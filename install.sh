@@ -48,6 +48,17 @@
 #   No model weights or index are pulled here — those come from
 #   models/fetch_models.sh and indexer/build_index.py on a workstation.
 #
+# Phase 7 scope (additive, Pi 4/5):
+#   - apt: python3-cryptography (Ed25519 signatures)
+#   - Stage mesh/ into /opt/signal/mesh/
+#   - Install + enable signal-mesh.service (uvicorn on 127.0.0.1:8500)
+#   - StateDirectory creates /var/lib/signal/keys (0700) for the keypair;
+#     ExecStartPre generates it on first boot
+#   - Refresh nginx config (carries /api/mesh/ block)
+#   - Refresh portal tree (carries peers.html + peers.js)
+#   No LoRa or BATMAN-adv radio daemons here — those are sub-phases 7.1
+#   and 7.3 and require physical adapters + region-specific config.
+#
 # Phase 8 scope (additive, Pi 4/5 for full; Zero 2 W: NOAA+FM only):
 #   - apt: rtl-sdr, multimon-ng (+ dump1090-mutability on Pi 4/5)
 #   - Stage listen/ into /opt/signal/listen/
@@ -74,7 +85,7 @@
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE="${PHASE:-9}"
+PHASE="${PHASE:-7}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
 PACK=""
 
@@ -431,6 +442,45 @@ phase6() {
     log "Phase 6 complete. http://hub.local/ask.html lights up when both units are running."
 }
 
+phase7() {
+    log "Phase 7 — Mesh control plane"
+
+    # python3-cryptography is the Ed25519 dep. Bookworm ships it under
+    # apt so we avoid pip. Without it the service falls back to a stub
+    # signature path; we log loudly in that case.
+    apt_install python3-cryptography
+
+    install -d -m 0755 /opt/signal/mesh
+    install_tree "${REPO_DIR}/mesh" /opt/signal/mesh
+
+    # Refresh portal (peers.html + peers.js) and nginx route.
+    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    ensure_nginx_site
+    if ! nginx -t 2>/dev/null; then
+        nginx -t
+        die "nginx config did not validate; aborting"
+    fi
+    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+
+    install -m 0644 "${REPO_DIR}/systemd/signal-mesh.service" \
+        /etc/systemd/system/signal-mesh.service
+    systemctl daemon-reload
+    systemctl enable signal-mesh.service
+    systemctl restart signal-mesh.service
+
+    # Surface the local fingerprint right after start so the operator
+    # can confirm the keypair landed.
+    sleep 1
+    if fp=$(curl --silent --max-time 1 http://127.0.0.1:8500/identity 2>/dev/null \
+              | python3 -c "import json,sys;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null); then
+        if [[ -n "$fp" ]]; then
+            log "mesh fingerprint: $fp"
+        fi
+    fi
+
+    log "Phase 7 complete. http://hub.local/peers.html shows the peer list."
+}
+
 phase8() {
     log "Phase 8 — RTL-SDR Listen"
 
@@ -550,7 +600,8 @@ main() {
         # PHASE=9 includes Phase 9 but not 8; PHASE=8 chains 9 first.
         9) phase1; phase2; phase3; phase4; phase5; phase6; phase9 ;;
         8) phase1; phase2; phase3; phase4; phase5; phase6; phase9; phase8 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 8)" ;;
+        7|all) phase1; phase2; phase3; phase4; phase5; phase6; phase9; phase8; phase7 ;;
+        *) die "PHASE=$PHASE not implemented (1..9 or 'all'; this tag ships all phases)" ;;
     esac
 }
 

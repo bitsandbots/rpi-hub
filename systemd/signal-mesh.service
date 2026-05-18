@@ -1,0 +1,73 @@
+# Purpose: Run the FastAPI signal-mesh control plane on 127.0.0.1:8500.
+#          nginx proxies /api/mesh/ to this upstream. The unit generates
+#          the Ed25519 keypair on first start (ExecStartPre) so the
+#          fingerprint is stable from boot 1.
+# Unit:    signal-mesh.service
+# Phase:   7
+#
+# Radio data planes live in their own units that this service ships
+# alongside (Reticulum daemon for LoRa, batctl + alfred for Wi-Fi). We
+# do not start them here because they require physical adapters and the
+# operator's region-specific frequency config.
+
+[Unit]
+Description=SIGNAL mesh control plane (FastAPI)
+After=network.target signal-ap.service
+PartOf=signal-ap.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+
+# StateDirectory creates /var/lib/signal/keys owned by the dynamic user
+# with mode 0700. That's where the Ed25519 keypair is pinned (priv 0600,
+# pub 0644). systemd manages the dir lifecycle; uninstall removes it.
+StateDirectory=signal/keys
+StateDirectoryMode=0700
+
+Environment=PYTHONPATH=/opt/signal
+Environment=PYTHONDONTWRITEBYTECODE=1
+WorkingDirectory=/opt/signal
+
+# Generate the keypair before binding the listener so the very first
+# /identity request sees a real fingerprint. The script exits 0 fast
+# when the keys are already present.
+ExecStartPre=/usr/bin/python3 -c "from mesh.signal_mesh import identity; identity.load_or_create()"
+
+ExecStart=/usr/bin/python3 -m uvicorn mesh.signal_mesh.main:app \
+    --host 127.0.0.1 \
+    --port 8500 \
+    --log-level warning \
+    --no-access-log
+
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+
+MemoryMax=128M
+TasksMax=64
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadOnlyPaths=/opt/signal /etc/signal
+ReadWritePaths=/var/lib/signal/keys
+
+[Install]
+WantedBy=multi-user.target

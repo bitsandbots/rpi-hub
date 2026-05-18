@@ -7,4 +7,4 @@ probe is fail-soft so the endpoint always returns 200 even on a fresh
 non-Pi machine.
 """
 
-__version__ = "0.8.0"
+__version__ = "1.0.0"

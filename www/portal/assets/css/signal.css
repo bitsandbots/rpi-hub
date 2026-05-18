@@ -713,5 +713,55 @@ main {
 }
 .listen-state strong { color: var(--c-navy); font-variant-numeric: tabular-nums; }
 
+/* -- Phase 7: peers ------------------------------------------------------- */
+
+.peers-identity {
+  margin: var(--s-5) 0;
+  padding: var(--s-4);
+  background: var(--c-silver-soft);
+  border-radius: var(--r-card);
+}
+.peers-identity__hint {
+  color: var(--c-ink-muted);
+  font-size: 0.9rem;
+  margin: var(--s-2) 0 0 0;
+}
+
+.peers-rows { list-style: none; margin: 0; padding: 0; }
+.peer {
+  background: #fff;
+  padding: var(--s-3) var(--s-4);
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-card);
+  margin-bottom: var(--s-2);
+  border-left: 4px solid var(--c-silver-edge);
+}
+.peer--trusted { border-left-color: var(--c-good); }
+.peer--unverified { border-left-color: var(--c-warn); }
+.peer--blocked { border-left-color: var(--c-bad); opacity: 0.6; }
+.peer__h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: var(--s-1);
+}
+.peer__trust {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--c-ink-muted);
+}
+.peer__meta {
+  font-size: 0.85rem;
+  color: var(--c-ink-muted);
+}
+.peer__banner {
+  margin: var(--s-2) 0 0 0;
+  padding: var(--s-2) var(--s-3);
+  background: #fff6e6;
+  border-left: 3px solid var(--c-warn);
+  font-size: 0.9rem;
+}
+
 
 

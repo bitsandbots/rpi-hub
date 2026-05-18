@@ -59,6 +59,15 @@ remove_assistant() {
     # is the user's call.
 }
 
+remove_mesh() {
+    # Phase 7. Stop the unit, drop the unit file. The Ed25519 keypair at
+    # /var/lib/signal/keys is intentionally preserved — a re-install
+    # keeps the node's identity stable, which is what trusted peers
+    # rely on.
+    systemctl disable --now signal-mesh.service 2>/dev/null || true
+    rm -f /etc/systemd/system/signal-mesh.service
+}
+
 remove_listen() {
     # Phase 8. Two units, both bound to dongle hardware. We stop the
     # pipeline before the control plane so a final stop request can
@@ -98,6 +107,7 @@ main() {
     # Tear down in reverse phase order. The status API and Kiwix are the
     # user-visible services; bring them down before the AP layer so a
     # watcher sees the outage propagate top-down.
+    remove_mesh
     remove_listen
     remove_notes
     remove_assistant
