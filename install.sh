@@ -30,14 +30,21 @@
 #   - Reload nginx (validated)
 #   - No new packages, no new services
 #
-# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=4
-# runs Phase 1, Phase 2, Phase 3, then Phase 4. Default is the highest phase
-# shipped at this tag.
+# Phase 5 scope (additive):
+#   - Install python3-fastapi + python3-uvicorn (apt; no pip)
+#   - Stage api/signal_status into /opt/signal/api/
+#   - Write /etc/signal/version (consumed by the status probe)
+#   - Install + enable signal-status.service (uvicorn on 127.0.0.1:8000)
+#   - Render config/motd/signal.motd → /etc/motd
+#
+# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=5
+# runs Phase 1 through Phase 5. Default is the highest phase shipped at
+# this tag.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE="${PHASE:-4}"
+PHASE="${PHASE:-5}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
 
 log() { printf '[signal-install] %s\n' "$*" >&2; }
@@ -252,6 +259,85 @@ phase4() {
     log "Phase 4 complete. Open http://hub.local/ on a connected client."
 }
 
+resolve_version() {
+    # Priority: explicit VERSION file (set by release tagging) → git describe
+    # → "dev". Echoes the resolved version on stdout.
+    if [[ -s "${REPO_DIR}/VERSION" ]]; then
+        head -n1 "${REPO_DIR}/VERSION" | tr -d '[:space:]'
+        return
+    fi
+    if command -v git >/dev/null && [[ -d "${REPO_DIR}/.git" ]]; then
+        git -C "${REPO_DIR}" describe --tags --always 2>/dev/null && return
+    fi
+    echo "dev"
+}
+
+phase5() {
+    log "Phase 5 — Status API + polish"
+
+    # FastAPI/uvicorn come from apt — much faster on a Pi than pip wheels,
+    # and pinned by the OS release. Our app is intentionally written to
+    # the lowest-common-denominator API surface (Bookworm ships FastAPI
+    # 0.92 + pydantic 1.10; that's fine for one read-only endpoint).
+    apt_install python3-fastapi python3-uvicorn python3-pydantic
+
+    # Stage the API package under /opt/signal/api so PYTHONPATH in the
+    # systemd unit can find it. We avoid /usr/lib/python3.11/site-packages
+    # so apt-managed paths stay clean.
+    install -d -m 0755 /opt/signal/api
+    install_tree "${REPO_DIR}/api" /opt/signal/api
+    # Scripts directory: the MOTD references /opt/signal/scripts/*.sh.
+    install -d -m 0755 /opt/signal/scripts
+    install_tree "${REPO_DIR}/scripts" /opt/signal/scripts
+
+    # /etc/signal is the runtime config dir. Currently just holds VERSION;
+    # Phase 7+ will park the mesh keypair here under 0600.
+    install -d -m 0755 /etc/signal
+    local version
+    version="$(resolve_version)"
+    printf '%s\n' "${version}" >/etc/signal/version
+    chmod 0644 /etc/signal/version
+    log "version pinned to ${version}"
+
+    # MOTD: substitute {{VERSION}}, drop into /etc/motd. PAM reads /etc/motd
+    # on shell login. Use install -m 0644 to overwrite the stock Debian motd.
+    local motd_tmp
+    motd_tmp="$(mktemp)"
+    sed "s/{{VERSION}}/${version}/g" \
+        "${REPO_DIR}/config/motd/signal.motd" >"${motd_tmp}"
+    install -m 0644 "${motd_tmp}" /etc/motd
+    rm -f "${motd_tmp}"
+
+    # Service unit. After install + enable, restart unconditionally so a
+    # re-run picks up code changes.
+    install -m 0644 "${REPO_DIR}/systemd/signal-status.service" \
+        /etc/systemd/system/signal-status.service
+    systemctl daemon-reload
+    systemctl enable signal-status.service
+    systemctl restart signal-status.service
+
+    # Smoke test: give uvicorn ~3s to bind, then probe /api/status. Failure
+    # here is non-fatal (install completed; the user can investigate via
+    # journalctl) but loud.
+    local i probe_ok=0
+    for i in 1 2 3 4 5 6; do
+        if curl --silent --fail --max-time 1 \
+            http://127.0.0.1:8000/status >/dev/null 2>&1; then
+            probe_ok=1
+            break
+        fi
+        sleep 0.5
+    done
+    if [[ $probe_ok -eq 1 ]]; then
+        log "signal-status responded on 127.0.0.1:8000 ✓"
+    else
+        log "warning: signal-status did not respond within 3s"
+        log "         check 'journalctl -u signal-status' for details"
+    fi
+
+    log "Phase 5 complete. http://hub.local/api/status now lights up status.html."
+}
+
 main() {
     require_root
     case "$PHASE" in
@@ -259,7 +345,8 @@ main() {
         2) phase1; phase2 ;;
         3) phase1; phase2; phase3 ;;
         4) phase1; phase2; phase3; phase4 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 4)" ;;
+        5) phase1; phase2; phase3; phase4; phase5 ;;
+        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 5)" ;;
     esac
 }
 

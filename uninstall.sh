@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
-# SIGNAL uninstaller — reverses install.sh through Phase 4.
+# SIGNAL uninstaller — reverses install.sh through Phase 5.
 #
 # Idempotent. Leaves package binaries installed (apt removal is the user's
 # call) but disables the service, unlinks configs, removes the dhcpcd block,
 # and drops the iptables rule. Phase 4's static assets live under
 # /var/www/signal-portal and are removed wholesale by remove_nginx_site.
+# Phase 5's deployed code at /opt/signal and runtime state at /etc/signal
+# are removed by remove_status.
 
 set -euo pipefail
 
@@ -46,12 +48,25 @@ remove_kiwix() {
     # ask for explicitly — `rm -rf /var/lib/kiwix` is one extra command.
 }
 
+remove_status() {
+    systemctl disable --now signal-status.service 2>/dev/null || true
+    rm -f /etc/systemd/system/signal-status.service
+    rm -rf /opt/signal
+    rm -rf /etc/signal
+    # Restore the Debian default MOTD if our copy is still in place.
+    # Bookworm's stock /etc/motd is empty; just blanking the file is safe.
+    if [[ -f /etc/motd ]] && grep -q "OFFLINE INFOHUB" /etc/motd 2>/dev/null; then
+        : >/etc/motd
+    fi
+}
+
 main() {
     require_root
 
-    # Tear down in reverse phase order. Kiwix and nginx are the user-visible
-    # services; bring them down before the AP layer so a watcher sees the
-    # outage propagate top-down.
+    # Tear down in reverse phase order. The status API and Kiwix are the
+    # user-visible services; bring them down before the AP layer so a
+    # watcher sees the outage propagate top-down.
+    remove_status
     remove_kiwix
     remove_nginx_site
 
@@ -68,7 +83,7 @@ main() {
     sysctl --system >/dev/null
     systemctl restart dhcpcd 2>/dev/null || true
 
-    log "SIGNAL uninstalled. Packages (hostapd, dnsmasq, nginx, kiwix-tools, iptables-persistent) left in place."
+    log "SIGNAL uninstalled. Packages (hostapd, dnsmasq, nginx, kiwix-tools, iptables-persistent, python3-fastapi, python3-uvicorn) left in place."
     log "Library content at /var/lib/kiwix/ preserved — delete manually if you want it gone."
 }
 

@@ -24,14 +24,18 @@ fmt:  ## Auto-format (black, ruff --fix, shfmt)
 	pre-commit run --all-files shfmt || true
 
 test:  ## Run pytest across api/, assistant/, indexer/, listen/, notes/
-	pytest -q
+	cd api && pytest -q
 
 smoke:  ## End-to-end healthcheck against a live device or QEMU
 	./scripts/healthcheck.sh
 
+bake:  ## Build a flashable signal-*.img.xz (requires sudo, Linux only)
+	sudo ./scripts/bake_image.sh
+
 check-headers:  ## Fail if any config/ file lacks the required header
 	./scripts/check_config_header.py config/
 
-clean:  ## Remove caches
+clean:  ## Remove caches and build artifacts
 	find . -type d -name __pycache__ -prune -exec rm -rf {} +
 	rm -rf .pytest_cache .mypy_cache .ruff_cache .coverage htmlcov
+	rm -rf .bake-cache dist
