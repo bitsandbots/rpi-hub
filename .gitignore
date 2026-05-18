@@ -1,0 +1,46 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Build / packaging
+build/
+dist/
+*.img
+*.img.xz
+
+# Editor / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+
+# Runtime artifacts — generated, not source
+/var/
+*.log
+*.pid
+*.sock
+
+# Content & model payloads — never in git
+content/zims/
+content/*.zim
+models/*.gguf
+models/*.bin
+assistant/embeddings_cache/
+/var/lib/kiwix/
+/var/lib/signal/
+
+# Secrets
+*.pem
+*.key
+.env
+.env.local
