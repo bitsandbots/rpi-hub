@@ -1,0 +1,40 @@
+# Security scans. pip-audit for Python deps, actionlint for workflow files.
+# Phase introduced: 1
+name: security-scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 6 * * 1"  # Weekly Monday 06:00 UTC
+
+jobs:
+  actionlint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run actionlint
+        uses: raven-actions/actionlint@v2
+
+  pip-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: pip-audit on every requirements file
+        run: |
+          python -m pip install --upgrade pip pip-audit
+          shopt -s globstar nullglob
+          files=(**/requirements*.txt)
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "No requirements files yet — skipping."
+            exit 0
+          fi
+          for f in "${files[@]}"; do
+            echo "::group::pip-audit $f"
+            pip-audit -r "$f" --strict || exit 1
+            echo "::endgroup::"
+          done

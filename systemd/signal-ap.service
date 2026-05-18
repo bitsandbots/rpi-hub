@@ -1,0 +1,27 @@
+# Purpose: Bring up the SIGNAL access point (hostapd then dnsmasq), reapply
+#          the iptables FORWARD drop on every start.
+# Unit:    signal-ap.service
+# Phase:   1
+
+[Unit]
+Description=SIGNAL Access Point (hostapd + dnsmasq)
+After=network.target dhcpcd.service
+Wants=dhcpcd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+ExecStartPre=/usr/bin/systemctl start hostapd.service
+ExecStart=/usr/bin/systemctl start dnsmasq.service
+
+# Belt-and-braces: ensure the FORWARD drop is present after every start.
+# install.sh applies it once; this guards against manual flushes.
+ExecStartPost=/sbin/iptables -C FORWARD -i wlan0 ! -o wlan0 -j DROP \
+    || /sbin/iptables -I FORWARD 1 -i wlan0 ! -o wlan0 -j DROP
+
+ExecStop=/usr/bin/systemctl stop dnsmasq.service
+ExecStop=/usr/bin/systemctl stop hostapd.service
+
+[Install]
+WantedBy=multi-user.target
