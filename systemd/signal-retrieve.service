@@ -1,0 +1,66 @@
+# Purpose: Run the FastAPI signal-retrieve app on 127.0.0.1:8100. nginx
+#          (Phase 6) proxies /api/retrieve to this upstream. The endpoint
+#          backs both the Ask UI and any third-party tooling that wants
+#          plain hybrid retrieval against the local library.
+# Unit:    signal-retrieve.service
+# Phase:   6
+#
+# Notes:
+#   - ConditionPathExists guards on /var/lib/signal/index/chunks.sqlite,
+#     so a node without a prebuilt index stays inactive instead of
+#     crash-looping. The Ask tile self-disables when this unit is down.
+#   - The service holds an HNSW handle in RAM (~150 MB for a Wikipedia
+#     no-images corpus). MemoryMax is the early-warning ceiling.
+
+[Unit]
+Description=SIGNAL hybrid retrieval API (FastAPI)
+After=network.target signal-ap.service
+PartOf=signal-ap.service
+ConditionPathExists=/var/lib/signal/index/chunks.sqlite
+
+[Service]
+Type=simple
+DynamicUser=yes
+
+Environment=PYTHONPATH=/opt/signal
+Environment=PYTHONDONTWRITEBYTECODE=1
+WorkingDirectory=/opt/signal
+
+ExecStart=/usr/bin/python3 -m uvicorn assistant.signal_retrieve.main:app \
+    --host 127.0.0.1 \
+    --port 8100 \
+    --log-level warning \
+    --no-access-log
+
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=15
+
+# HNSW + sqlite cache. Generous on a Pi 5 (8 GB); will need tuning on
+# 4 GB Pi 4 builds.
+MemoryMax=512M
+TasksMax=128
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=no  # llama.cpp / numpy may JIT-emit pages
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadOnlyPaths=/var/lib/signal /opt/signal
+
+[Install]
+WantedBy=multi-user.target

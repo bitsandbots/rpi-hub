@@ -7,9 +7,11 @@ networking, and a community notes board — **without any internet uplink**.
 Built for emergency contexts, mutual-aid groups, disaster response, and
 off-grid communities.
 
-> Status: **Phase 1 — Bare AP**. See [the full plan](./docs/PLAN.md) and the
-> interactive [build wizard](./signal-wizard.html) for phase-by-phase scope
-> and acceptance criteria.
+> Status: **Phase 6 — RAG Assistant**. Phases 1–5 ship the AP, captive portal,
+> Kiwix library, CoreConduit frontend, and status API. Phase 6 adds the
+> grounded/cited/deferential assistant on Pi 5. See [the full plan](./docs/PLAN.md)
+> and the interactive [build wizard](./signal-wizard.html) for phase-by-phase
+> scope and acceptance criteria.
 
 ## What it is
 

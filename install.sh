@@ -37,14 +37,25 @@
 #   - Install + enable signal-status.service (uvicorn on 127.0.0.1:8000)
 #   - Render config/motd/signal.motd → /etc/motd
 #
-# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=5
-# runs Phase 1 through Phase 5. Default is the highest phase shipped at
+# Phase 6 scope (additive, Pi 5 only):
+#   - Stage assistant/ into /opt/signal/assistant/
+#   - Create /var/lib/signal/{index,models}/ as data dirs
+#   - Install + enable signal-retrieve.service (uvicorn on 127.0.0.1:8100)
+#   - Install + enable signal-assist.service   (uvicorn on 127.0.0.1:8200)
+#   - Install signal-llama.service (stays inactive until a model is staged)
+#   - Refresh nginx config (carries /api/ask + /api/retrieve blocks)
+#   - Refresh portal tree (carries ask.html + assets/js/ask.js)
+#   No model weights or index are pulled here — those come from
+#   models/fetch_models.sh and indexer/build_index.py on a workstation.
+#
+# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=6
+# runs Phase 1 through Phase 6. Default is the highest phase shipped at
 # this tag.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE="${PHASE:-5}"
+PHASE="${PHASE:-6}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
 
 log() { printf '[signal-install] %s\n' "$*" >&2; }
@@ -338,6 +349,58 @@ phase5() {
     log "Phase 5 complete. http://hub.local/api/status now lights up status.html."
 }
 
+phase6() {
+    log "Phase 6 — RAG assistant (Pi 5 only)"
+
+    # We do not block on hardware detection here — the unit guards
+    # themselves are ConditionPathExists on model files. On a Zero 2 W
+    # the user simply never stages weights and the Ask tile stays hidden.
+
+    # Stage the assistant package alongside the api/ tree from Phase 5.
+    install -d -m 0755 /opt/signal/assistant
+    install_tree "${REPO_DIR}/assistant" /opt/signal/assistant
+
+    # Runtime data dirs. These hold prebuilt index + downloaded weights;
+    # both are produced on a workstation and rsynced over.
+    install -d -m 0755 /var/lib/signal/index
+    install -d -m 0755 /var/lib/signal/models
+
+    # Refresh portal so ask.html + ask.js land alongside the existing tree.
+    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    ensure_nginx_site
+    if ! nginx -t 2>/dev/null; then
+        nginx -t
+        die "nginx config did not validate; aborting"
+    fi
+    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+
+    # Install all three units. Each one carries its own Condition guard so
+    # they stay inactive until their respective data appears.
+    for unit in signal-retrieve.service signal-assist.service signal-llama.service; do
+        install -m 0644 "${REPO_DIR}/systemd/${unit}" "/etc/systemd/system/${unit}"
+    done
+    systemctl daemon-reload
+    systemctl enable signal-retrieve.service signal-assist.service signal-llama.service
+
+    # Start whatever is ready. If the index is missing the unit stays
+    # inactive; we surface that to the user rather than letting it look
+    # like a failure.
+    if [[ -s /var/lib/signal/index/chunks.sqlite ]]; then
+        systemctl restart signal-retrieve.service
+        log "signal-retrieve started (index present)"
+    else
+        log "no index at /var/lib/signal/index — run indexer/build_index.py on a workstation."
+    fi
+    if [[ -s /var/lib/signal/models/qwen2.5-1.5b-instruct-q4_k_m.gguf ]]; then
+        systemctl restart signal-llama.service signal-assist.service
+        log "signal-assist started (model present)"
+    else
+        log "no model weights at /var/lib/signal/models — run models/fetch_models.sh on a workstation."
+    fi
+
+    log "Phase 6 complete. http://hub.local/ask.html lights up when both units are running."
+}
+
 main() {
     require_root
     case "$PHASE" in
@@ -346,7 +409,8 @@ main() {
         3) phase1; phase2; phase3 ;;
         4) phase1; phase2; phase3; phase4 ;;
         5) phase1; phase2; phase3; phase4; phase5 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 5)" ;;
+        6) phase1; phase2; phase3; phase4; phase5; phase6 ;;
+        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 6)" ;;
     esac
 }
 

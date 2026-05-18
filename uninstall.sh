@@ -48,6 +48,17 @@ remove_kiwix() {
     # ask for explicitly — `rm -rf /var/lib/kiwix` is one extra command.
 }
 
+remove_assistant() {
+    # Phase 6 units. Bring them down before /opt/signal goes away.
+    for unit in signal-assist.service signal-llama.service signal-retrieve.service; do
+        systemctl disable --now "$unit" 2>/dev/null || true
+        rm -f "/etc/systemd/system/${unit}"
+    done
+    # Leave /var/lib/signal/{index,models}/ in place: re-downloading model
+    # weights and rebuilding the index is expensive. `rm -rf /var/lib/signal`
+    # is the user's call.
+}
+
 remove_status() {
     systemctl disable --now signal-status.service 2>/dev/null || true
     rm -f /etc/systemd/system/signal-status.service
@@ -66,6 +77,7 @@ main() {
     # Tear down in reverse phase order. The status API and Kiwix are the
     # user-visible services; bring them down before the AP layer so a
     # watcher sees the outage propagate top-down.
+    remove_assistant
     remove_status
     remove_kiwix
     remove_nginx_site
