@@ -80,6 +80,15 @@ remove_listen() {
     done
     # Leave /var/lib/signal/listen in place: pack-supplied NOAA presets
     # are useful again immediately on reinstall.
+
+    # Phase 8.4 — undo dump1090-mutability enablement. The Debian
+    # package itself stays installed (apt removal is the user's call);
+    # we only revert our /etc/default override and disable the unit.
+    systemctl disable --now dump1090-mutability.service 2>/dev/null || true
+    if [[ -f /etc/default/dump1090-mutability ]] \
+       && grep -q "SIGNAL" /etc/default/dump1090-mutability 2>/dev/null; then
+        rm -f /etc/default/dump1090-mutability
+    fi
 }
 
 remove_notes() {

@@ -93,7 +93,14 @@
       var state = svc[key] || "unknown";
       var stateEl = li.querySelector(".services-list__state");
       var dotEl = li.querySelector(".services-list__dot");
-      if (stateEl) stateEl.textContent = state;
+      // ADS-B is the one service where "ready" carries extra context
+      // — a live aircraft count, surfaced inline so operators can tell
+      // "decoder running but quiet" apart from "decoder seeing planes".
+      var stateText = state;
+      if (key === "adsb" && state === "ready" && typeof svc.adsb_aircraft === "number") {
+        stateText = "ready · " + svc.adsb_aircraft + " aircraft";
+      }
+      if (stateEl) stateEl.textContent = stateText;
       li.classList.remove(
         "services-list__row--ready",
         "services-list__row--off",

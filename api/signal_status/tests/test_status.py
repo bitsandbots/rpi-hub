@@ -125,6 +125,8 @@ def _pinned_services() -> system.ServicesInfo:
         listen="not-running",
         notes="not-running",
         mesh="not-running",
+        adsb="not-running",
+        adsb_aircraft=None,
         mesh_fingerprint=None,
     )
 
@@ -156,6 +158,8 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
             listen="not-running",
             notes="ready",
             mesh="ready",
+            adsb="ready",
+            adsb_aircraft=7,
             mesh_fingerprint="ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
         ),
     )
@@ -177,6 +181,8 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
             "listen": "not-running",
             "notes": "ready",
             "mesh": "ready",
+            "adsb": "ready",
+            "adsb_aircraft": 7,
             "mesh_fingerprint": "ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
         },
     }
@@ -216,3 +222,51 @@ def test_services_probe_returns_not_running_for_unreachable() -> None:
     svc = system.services()
     for field in ("retrieve", "assist", "listen", "notes", "mesh"):
         assert getattr(svc, field) in ("ready", "not-running", "unknown")
+
+
+# -- ADS-B file probe (Phase 8.4) -----------------------------------------
+
+def test_adsb_probe_returns_not_running_when_file_missing(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setattr(system, "ADSB_JSON", tmp_path / "absent.json")
+    state, count = system._probe_adsb()
+    assert state == "not-running"
+    assert count is None
+
+
+def test_adsb_probe_returns_not_running_when_file_stale(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "aircraft.json"
+    path.write_text('{"aircraft": []}')
+    monkeypatch.setattr(system, "ADSB_JSON", path)
+    # Pretend the file was last touched 5 minutes ago.
+    monkeypatch.setattr(system, "_now", lambda: path.stat().st_mtime + 300.0)
+    state, count = system._probe_adsb()
+    assert state == "not-running"
+    assert count is None
+
+
+def test_adsb_probe_returns_ready_with_aircraft_count(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "aircraft.json"
+    path.write_text('{"now": 1700000000, "aircraft": [{"hex": "a1"}, {"hex": "b2"}, {"hex": "c3"}]}')
+    monkeypatch.setattr(system, "ADSB_JSON", path)
+    monkeypatch.setattr(system, "_now", lambda: path.stat().st_mtime + 1.0)
+    state, count = system._probe_adsb()
+    assert state == "ready"
+    assert count == 3
+
+
+def test_adsb_probe_returns_unknown_on_garbage_json(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    path = tmp_path / "aircraft.json"
+    path.write_text("not-json")
+    monkeypatch.setattr(system, "ADSB_JSON", path)
+    monkeypatch.setattr(system, "_now", lambda: path.stat().st_mtime + 1.0)
+    state, count = system._probe_adsb()
+    assert state == "unknown"
+    assert count is None

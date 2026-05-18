@@ -26,6 +26,11 @@ KIWIX_DIR = Path("/var/lib/kiwix")
 VERSION_FILE = Path("/etc/signal/version")
 RTC_DEV = Path("/dev/rtc")
 RTC_DEV_0 = Path("/dev/rtc0")
+ADSB_JSON = Path("/run/dump1090-mutability/aircraft.json")
+# Stale-ness ceiling for the ADS-B probe. dump1090-mutability writes
+# aircraft.json once per second by default; 30s of staleness reliably
+# means the process is wedged or stopped.
+ADSB_STALE_SECONDS = 30.0
 
 VCGENCMD_TIMEOUT_S = 1.0
 
@@ -179,15 +184,57 @@ class ServicesInfo:
     listen: str    # Phase 8
     notes: str     # Phase 9A
     mesh: str      # Phase 7
+    adsb: str      # Phase 8.4
+    adsb_aircraft: int | None  # surfaced from aircraft.json on a ready probe
     mesh_fingerprint: str | None  # surfaced for owner-to-owner trust
 
 
+def _probe_adsb() -> tuple[str, int | None]:
+    """File-based probe for dump1090-mutability.
+
+    The ADS-B decoder has no HTTP surface in our config (HTTP=no in
+    /etc/default/dump1090-mutability). What it *does* have is a JSON
+    file refreshed once per second at ``/run/dump1090-mutability/aircraft.json``,
+    and that file's mtime is the cleanest readiness signal: anything
+    older than ~30s means the decoder is wedged or stopped, regardless
+    of whether the unit thinks it's active.
+    """
+
+    try:
+        st = ADSB_JSON.stat()
+    except OSError:
+        return ("not-running", None)
+    age = max(0.0, _now() - st.st_mtime)
+    if age > ADSB_STALE_SECONDS:
+        return ("not-running", None)
+    try:
+        body = json.loads(ADSB_JSON.read_bytes())
+    except (OSError, json.JSONDecodeError):
+        return ("unknown", None)
+    if not isinstance(body, dict):
+        return ("unknown", None)
+    aircraft = body.get("aircraft")
+    count = len(aircraft) if isinstance(aircraft, list) else None
+    return ("ready", count)
+
+
+def _now() -> float:
+    """Wallclock seconds, factored for test monkeypatching."""
+
+    import time
+
+    return time.time()
+
+
 def services() -> ServicesInfo:
+    adsb_state, adsb_count = _probe_adsb()
     return ServicesInfo(
         retrieve=_probe_local_http("http://127.0.0.1:8100/health"),
         assist=_probe_local_http("http://127.0.0.1:8200/health"),
         listen=_probe_local_http("http://127.0.0.1:8300/health"),
         notes=_probe_local_http("http://127.0.0.1:8400/health"),
         mesh=_probe_local_http("http://127.0.0.1:8500/health"),
+        adsb=adsb_state,
+        adsb_aircraft=adsb_count,
         mesh_fingerprint=_probe_json_field("http://127.0.0.1:8500/identity", "fingerprint"),
     )

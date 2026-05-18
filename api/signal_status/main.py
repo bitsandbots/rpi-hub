@@ -40,6 +40,8 @@ class ServicesOut(BaseModel):
     listen: str
     notes: str
     mesh: str
+    adsb: str
+    adsb_aircraft: int | None
     mesh_fingerprint: str | None
 
 
@@ -79,6 +81,8 @@ def status() -> StatusResponse:
             listen=svc.listen,
             notes=svc.notes,
             mesh=svc.mesh,
+            adsb=svc.adsb,
+            adsb_aircraft=svc.adsb_aircraft,
             mesh_fingerprint=svc.mesh_fingerprint,
         ),
     )

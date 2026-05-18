@@ -547,7 +547,53 @@ phase8() {
             || log "signal-listen-same did not start (no dongle?); check journalctl"
     fi
 
+    phase8_adsb
+
     log "Phase 8 complete. http://hub.local/listen.html lights up when the service is reachable."
+}
+
+phase8_adsb() {
+    # Phase 8.4 — gate dump1090-mutability on a real dongle being present.
+    #
+    # The package install above is unconditional (cheap; ~250 KB), so an
+    # operator who plugs in a dongle later can flip the service on with
+    # `systemctl enable --now dump1090-mutability` and the config we
+    # dropped below will pick up automatically.
+    #
+    # Why detect at install time rather than relying on the systemd
+    # ConditionPathExists= pattern we use for signal-listen-same: the
+    # upstream dump1090-mutability.service ships with
+    # START_DUMP1090="no" baked into /etc/default, so the unit refuses
+    # to do anything until we write our drop-in. That drop-in only
+    # makes sense once we've decided we *want* ADS-B running.
+
+    # Always install the /etc/default file; without it the package's
+    # own defaults (START=no, no JSON output) would leave the unit
+    # quietly inert even if a dongle shows up later.
+    if dpkg -s dump1090-mutability >/dev/null 2>&1; then
+        install -m 0644 "${REPO_DIR}/config/dump1090/dump1090-mutability.default" \
+            /etc/default/dump1090-mutability
+    else
+        log "dump1090-mutability package absent; sub-phase 8.4 will stay dormant."
+        return 0
+    fi
+
+    # Detector lives at scripts/detect_rtlsdr.sh — exit 0 iff a known
+    # RTL2832U-based dongle is on the USB bus right now.
+    if "${REPO_DIR}/scripts/detect_rtlsdr.sh" >/dev/null 2>&1; then
+        systemctl daemon-reload
+        systemctl enable dump1090-mutability.service 2>/dev/null || true
+        systemctl restart dump1090-mutability.service 2>/dev/null \
+            || log "dump1090-mutability failed to start; check journalctl -u dump1090-mutability"
+        log "Phase 8.4 — RTL-SDR dongle detected; dump1090-mutability enabled."
+        log "    aircraft.json lands at /run/dump1090-mutability/, served at /adsb/"
+    else
+        # Leave the unit disabled so it does not race signal-listen-same
+        # for the same single-dongle setup. Operator can opt in later.
+        systemctl disable dump1090-mutability.service 2>/dev/null || true
+        log "Phase 8.4 — no RTL-SDR dongle detected; dump1090-mutability stays disabled."
+        log "    Plug a dongle in and run: sudo systemctl enable --now dump1090-mutability"
+    fi
 }
 
 ensure_owner_token() {

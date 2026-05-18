@@ -9,6 +9,38 @@ commit.
 
 ## [Unreleased]
 
+## [1.2.1] — 2026-05-18
+
+Phase 8.4 install gate. dump1090-mutability now enables itself only
+when a known RTL-SDR dongle is on the USB bus at provision time, and
+the status page surfaces a live aircraft count beside the per-service
+readiness dot. Closes the "dump1090-mutability install integration"
+item from v1.1's hardware-gated backlog.
+
+### Added
+
+- `scripts/detect_rtlsdr.sh` — `lsusb`-based detector that exits 0 iff
+  a USB device matches a known RTL2832U vendor/product ID.
+- `config/dump1090/dump1090-mutability.default` — `/etc/default/`
+  override pointing JSON output at `/run/dump1090-mutability/` (the
+  v1.1 `/adsb/` nginx alias target), `START_DUMP1090="yes"`, BaseStation
+  TCP and embedded HTTP listener both disabled.
+- `install.sh phase8_adsb()` — runs the detector; enables + starts
+  `dump1090-mutability.service` on a hit, leaves it disabled with a
+  helpful log line on a miss.
+- `_probe_adsb()` in `api/signal_status/system.py` — file-based probe
+  that returns `"ready"` + the live aircraft count when
+  `aircraft.json` mtime is fresh (≤30s).
+- `adsb` + `adsb_aircraft` fields on `GET /api/status`'s `services`
+  block.
+- `status.html` + `status.js` render an "ADS-B" row; "ready" rows show
+  the live aircraft count inline.
+
+### Changed
+
+- `uninstall.sh` removes the dump1090 default override (only if it
+  carries our SIGNAL marker) and disables the unit.
+
 ## [1.2.0] — 2026-05-18
 
 Polish release closing two of the four non-hardware-gated items
@@ -180,7 +212,8 @@ See `docs/PHASE_2.md`. Captive portal redirect + nginx default-server.
 
 See `docs/PHASE_1.md`. Bare AP — hostapd + dnsmasq + `signal-ap.service`.
 
-[Unreleased]: https://github.com/coreconduit/signal/compare/v1.2.0...HEAD
+[Unreleased]: https://github.com/coreconduit/signal/compare/v1.2.1...HEAD
+[1.2.1]: https://github.com/coreconduit/signal/releases/tag/v1.2.1
 [1.2.0]: https://github.com/coreconduit/signal/releases/tag/v1.2.0
 [1.1.0]: https://github.com/coreconduit/signal/releases/tag/v1.1.0
 [1.0.0]: https://github.com/coreconduit/signal/releases/tag/v1.0.0
