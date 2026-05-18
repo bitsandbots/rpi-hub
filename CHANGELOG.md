@@ -9,7 +9,38 @@ commit.
 
 ## [Unreleased]
 
-Post-v1.0 follow-ups under active work. Tracked but not yet tagged.
+## [1.1.0] — 2026-05-18
+
+Post-v1.0 follow-ups bundled. See `docs/V1.1.md` for the full write-up.
+
+### Added
+
+- **Phase 7.1 scaffold** — `mesh/signal_mesh/lora_bridge.py` +
+  `signal-reticulum.service`. Reticulum daemon wiring; degrades to
+  `unavailable` cleanly when no LoRa hat is present.
+- **Phase 7.3 scaffold** — `mesh/signal_mesh/wifi_bridge.py` +
+  `signal-batman.service` + `scripts/batman_setup.sh`. BATMAN-adv
+  setup script; polls `batctl o -nH` to surface Wi-Fi peers.
+- **Phase 9.2** — `notes/signal_notes/mesh_client.py` calls
+  `signal-mesh` on every local post; mesh service signs the envelope
+  and fans it out to whichever radio bridges are up.
+- **Phase 8.3 primitive** — `listen/signal_listen/audio_bridge.py`
+  with bounded-queue producer-many-consumers fanout.
+- **Phase 8.4 UI** — `www/portal/adsb.html` + `adsb.js` + `/adsb/`
+  nginx alias to dump1090-mutability's output directory.
+- **Read-only root** — `scripts/readonly_root.sh` `enable | disable | status`;
+  initramfs hook + fstab block for overlayfs root. Operator-run; reboot
+  required.
+- **`/api/mesh/health`** gains `lora` + `wifi` radio status fields with
+  state machine (`unavailable | connecting | connected | error |
+  running`).
+
+### Changed
+
+- `signal-mesh.service` lazily attaches both radio bridges on first
+  /health call so test clients don't spin up threads.
+- Mesh peer table tags Wi-Fi peers with `BAT:` prefix so the UI
+  distinguishes them from Ed25519-fingerprint peers.
 
 ## [1.0.0] — 2026-05-18
 

@@ -60,12 +60,14 @@ remove_assistant() {
 }
 
 remove_mesh() {
-    # Phase 7. Stop the unit, drop the unit file. The Ed25519 keypair at
-    # /var/lib/signal/keys is intentionally preserved — a re-install
-    # keeps the node's identity stable, which is what trusted peers
-    # rely on.
-    systemctl disable --now signal-mesh.service 2>/dev/null || true
-    rm -f /etc/systemd/system/signal-mesh.service
+    # Phase 7 + v1.1 radio data planes. Stop the units, drop the unit
+    # files. The Ed25519 keypair at /var/lib/signal/keys is intentionally
+    # preserved — a re-install keeps the node's identity stable, which is
+    # what trusted peers rely on.
+    for unit in signal-batman.service signal-reticulum.service signal-mesh.service; do
+        systemctl disable --now "$unit" 2>/dev/null || true
+        rm -f "/etc/systemd/system/${unit}"
+    done
 }
 
 remove_listen() {

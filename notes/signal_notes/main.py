@@ -23,7 +23,7 @@ from typing import Annotated
 from fastapi import FastAPI, Header, HTTPException, Request, Response, status
 from pydantic import BaseModel, Field
 
-from . import __version__, rate_limit, storage, validation
+from . import __version__, mesh_client, rate_limit, storage, validation
 
 app = FastAPI(
     title="signal-notes",
@@ -138,6 +138,13 @@ def post_note(req: Request, body: PostNoteIn, response: Response) -> NoteOut:
         raise HTTPException(status_code=status.HTTP_429_TOO_MANY_REQUESTS, detail=verdict.reason)
 
     note = storage.insert(conn, name=name, text=text, ip=ip)
+
+    # Phase 9.2 wiring: hand the note to signal-mesh for fan-out. This
+    # is best-effort — the local board is the canonical store; the
+    # mesh is icing. Failure is silent (the mesh service may be off,
+    # or absent on this hardware) and never blocks the user.
+    mesh_client.publish(note.id, note.name, note.text)
+
     return NoteOut(id=note.id, created_ts=note.created_ts, name=note.name, text=note.text)
 
 

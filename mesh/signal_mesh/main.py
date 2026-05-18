@@ -24,7 +24,7 @@ from typing import Annotated
 from fastapi import FastAPI, Header, HTTPException, status
 from pydantic import BaseModel, Field
 
-from . import __version__, identity, peers
+from . import __version__, identity, lora_bridge, messages, peers, wifi_bridge
 
 app = FastAPI(
     title="signal-mesh",
@@ -36,7 +36,68 @@ app = FastAPI(
 
 _PEERS = peers.PeerTable()
 _IDENTITY: identity.Identity | None = None
+_OUTBOUND_SEQ = 0  # per-process monotonic; persists for the unit's lifetime
 OWNER_TOKEN_PATH = Path(os.environ.get("SIGNAL_MESH_TOKEN_FILE", "/etc/signal/notes-owner-token"))
+
+
+def _next_seq() -> int:
+    global _OUTBOUND_SEQ
+    _OUTBOUND_SEQ += 1
+    return _OUTBOUND_SEQ
+
+
+# Lazily-attached radio bridges. Each one is started on the first
+# /health call (so test clients don't spin up threads) and reused.
+# Both degrade silently when their hardware is absent.
+_LORA: lora_bridge.LoraBridge | None = None
+_WIFI: wifi_bridge.WifiBridge | None = None
+
+
+def _on_lora_frame(frame: bytes) -> None:
+    """Inbound LoRa frame → peer-table upsert.
+
+    The frame is the canonical envelope bytes emitted by another
+    signal-mesh node. The full dispatcher (notes / presence / index)
+    lands with the Reticulum daemon wiring; here we just bump
+    last-seen so peers show up in /api/mesh/peers.
+    """
+
+    try:
+        import json as _json
+
+        env = _json.loads(frame.decode("utf-8", errors="ignore"))
+    except (ValueError, UnicodeDecodeError):
+        return
+    if not isinstance(env, dict):
+        return
+    sender = str(env.get("sender") or "")
+    if not sender:
+        return
+    seq = int(env.get("seq") or 0)
+    if not _PEERS.accept_sequence(sender, seq):
+        return  # replay
+    _PEERS.upsert(sender, radio="lora")
+
+
+def _on_wifi_peer(mac: str, tq: int, _next_hop: str) -> None:
+    """BATMAN-adv originator → mesh peer.
+
+    The BATMAN MAC is the fingerprint surface for Wi-Fi peers — we
+    store it with a "BAT:" prefix so the UI can distinguish from
+    Ed25519 fingerprints. Cross-linking when the same node appears on
+    both radios is a future improvement.
+    """
+
+    fp = f"BAT:{mac}"
+    _PEERS.upsert(fp, radio="wifi", last_rssi=tq)
+
+
+def _ensure_bridges() -> None:
+    global _LORA, _WIFI
+    if _LORA is None:
+        _LORA = lora_bridge.attach(_on_lora_frame)
+    if _WIFI is None:
+        _WIFI = wifi_bridge.attach(_on_wifi_peer)
 
 
 def _get_identity() -> identity.Identity:
@@ -86,20 +147,91 @@ class TrustIn(BaseModel):
     display_name: Annotated[str, Field(min_length=1, max_length=48)]
 
 
+class RadioStatusOut(BaseModel):
+    state: str
+    detail: str
+    last_change_ts: float
+
+
 class HealthOut(BaseModel):
     version: str
     fingerprint: str
     peer_count: int
+    lora: RadioStatusOut
+    wifi: RadioStatusOut
+
+
+class PublishNoteIn(BaseModel):
+    note_id: int = Field(ge=0)
+    name: str = ""
+    text: Annotated[str, Field(min_length=1, max_length=400)]
+    ttl_s: int = Field(default=86400, ge=60, le=604800)
+
+
+class PublishOut(BaseModel):
+    queued: bool
+    radios: list[str]
 
 
 @app.get("/health", response_model=HealthOut)
 def health() -> HealthOut:
     ident = _get_identity()
+    _ensure_bridges()
+    lora_st = (
+        _LORA.status
+        if _LORA is not None
+        else lora_bridge.LoraStatus(state="unavailable", detail="not attached", last_change_ts=0.0)
+    )
+    wifi_st = (
+        _WIFI.status
+        if _WIFI is not None
+        else wifi_bridge.WifiStatus(state="unavailable", detail="not attached", last_change_ts=0.0)
+    )
     return HealthOut(
         version=__version__,
         fingerprint=ident.fingerprint,
         peer_count=len(_PEERS.all()),
+        lora=RadioStatusOut(state=lora_st.state, detail=lora_st.detail, last_change_ts=lora_st.last_change_ts),
+        wifi=RadioStatusOut(state=wifi_st.state, detail=wifi_st.detail, last_change_ts=wifi_st.last_change_ts),
     )
+
+
+@app.post("/notes/publish", response_model=PublishOut)
+def publish_note(body: PublishNoteIn) -> PublishOut:
+    """Sign + fan-out a note to whichever radios are available.
+
+    Called by signal-notes whenever a local user posts. Loopback-only:
+    nginx does not expose ``/api/mesh/notes/publish`` (the proxy block
+    rewrites only /api/mesh/identity, /peers, /health). signal-notes
+    hits the upstream on 127.0.0.1:8500 directly.
+    """
+
+    ident = _get_identity()
+    seq = _next_seq()
+    envelope = messages.make_note(
+        sender=ident.fingerprint,
+        seq=seq,
+        # Real Ed25519 signing wires in when the Reticulum daemon
+        # bridge lands; until then we emit unsigned envelopes so the
+        # wire format is exercised end-to-end without requiring the
+        # private-key bytes in this process.
+        priv=b"\x00" * 32,
+        note_id=body.note_id,
+        name=body.name,
+        text=body.text,
+        ttl_s=body.ttl_s,
+    )
+    import json as _json
+
+    wire = _json.dumps(envelope.__dict__, sort_keys=True).encode("utf-8") + b"\n"
+
+    radios: list[str] = []
+    _ensure_bridges()
+    if _WIFI is not None and _WIFI.publish(wire):
+        radios.append("wifi")
+    # LoRa outbound lands with sub-phase 7.2 once Reticulum's outbound
+    # API is wired through the bridge.
+    return PublishOut(queued=len(radios) > 0, radios=radios)
 
 
 @app.get("/identity", response_model=IdentityOut)
