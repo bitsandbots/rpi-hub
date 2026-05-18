@@ -1,9 +1,11 @@
 # Purpose: Run the FastAPI signal-mesh control plane on 127.0.0.1:8500.
-#          nginx proxies /api/mesh/ to this upstream. The unit generates
-#          the Ed25519 keypair on first start (ExecStartPre) so the
-#          fingerprint is stable from boot 1.
+#          nginx proxies /api/mesh/ to this upstream. The Ed25519
+#          keypair is provisioned out-of-band by signal-mesh-keygen
+#          (oneshot) and delivered into this unit via LoadCredential=,
+#          so the daemon never has filesystem access to /var/lib/signal/keys
+#          while it is running.
 # Unit:    signal-mesh.service
-# Phase:   7
+# Phase:   7 (signed envelopes wired v1.2)
 #
 # Radio data planes live in their own units that this service ships
 # alongside (Reticulum daemon for LoRa, batctl + alfred for Wi-Fi). We
@@ -12,27 +14,26 @@
 
 [Unit]
 Description=SIGNAL mesh control plane (FastAPI)
-After=network.target signal-ap.service
+After=network.target signal-ap.service signal-mesh-keygen.service
+Requires=signal-mesh-keygen.service
 PartOf=signal-ap.service
 
 [Service]
 Type=simple
 DynamicUser=yes
 
-# StateDirectory creates /var/lib/signal/keys owned by the dynamic user
-# with mode 0700. That's where the Ed25519 keypair is pinned (priv 0600,
-# pub 0644). systemd manages the dir lifecycle; uninstall removes it.
-StateDirectory=signal/keys
-StateDirectoryMode=0700
+# Private key (0600) + public key (0644) are loaded by the credential
+# manager as root before the daemon steps down to its dynamic user. The
+# daemon reads them via $CREDENTIALS_DIRECTORY (see
+# identity.load_from_credentials). If either file is missing the unit
+# fails — keygen runs Before= us and is Requires=, so a fresh boot
+# always has both in place.
+LoadCredential=ed25519_priv:/var/lib/signal/keys/ed25519.priv
+LoadCredential=ed25519_pub:/var/lib/signal/keys/ed25519.pub
 
 Environment=PYTHONPATH=/opt/signal
 Environment=PYTHONDONTWRITEBYTECODE=1
 WorkingDirectory=/opt/signal
-
-# Generate the keypair before binding the listener so the very first
-# /identity request sees a real fingerprint. The script exits 0 fast
-# when the keys are already present.
-ExecStartPre=/usr/bin/python3 -c "from mesh.signal_mesh import identity; identity.load_or_create()"
 
 ExecStart=/usr/bin/python3 -m uvicorn mesh.signal_mesh.main:app \
     --host 127.0.0.1 \
@@ -67,7 +68,6 @@ SystemCallFilter=@system-service
 SystemCallFilter=~@privileged @resources
 RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 ReadOnlyPaths=/opt/signal /etc/signal
-ReadWritePaths=/var/lib/signal/keys
 
 [Install]
 WantedBy=multi-user.target

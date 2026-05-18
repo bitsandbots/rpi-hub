@@ -33,8 +33,18 @@
       .then(function (body) {
         var fp = $("#peers-fp");
         if (fp) fp.textContent = body.fingerprint || "—";
+        // QR image is set in HTML; if the mesh service is offline the
+        // <img> 404s and renders the alt text. Hide it in that case so
+        // the page stays calm.
+        var qr = $("#peers-qr");
+        if (qr) {
+          qr.addEventListener("error", function () { qr.hidden = true; }, { once: true });
+        }
       })
-      .catch(function () { /* leave dash */ });
+      .catch(function () {
+        var qr = $("#peers-qr");
+        if (qr) qr.hidden = true;
+      });
   }
 
   function refreshPeers() {

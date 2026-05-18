@@ -64,7 +64,7 @@ remove_mesh() {
     # files. The Ed25519 keypair at /var/lib/signal/keys is intentionally
     # preserved — a re-install keeps the node's identity stable, which is
     # what trusted peers rely on.
-    for unit in signal-batman.service signal-reticulum.service signal-mesh.service; do
+    for unit in signal-batman.service signal-reticulum.service signal-mesh.service signal-mesh-keygen.service; do
         systemctl disable --now "$unit" 2>/dev/null || true
         rm -f "/etc/systemd/system/${unit}"
     done

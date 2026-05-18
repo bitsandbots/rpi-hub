@@ -7,10 +7,14 @@ networking, and a community notes board — **without any internet uplink**.
 Built for emergency contexts, mutual-aid groups, disaster response, and
 off-grid communities.
 
-> Status: **v1.0 — all nine phases shipped.** AP, captive portal, Kiwix
-> library, CoreConduit frontend, status API, RAG assistant (Pi 5),
-> ephemeral notes board, regional content packs, RTL-SDR Listen
-> (NOAA/FM/ham), and Reticulum + BATMAN-adv mesh control plane.
+> Status: **v1.2 — all nine phases plus every software-only follow-up shipped.**
+> AP, captive portal, Kiwix library, CoreConduit frontend, status API,
+> RAG assistant (Pi 5), ephemeral notes board, regional content packs,
+> RTL-SDR Listen (NOAA/FM/ham), Reticulum + BATMAN-adv mesh control plane,
+> signed `/notes/publish` envelopes via systemd `LoadCredential=`, and a
+> QR fingerprint endpoint at `/api/mesh/identity.svg` for cross-hub
+> trust setup. What's still gated on bench hardware is documented in
+> [`docs/V1.2.md`](./docs/V1.2.md).
 > See [the full plan](./docs/PLAN.md) and the interactive
 > [build wizard](./signal-wizard.html) for phase-by-phase scope and
 > acceptance criteria. Build sequencing followed `1 → 2 → 3 → 4 → 5 → 6 → 9 → 8 → 7`.

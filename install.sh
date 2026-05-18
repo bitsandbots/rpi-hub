@@ -476,10 +476,18 @@ phase7() {
     fi
     systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
 
+    # v1.2: split keypair provisioning out into its own oneshot, so the
+    # long-running daemon can pick up the bytes via LoadCredential= and
+    # drop filesystem access to /var/lib/signal/keys entirely.
+    install -m 0644 "${REPO_DIR}/systemd/signal-mesh-keygen.service" \
+        /etc/systemd/system/signal-mesh-keygen.service
     install -m 0644 "${REPO_DIR}/systemd/signal-mesh.service" \
         /etc/systemd/system/signal-mesh.service
     systemctl daemon-reload
-    systemctl enable signal-mesh.service
+    systemctl enable signal-mesh-keygen.service signal-mesh.service
+    # Keygen first, then the daemon; the latter Requires= the former so
+    # restart in this order is also what systemd would have done.
+    systemctl restart signal-mesh-keygen.service
     systemctl restart signal-mesh.service
 
     # Surface the local fingerprint right after start so the operator

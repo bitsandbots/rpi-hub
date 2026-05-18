@@ -7,8 +7,9 @@ the trust UI; sub-phases 7.1–7.3 wire the radio layers into it.
 
 Endpoints:
 
-* ``GET /identity`` — local fingerprint + public key (for owner-to-owner trust setup)
-* ``GET /peers``    — peer table
+* ``GET /identity``     — local fingerprint + public key (for owner-to-owner trust setup)
+* ``GET /identity.svg`` — fingerprint rendered as a printable QR code
+* ``GET /peers``        — peer table
 * ``POST /peers/{fp}/trust`` {display_name} — owner action
 * ``POST /peers/{fp}/block`` — owner action
 * ``GET /health``
@@ -22,9 +23,10 @@ from pathlib import Path
 from typing import Annotated
 
 from fastapi import FastAPI, Header, HTTPException, status
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from . import __version__, identity, lora_bridge, messages, peers, wifi_bridge
+from . import __version__, identity, lora_bridge, messages, peers, qrcode, wifi_bridge
 
 app = FastAPI(
     title="signal-mesh",
@@ -35,7 +37,7 @@ app = FastAPI(
 )
 
 _PEERS = peers.PeerTable()
-_IDENTITY: identity.Identity | None = None
+_BUNDLE: identity.IdentityBundle | None = None
 _OUTBOUND_SEQ = 0  # per-process monotonic; persists for the unit's lifetime
 OWNER_TOKEN_PATH = Path(os.environ.get("SIGNAL_MESH_TOKEN_FILE", "/etc/signal/notes-owner-token"))
 
@@ -100,11 +102,24 @@ def _ensure_bridges() -> None:
         _WIFI = wifi_bridge.attach(_on_wifi_peer)
 
 
+def _get_bundle() -> identity.IdentityBundle:
+    """Cached identity + private-key bundle for this unit's lifetime.
+
+    Reads from ``$CREDENTIALS_DIRECTORY`` under systemd (production),
+    falls back to ``/var/lib/signal/keys/`` for dev. The private bytes
+    only live in this process's memory — they are not on the filesystem
+    from the daemon's point of view (signal-mesh.service has no
+    ReadWritePaths / ReadOnlyPaths to the key dir).
+    """
+
+    global _BUNDLE
+    if _BUNDLE is None:
+        _BUNDLE = identity.load_from_credentials()
+    return _BUNDLE
+
+
 def _get_identity() -> identity.Identity:
-    global _IDENTITY
-    if _IDENTITY is None:
-        _IDENTITY = identity.load_or_create()
-    return _IDENTITY
+    return _get_bundle().identity
 
 
 def _require_owner(token_header: str | None) -> None:
@@ -206,16 +221,12 @@ def publish_note(body: PublishNoteIn) -> PublishOut:
     hits the upstream on 127.0.0.1:8500 directly.
     """
 
-    ident = _get_identity()
+    bundle = _get_bundle()
     seq = _next_seq()
     envelope = messages.make_note(
-        sender=ident.fingerprint,
+        sender=bundle.identity.fingerprint,
         seq=seq,
-        # Real Ed25519 signing wires in when the Reticulum daemon
-        # bridge lands; until then we emit unsigned envelopes so the
-        # wire format is exercised end-to-end without requiring the
-        # private-key bytes in this process.
-        priv=b"\x00" * 32,
+        priv=bundle.private_key,
         note_id=body.note_id,
         name=body.name,
         text=body.text,
@@ -241,6 +252,26 @@ def get_identity() -> IdentityOut:
         fingerprint=ident.fingerprint,
         public_key_b64=base64.b64encode(ident.public_key).decode("ascii"),
         version=__version__,
+    )
+
+
+@app.get("/identity.svg")
+def get_identity_svg() -> Response:
+    """Fingerprint as a QR code, for the cross-hub trust workflow.
+
+    A second owner scans this with any phone camera; their reader
+    surfaces the fingerprint text, which they then paste into their
+    own /peers page to mark our node trusted. The endpoint serves
+    image/svg+xml so a fresh page (or print preview) can render it
+    without JavaScript.
+    """
+
+    fp = _get_identity().fingerprint
+    svg = qrcode.to_svg(fp, module_px=8, quiet=4)
+    return Response(
+        content=svg,
+        media_type="image/svg+xml",
+        headers={"Cache-Control": "public, max-age=60"},
     )
 
 

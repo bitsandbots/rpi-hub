@@ -9,6 +9,44 @@ commit.
 
 ## [Unreleased]
 
+## [1.2.0] — 2026-05-18
+
+Polish release closing two of the four non-hardware-gated items
+deferred past v1.1. See `docs/V1.2.md`.
+
+### Added
+
+- **Signed mesh envelopes.** `/notes/publish` now signs the outbound
+  envelope with the real Ed25519 private key instead of the zero-byte
+  stub. The keypair is delivered into `signal-mesh.service` via systemd
+  `LoadCredential=`, so the running daemon has no filesystem access to
+  `/var/lib/signal/keys`.
+- **`signal-mesh-keygen.service`** (oneshot, `RemainAfterExit=yes`) —
+  owns first-boot keypair generation. `signal-mesh.service` is
+  `Requires=` + `After=` this unit, so the credential loader always
+  sees a populated key directory.
+- **`GET /api/mesh/identity.svg`** — server-rendered QR code of the
+  local fingerprint, for the cross-hub trust workflow. Rendered by a
+  hand-rolled pure-Python QR encoder (`mesh/signal_mesh/qrcode.py`):
+  byte mode, ECC level M, versions 1-3, all 8 mask patterns evaluated.
+- **`peers.html`** surfaces the QR inline beneath the fingerprint with
+  a calm "scan with any QR reader" caption. The image element 404s
+  silently if mesh is offline.
+
+### Changed
+
+- `signal-mesh.service` drops `ReadWritePaths=/var/lib/signal/keys`,
+  `StateDirectory=signal/keys`, and the in-unit keypair-generation
+  `ExecStartPre=`. Those responsibilities moved to the new keygen
+  oneshot.
+- `identity.load_from_credentials()` replaces the daemon's call to
+  `identity.load_or_create()`; the latter stays for the keygen unit
+  and for tests.
+- Mesh test suite adds three coverage points: credentials-dir vs disk
+  fallback, deterministic stub when neither is present, and a real
+  Ed25519 signature on `/notes/publish` verifying against the public
+  key.
+
 ## [1.1.0] — 2026-05-18
 
 Post-v1.0 follow-ups bundled. See `docs/V1.1.md` for the full write-up.
@@ -142,7 +180,9 @@ See `docs/PHASE_2.md`. Captive portal redirect + nginx default-server.
 
 See `docs/PHASE_1.md`. Bare AP — hostapd + dnsmasq + `signal-ap.service`.
 
-[Unreleased]: https://github.com/coreconduit/signal/compare/v1.0.0...HEAD
+[Unreleased]: https://github.com/coreconduit/signal/compare/v1.2.0...HEAD
+[1.2.0]: https://github.com/coreconduit/signal/releases/tag/v1.2.0
+[1.1.0]: https://github.com/coreconduit/signal/releases/tag/v1.1.0
 [1.0.0]: https://github.com/coreconduit/signal/releases/tag/v1.0.0
 [0.8.0-phase8]: https://github.com/coreconduit/signal/releases/tag/v0.8.0-phase8
 [0.9.0-phase9]: https://github.com/coreconduit/signal/releases/tag/v0.9.0-phase9

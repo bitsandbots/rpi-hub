@@ -10,7 +10,9 @@ a retrieval-grounded assistant, an ephemeral notes board, RTL-SDR radio
 reception, and a Reticulum + BATMAN-adv mesh control plane — **without
 any internet uplink**.
 
-**Status: v1.0 shipped. All nine phases landed.**
+**Status: v1.2 shipped.** Every nine-phase item plus every post-v1.0
+follow-up that doesn't require physical hardware on a bench is in the
+box.
 
 ## Phase status (all shipped per the approved sequencing 1→2→3→4→5→6→9→8→7)
 
@@ -25,6 +27,8 @@ any internet uplink**.
 | `v0.9.0-phase9` | Notes board + packs | signal-notes (tmpfs) + 5 regional packs + `/print/` |
 | `v0.8.0-phase8` | Listen | signal-listen + SAME pipeline + alert banner + Listen UI |
 | `v1.0.0`        | Mesh | signal-mesh + Ed25519 identity + peer trust UI |
+| `v1.1.0`        | Post-v1.0 polish | LoRa+BATMAN scaffolds, audio fanout, ADS-B UI, mesh-propagated notes, read-only root |
+| `v1.2.0`        | Mesh signing + QR | signed `/notes/publish`, `signal-mesh-keygen.service`, `/api/mesh/identity.svg` |
 
 ## Repository layout
 
@@ -115,15 +119,22 @@ make smoke    # → scripts/healthcheck.sh
 8500/tcp  signal-mesh     127.0.0.1       /api/mesh
 ```
 
-## Known follow-ups (post-v1.0)
+## Known follow-ups (hardware-gated only as of v1.2)
 
-- **Phase 7.1–7.3**: Reticulum daemon (LoRa) + BATMAN-adv (Wi-Fi mesh)
-  data planes. Control plane shipped; data planes need physical
-  hardware on the bench.
-- **Phase 8.3**: WebSocket audio bridge for the Listen UI.
-- **Phase 8.4**: dump1090 / ADS-B UI (decoder installed, UI follow-up).
-- **Phase 9.2**: mesh-propagated notes (depends on Phase 7.1–7.2).
-- **v1.1**: read-only root via overlayfs.
+Every software-only follow-up has shipped. What remains is gated on
+specific hardware on a bench:
+
+- **Phase 7.1–7.3 data planes**: Reticulum daemon (LoRa) + BATMAN-adv
+  (Wi-Fi mesh). Bridges and units ship as scaffolds in v1.1 — need
+  RAK4631 + USB Wi-Fi adapter to validate.
+- **Phase 8.3**: WebSocket audio bridge for the Listen UI. Producer
+  primitive `AudioFanout` lands in v1.1; the route needs a Pi 4 +
+  RTL-SDR dongle to tune buffer sizes against.
+- **Phase 8.4**: dump1090-mutability install integration (UI shipped
+  in v1.1 — apt-install gated on USB dongle detection).
+- **Three-node mesh testbed write-up**: `docs/MESH_TESTBED.md` once
+  three Pi 4/5 + LoRa hats are on the bench.
+- **Pack PDFs**: printable field-card design pass.
 
 ## Source-of-truth documents
 

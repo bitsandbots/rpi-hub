@@ -726,6 +726,27 @@ main {
   font-size: 0.9rem;
   margin: var(--s-2) 0 0 0;
 }
+.peers-identity__qr {
+  margin: var(--s-3) 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+}
+.peers-identity__qr img {
+  display: block;
+  width: 232px;
+  height: 232px;
+  background: #fff;
+  padding: var(--s-2);
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-card);
+}
+.peers-identity__qr figcaption {
+  color: var(--c-ink-muted);
+  font-size: 0.85rem;
+  max-width: 24rem;
+}
 
 .peers-rows { list-style: none; margin: 0; padding: 0; }
 .peer {
