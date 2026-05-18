@@ -77,6 +77,20 @@
           <p class="tile__desc">OpenStreetMap regional bundles — works fully offline.</p>
         </a>
 
+        <a class="tile" id="tile-board" href="/board.html" data-state="probing" hidden>
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">Brd</span>
+          <h2 class="tile__title">Board</h2>
+          <p class="tile__desc">Local notes board — wipes on reboot.</p>
+        </a>
+
+        <a class="tile" id="tile-print" href="/print/" data-state="probing" hidden>
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">Prn</span>
+          <h2 class="tile__title">Print</h2>
+          <p class="tile__desc">Field cards — water, wounds, fire, knots.</p>
+        </a>
+
         <a class="tile" href="/status.html" data-state="ready">
           <span class="tile__state">Live</span>
           <span class="tile__icon" aria-hidden="true">Sys</span>
@@ -94,20 +108,24 @@
   </main>
 
   <footer class="site-footer">
-    SIGNAL <code>v0.6</code> · Phase 6 · Open SSID · No internet egress · MIT licensed
+    SIGNAL <code>v0.9</code> · Phase 9 · Open SSID · No internet egress · MIT licensed
   </footer>
 
   <script>
-    // Probe /api/ask via signal-assist's /health when reachable; the tile
-    // only unhides if the unit is actually running. This is the only JS
-    // on the landing page and it's strictly progressive enhancement —
-    // the Library, Status, etc. tiles stay visible without JS.
+    // Progressive-enhancement tile probes. Each unit-backed tile stays
+    // hidden until its endpoint replies 2xx. Library, Status, etc. tiles
+    // remain visible without JS.
     (function () {
-      var tile = document.getElementById("tile-ask");
-      if (!tile) return;
-      fetch("/api/retrieve?q=hub&k=1", { cache: "no-store" })
-        .then(function (r) { if (r.ok) tile.hidden = false; })
-        .catch(function () { /* keep hidden */ });
+      function probe(tileId, url) {
+        var tile = document.getElementById(tileId);
+        if (!tile) return;
+        fetch(url, { cache: "no-store" })
+          .then(function (r) { if (r.ok) tile.hidden = false; })
+          .catch(function () { /* keep hidden */ });
+      }
+      probe("tile-ask",   "/api/retrieve?q=hub&k=1");
+      probe("tile-board", "/api/notes?limit=1");
+      probe("tile-print", "/print/");
     })();
   </script>
 </body>

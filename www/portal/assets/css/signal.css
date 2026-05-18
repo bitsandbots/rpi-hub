@@ -562,3 +562,98 @@ main {
   margin-top: var(--s-2);
 }
 
+/* -- Phase 9: notes board ------------------------------------------------- */
+
+.board-form {
+  margin: var(--s-5) 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.board-form input[type="text"],
+.board-form textarea {
+  font: inherit;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--c-silver-edge);
+  border-radius: var(--r-card);
+  background: #fff;
+  color: var(--c-ink);
+  width: 100%;
+  box-sizing: border-box;
+}
+.board-form textarea {
+  resize: vertical;
+  min-height: 5rem;
+  line-height: 1.5;
+}
+.board-form input[type="text"]:focus,
+.board-form textarea:focus {
+  outline: 2px solid var(--c-blue);
+  outline-offset: 1px;
+}
+.board-form__row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: var(--s-3);
+}
+.board-counter {
+  font-variant-numeric: tabular-nums;
+  color: var(--c-ink-muted);
+  font-size: 0.9rem;
+}
+.board-counter--low {
+  color: var(--c-warn);
+  font-weight: 600;
+}
+.board-form button {
+  font: inherit;
+  font-weight: 600;
+  padding: var(--s-3) var(--s-5);
+  background: var(--c-blue);
+  color: #fff;
+  border: 0;
+  border-radius: var(--r-card);
+  cursor: pointer;
+}
+.board-form button:hover { background: #1a5ec1; }
+.board-status {
+  margin: 0;
+  min-height: 1.25rem;
+  font-size: 0.9rem;
+  color: var(--c-ink-muted);
+}
+.board-status--error { color: var(--c-bad); }
+
+.board-notes {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.board-note {
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-card);
+  padding: var(--s-3) var(--s-4);
+  margin-bottom: var(--s-2);
+}
+.board-note__h {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 0.85rem;
+  color: var(--c-ink-muted);
+  margin-bottom: var(--s-1);
+}
+.board-note__name { font-weight: 600; color: var(--c-navy); }
+.board-note__text {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.board-empty {
+  color: var(--c-ink-muted);
+  font-style: italic;
+}
+
+

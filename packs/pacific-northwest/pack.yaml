@@ -1,0 +1,28 @@
+# Purpose: Pacific Northwest regional pack. Tuned for Cascadia subduction
+#          zone seismic + tsunami risk, plus regional flora/fauna and
+#          NOAA WA/OR/ID stations for Phase 8.
+# Unit:    n/a (consumed by install.sh --pack=pacific-northwest)
+# Phase:   9B
+name: pacific-northwest
+display_name: Pacific Northwest
+description: >
+  Cascadia earthquake + tsunami, regional flora/fauna, NOAA WA/OR/ID
+  presets. Layered on top of the general-purpose corpus.
+version: 1
+tier: core
+zims:
+  - wikipedia_en_simple_all_nopic.zim
+  - wikihow_en_maxi.zim
+  - medical_en_all_maxi.zim
+print:
+  - file: cascadia-shake.pdf
+    title: Cascadia shake — first 30 minutes
+  - file: tsunami-evacuation.pdf
+    title: Tsunami — high-ground heuristics
+  - file: pnw-edible-plants.pdf
+    title: Pacific Northwest edible plants (and lookalikes)
+noaa:
+  preset_frequencies_mhz:
+    - 162.400  # KHB-60 (Seattle, WA)
+    - 162.475  # KEC-91 (Portland, OR)
+    - 162.550  # KIH-21 (Coeur d'Alene, ID)

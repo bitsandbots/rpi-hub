@@ -59,6 +59,15 @@ remove_assistant() {
     # is the user's call.
 }
 
+remove_notes() {
+    # Phase 9A. The board lives on tmpfs so there's no persistent state
+    # to clean up beyond the service + token + print tree.
+    systemctl disable --now signal-notes.service 2>/dev/null || true
+    rm -f /etc/systemd/system/signal-notes.service
+    rm -f /etc/signal/notes-owner-token
+    rm -rf /var/www/signal-portal/print
+}
+
 remove_status() {
     systemctl disable --now signal-status.service 2>/dev/null || true
     rm -f /etc/systemd/system/signal-status.service
@@ -77,6 +86,7 @@ main() {
     # Tear down in reverse phase order. The status API and Kiwix are the
     # user-visible services; bring them down before the AP layer so a
     # watcher sees the outage propagate top-down.
+    remove_notes
     remove_assistant
     remove_status
     remove_kiwix

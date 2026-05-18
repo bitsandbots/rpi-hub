@@ -1,0 +1,27 @@
+# Purpose: Gulf Coast regional pack. Hurricane prep, flood maps, mosquito-
+#          borne disease, NOAA TX–FL presets.
+# Unit:    n/a (consumed by install.sh --pack=gulf-coast)
+# Phase:   9B
+name: gulf-coast
+display_name: Gulf Coast
+description: >
+  Hurricane prep, flood-zone awareness, mosquito-borne illness, and NOAA
+  TX–FL presets. Layered on top of the general-purpose corpus.
+version: 1
+tier: core
+zims:
+  - wikipedia_en_simple_all_nopic.zim
+  - wikihow_en_maxi.zim
+  - medical_en_all_maxi.zim
+print:
+  - file: hurricane-prep.pdf
+    title: Hurricane prep — 72 hours before landfall
+  - file: post-storm-water.pdf
+    title: Post-storm water safety
+  - file: mosquito-borne-illness.pdf
+    title: Mosquito-borne illness — recognise + treat
+noaa:
+  preset_frequencies_mhz:
+    - 162.400  # WXK-50 (New Orleans, LA)
+    - 162.475  # KIH-23 (Houston, TX)
+    - 162.550  # WXJ-67 (Miami, FL)

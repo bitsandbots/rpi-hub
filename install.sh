@@ -48,15 +48,35 @@
 #   No model weights or index are pulled here — those come from
 #   models/fetch_models.sh and indexer/build_index.py on a workstation.
 #
-# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=6
-# runs Phase 1 through Phase 6. Default is the highest phase shipped at
-# this tag.
+# Phase 9 scope (additive):
+#   - Stage notes/ into /opt/signal/notes/
+#   - Install + enable signal-notes.service (uvicorn on 127.0.0.1:8400)
+#   - Generate /etc/signal/notes-owner-token (one-time, 32 hex chars)
+#   - Refresh nginx config (carries /api/notes + /print/ blocks)
+#   - Refresh portal tree (carries board.html + board.js)
+#   - --pack=<name> applies a regional content pack (zims + print PDFs)
+#
+# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=9
+# runs Phase 1 through Phase 9. (Phases 7 + 8 land later; the value 9
+# here means "include the 9A notes board"; we skip Phase 7 + 8 cleanly.)
+# Default is the highest phase shipped at this tag.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE="${PHASE:-6}"
+PHASE="${PHASE:-9}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
+PACK=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --pack=*) PACK="${1#--pack=}"; shift ;;
+        --pack)   PACK="${2:-}"; shift 2 ;;
+        --phase=*) PHASE="${1#--phase=}"; shift ;;
+        --) shift; break ;;
+        *) shift ;;
+    esac
+done
 
 log() { printf '[signal-install] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -401,6 +421,65 @@ phase6() {
     log "Phase 6 complete. http://hub.local/ask.html lights up when both units are running."
 }
 
+ensure_owner_token() {
+    # Generate a 32-hex-char token if one is not already on disk. The
+    # token gates DELETE /api/notes/{id} and POST /api/notes/wipe — the
+    # owner shells into the device to read it.
+    local token_file="/etc/signal/notes-owner-token"
+    install -d -m 0755 /etc/signal
+    if [[ ! -s "$token_file" ]]; then
+        # /dev/urandom + tr is universal; openssl/uuidgen aren't always
+        # in Bookworm minimal images.
+        tr -dc 'a-f0-9' </dev/urandom | head -c 32 >"$token_file"
+        chmod 0600 "$token_file"
+        log "generated owner token at $token_file (cat it as root)"
+    fi
+}
+
+phase9() {
+    log "Phase 9 — Notes board + regional packs"
+
+    # Notes board service code.
+    install -d -m 0755 /opt/signal/notes
+    install_tree "${REPO_DIR}/notes" /opt/signal/notes
+
+    # Owner-moderation token. One-time generation; never overwritten.
+    ensure_owner_token
+
+    # Refresh portal so board.html + board.js are served.
+    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    ensure_nginx_site
+    if ! nginx -t 2>/dev/null; then
+        nginx -t
+        die "nginx config did not validate; aborting"
+    fi
+    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+
+    # Service unit. The unit creates /run/signal-notes (tmpfs) via
+    # RuntimeDirectory= so we don't touch fstab.
+    install -m 0644 "${REPO_DIR}/systemd/signal-notes.service" \
+        /etc/systemd/system/signal-notes.service
+    systemctl daemon-reload
+    systemctl enable signal-notes.service
+    systemctl restart signal-notes.service
+
+    # Optional pack application. The workstation produces the PDFs +
+    # writes the print/ tree; we just install them here. The user passes
+    # --pack=<name> the same way they passed PHASE=N.
+    if [[ -n "$PACK" ]]; then
+        local pack_print_src="${REPO_DIR}/packs/${PACK}/print"
+        if [[ -d "$pack_print_src" ]]; then
+            install_tree "$pack_print_src" /var/www/signal-portal/print
+            log "applied pack=$PACK print cards"
+        else
+            log "pack=$PACK has no print/ directory; skipping print install"
+        fi
+    fi
+
+    log "Phase 9 complete. http://hub.local/board.html serves the board."
+    log "Owner token: cat /etc/signal/notes-owner-token (root only)"
+}
+
 main() {
     require_root
     case "$PHASE" in
@@ -410,7 +489,10 @@ main() {
         4) phase1; phase2; phase3; phase4 ;;
         5) phase1; phase2; phase3; phase4; phase5 ;;
         6) phase1; phase2; phase3; phase4; phase5; phase6 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 6)" ;;
+        # Phases 7 + 8 land later; PHASE=9 skips them cleanly (notes
+        # board is independent of mesh + radio).
+        9) phase1; phase2; phase3; phase4; phase5; phase6; phase9 ;;
+        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 9)" ;;
     esac
 }
 
