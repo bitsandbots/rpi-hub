@@ -7,17 +7,22 @@ networking, and a community notes board — **without any internet uplink**.
 Built for emergency contexts, mutual-aid groups, disaster response, and
 off-grid communities.
 
-> Status: **v1.2 — all nine phases plus every software-only follow-up shipped.**
+> Status: **v1.2.1 — all nine phases plus every software-only follow-up shipped.**
 > AP, captive portal, Kiwix library, CoreConduit frontend, status API,
 > RAG assistant (Pi 5), ephemeral notes board, regional content packs,
-> RTL-SDR Listen (NOAA/FM/ham), Reticulum + BATMAN-adv mesh control plane,
-> signed `/notes/publish` envelopes via systemd `LoadCredential=`, and a
-> QR fingerprint endpoint at `/api/mesh/identity.svg` for cross-hub
-> trust setup. What's still gated on bench hardware is documented in
-> [`docs/V1.2.md`](./docs/V1.2.md).
-> See [the full plan](./docs/PLAN.md) and the interactive
-> [build wizard](./signal-wizard.html) for phase-by-phase scope and
-> acceptance criteria. Build sequencing followed `1 → 2 → 3 → 4 → 5 → 6 → 9 → 8 → 7`.
+> RTL-SDR Listen (NOAA / FM / ham), Reticulum + BATMAN-adv mesh control
+> plane, signed `/notes/publish` envelopes via systemd `LoadCredential=`,
+> QR fingerprint endpoint at `/api/mesh/identity.svg`, and the Phase 8.4
+> dump1090-mutability install gate with a live ADS-B status row.
+>
+> Canonical references:
+> - [`docs/OVERVIEW.md`](./docs/OVERVIEW.md) — system reference (architecture, setup, API)
+> - [`docs/GAP_ANALYSIS.md`](./docs/GAP_ANALYSIS.md) — what's still gated on bench hardware
+> - [`Blueprint_Overview.html`](./Blueprint_Overview.html) — visual blueprint for operators
+> - [`signal-wizard.html`](./signal-wizard.html) — interactive build checklist
+> - [`CHANGELOG.md`](./CHANGELOG.md) — per-release notes
+>
+> Build sequencing followed `1 → 2 → 3 → 4 → 5 → 6 → 9 → 8 → 7` so every tag was end-to-end demoable.
 
 ## What it is
 

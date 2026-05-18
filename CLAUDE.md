@@ -46,7 +46,7 @@ systemd/             one unit per service; all bind 127.0.0.1
 www/portal/          landing + per-tile pages + assets
 scripts/             healthcheck, factory_reset, bake_image, apply_pack, same_pipeline
 content/             ZIM manifest + workstation fetch script
-docs/                PHASE_1.md … PHASE_9.md, CONTENT_GUIDE, CROSS_OS_TEST_MATRIX
+docs/                OVERVIEW.md (canonical), GAP_ANALYSIS.md, CONTENT_GUIDE.md, CROSS_OS_TEST_MATRIX.md
 ```
 
 ## Non-negotiable invariants
@@ -138,13 +138,30 @@ specific hardware on a bench:
 
 ## Source-of-truth documents
 
-- `signal-wizard.html` — interactive checklist UI (phase scope + acceptance gates).
-- `docs/PHASE_<N>.md` — per-phase implementation notes.
-- `Project_SIGNAL_*.docx` — original engineering specs (Phases 1–5, 6, 7–9).
+- **`docs/OVERVIEW.md`** — canonical v1.2.1 system reference (purpose,
+  architecture, tech stack, setup, API reference, frontend pages, ops
+  runbooks, module map). Replaces the per-phase notes that used to
+  live in this directory.
+- **`docs/GAP_ANALYSIS.md`** — open hardware-gated work, undocumented
+  surfaces, frontend inconsistencies, test gaps.
+- **`Blueprint_Overview.html`** — visual blueprint for operators (SVG
+  architecture diagram, service grid, hardware tiers, port inventory).
+- **`signal-wizard.html`** — interactive build checklist.
+- **`CHANGELOG.md`** — per-release notes (supersedes the old
+  `docs/V1.x.md` deltas).
+- **`Project_SIGNAL_*.docx`** — original engineering specs (frozen
+  pre-implementation, useful for historical context; current state
+  may differ).
+
+The per-phase `docs/PHASE_<N>.md` files were retired in the v1.2.1
+docs-consolidation pass. Their content remains in git history at the
+corresponding release tags (`v0.1.0-phase1` … `v1.0.0`).
 
 ## When extending an existing phase
 
-1. Read the phase's `docs/PHASE_<N>.md` for invariants and known limits.
+1. Read the relevant section of `docs/OVERVIEW.md` for the current
+   shape of the service; check `docs/GAP_ANALYSIS.md` for known
+   limits.
 2. Match the existing unit-of-work pattern: service code under its
    package, systemd unit under `systemd/`, nginx route in
    `config/nginx/signal-portal.conf`, UI page under `www/portal/`, tile
