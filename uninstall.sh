@@ -59,6 +59,18 @@ remove_assistant() {
     # is the user's call.
 }
 
+remove_listen() {
+    # Phase 8. Two units, both bound to dongle hardware. We stop the
+    # pipeline before the control plane so a final stop request can
+    # reach the arbiter.
+    for unit in signal-listen-same.service signal-listen.service; do
+        systemctl disable --now "$unit" 2>/dev/null || true
+        rm -f "/etc/systemd/system/${unit}"
+    done
+    # Leave /var/lib/signal/listen in place: pack-supplied NOAA presets
+    # are useful again immediately on reinstall.
+}
+
 remove_notes() {
     # Phase 9A. The board lives on tmpfs so there's no persistent state
     # to clean up beyond the service + token + print tree.
@@ -86,6 +98,7 @@ main() {
     # Tear down in reverse phase order. The status API and Kiwix are the
     # user-visible services; bring them down before the AP layer so a
     # watcher sees the outage propagate top-down.
+    remove_listen
     remove_notes
     remove_assistant
     remove_status

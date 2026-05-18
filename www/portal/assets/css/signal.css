@@ -656,4 +656,62 @@ main {
   font-style: italic;
 }
 
+/* -- Phase 8: listen ------------------------------------------------------ */
+
+.listen-modes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-5) 0 var(--s-3) 0;
+}
+.listen-mode-btn {
+  font: inherit;
+  font-weight: 600;
+  padding: var(--s-3) var(--s-4);
+  border: 1px solid var(--c-silver-edge);
+  background: #fff;
+  color: var(--c-navy);
+  border-radius: var(--r-card);
+  cursor: pointer;
+}
+.listen-mode-btn:hover { background: var(--c-silver-soft); }
+.listen-mode-btn--stop {
+  border-color: var(--c-bad);
+  color: var(--c-bad);
+}
+
+.listen-presets {
+  display: flex;
+  gap: var(--s-2);
+  margin-bottom: var(--s-3);
+}
+.listen-presets select {
+  flex: 1;
+  font: inherit;
+  padding: var(--s-2) var(--s-3);
+  border: 1px solid var(--c-silver-edge);
+  border-radius: var(--r-card);
+  background: #fff;
+}
+.listen-presets button {
+  font: inherit;
+  font-weight: 600;
+  padding: var(--s-2) var(--s-5);
+  background: var(--c-blue);
+  color: #fff;
+  border: 0;
+  border-radius: var(--r-card);
+  cursor: pointer;
+}
+.listen-presets button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.listen-state {
+  padding: var(--s-3) var(--s-4);
+  background: var(--c-silver-soft);
+  border-radius: var(--r-card);
+  color: var(--c-ink-muted);
+}
+.listen-state strong { color: var(--c-navy); font-variant-numeric: tabular-nums; }
+
+
 

@@ -48,6 +48,16 @@
 #   No model weights or index are pulled here — those come from
 #   models/fetch_models.sh and indexer/build_index.py on a workstation.
 #
+# Phase 8 scope (additive, Pi 4/5 for full; Zero 2 W: NOAA+FM only):
+#   - apt: rtl-sdr, multimon-ng (+ dump1090-mutability on Pi 4/5)
+#   - Stage listen/ into /opt/signal/listen/
+#   - Stage scripts/same_pipeline.sh into /opt/signal/scripts/
+#   - Install + enable signal-listen.service (uvicorn on 127.0.0.1:8300)
+#   - Install signal-listen-same.service (rtl_fm | multimon-ng | curl;
+#     stays inactive when rtl_fm is absent or no dongle is plugged in)
+#   - Refresh nginx config (carries /api/listen/ block)
+#   - Refresh portal tree (carries listen.html + listen.js)
+#
 # Phase 9 scope (additive):
 #   - Stage notes/ into /opt/signal/notes/
 #   - Install + enable signal-notes.service (uvicorn on 127.0.0.1:8400)
@@ -421,6 +431,53 @@ phase6() {
     log "Phase 6 complete. http://hub.local/ask.html lights up when both units are running."
 }
 
+phase8() {
+    log "Phase 8 — RTL-SDR Listen"
+
+    # rtl-sdr ships /usr/bin/rtl_fm + /usr/bin/rtl_test; multimon-ng
+    # decodes SAME / APRS / POCSAG. dump1090-mutability is the ADS-B
+    # decoder for sub-phase 8.4 — apt-install it conditionally because
+    # not every Bookworm mirror carries it.
+    apt_install rtl-sdr multimon-ng
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+        dump1090-mutability 2>/dev/null \
+        || log "dump1090-mutability not available; ADS-B (sub-phase 8.4) will be skipped"
+
+    install -d -m 0755 /opt/signal/listen
+    install_tree "${REPO_DIR}/listen" /opt/signal/listen
+    install -d -m 0755 /opt/signal/scripts
+    install -m 0755 "${REPO_DIR}/scripts/same_pipeline.sh" /opt/signal/scripts/same_pipeline.sh
+
+    install -d -m 0755 /var/lib/signal/listen
+
+    # Refresh portal (listen.html + listen.js) and nginx route.
+    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    ensure_nginx_site
+    if ! nginx -t 2>/dev/null; then
+        nginx -t
+        die "nginx config did not validate; aborting"
+    fi
+    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+
+    install -m 0644 "${REPO_DIR}/systemd/signal-listen.service" \
+        /etc/systemd/system/signal-listen.service
+    install -m 0644 "${REPO_DIR}/systemd/signal-listen-same.service" \
+        /etc/systemd/system/signal-listen-same.service
+    systemctl daemon-reload
+    systemctl enable signal-listen.service signal-listen-same.service
+    systemctl restart signal-listen.service
+
+    # SAME pipeline starts only if the rtl_fm binary is present (a
+    # ConditionPathExists= guard inside the unit handles missing
+    # dongles cleanly).
+    if command -v rtl_fm >/dev/null; then
+        systemctl restart signal-listen-same.service 2>/dev/null \
+            || log "signal-listen-same did not start (no dongle?); check journalctl"
+    fi
+
+    log "Phase 8 complete. http://hub.local/listen.html lights up when the service is reachable."
+}
+
 ensure_owner_token() {
     # Generate a 32-hex-char token if one is not already on disk. The
     # token gates DELETE /api/notes/{id} and POST /api/notes/wipe — the
@@ -489,10 +546,11 @@ main() {
         4) phase1; phase2; phase3; phase4 ;;
         5) phase1; phase2; phase3; phase4; phase5 ;;
         6) phase1; phase2; phase3; phase4; phase5; phase6 ;;
-        # Phases 7 + 8 land later; PHASE=9 skips them cleanly (notes
-        # board is independent of mesh + radio).
+        # Phase 9 ships before Phase 8 per approved sequencing (9 → 8 → 7).
+        # PHASE=9 includes Phase 9 but not 8; PHASE=8 chains 9 first.
         9) phase1; phase2; phase3; phase4; phase5; phase6; phase9 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 9)" ;;
+        8) phase1; phase2; phase3; phase4; phase5; phase6; phase9; phase8 ;;
+        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 8)" ;;
     esac
 }
 
