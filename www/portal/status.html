@@ -58,6 +58,25 @@
         </article>
       </section>
 
+      <section class="services-block" aria-label="Optional services">
+        <h2>Optional services</h2>
+        <p class="services-block__hint">
+          Each tile is independent — a missing model or dongle leaves the
+          corresponding service inactive, never crash-looping.
+        </p>
+        <ul class="services-list" id="services-list">
+          <li data-svc="retrieve"><span class="services-list__dot"></span><strong>Retrieve</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="assist"><span class="services-list__dot"></span><strong>Ask</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="listen"><span class="services-list__dot"></span><strong>Listen</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="notes"><span class="services-list__dot"></span><strong>Board</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="mesh"><span class="services-list__dot"></span><strong>Mesh</strong> <span class="services-list__state">—</span></li>
+        </ul>
+        <p id="services-fp" class="services-block__fp" hidden>
+          Mesh fingerprint: <code></code>
+          <small>Share this with another SIGNAL owner so they can mark this node trusted.</small>
+        </p>
+      </section>
+
       <div id="api-banner" class="api-banner" role="status">
         <strong>Heads up.</strong>
         <span class="api-banner__msg">The status service isn't running yet — Phase 5 adds it.</span>

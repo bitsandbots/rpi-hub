@@ -34,6 +34,15 @@ class VoltageOut(BaseModel):
     undervoltage: bool | None
 
 
+class ServicesOut(BaseModel):
+    retrieve: str
+    assist: str
+    listen: str
+    notes: str
+    mesh: str
+    mesh_fingerprint: str | None
+
+
 class StatusResponse(BaseModel):
     uptime_seconds: float | None
     load_avg: tuple[float, float, float] | None
@@ -42,12 +51,14 @@ class StatusResponse(BaseModel):
     dhcp_clients: int | None
     time_source: str
     build_version: str
+    services: ServicesOut
 
 
 @app.get("/status", response_model=StatusResponse)
 def status() -> StatusResponse:
     s = system.storage()
     v = system.voltage()
+    svc = system.services()
     return StatusResponse(
         uptime_seconds=system.uptime_seconds(),
         load_avg=system.load_avg(),
@@ -62,4 +73,12 @@ def status() -> StatusResponse:
         dhcp_clients=system.dhcp_clients(),
         time_source=system.time_source(),
         build_version=system.build_version(),
+        services=ServicesOut(
+            retrieve=svc.retrieve,
+            assist=svc.assist,
+            listen=svc.listen,
+            notes=svc.notes,
+            mesh=svc.mesh,
+            mesh_fingerprint=svc.mesh_fingerprint,
+        ),
     )

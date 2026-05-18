@@ -351,11 +351,25 @@ phase5() {
     chmod 0644 /etc/signal/version
     log "version pinned to ${version}"
 
-    # MOTD: substitute {{VERSION}}, drop into /etc/motd. PAM reads /etc/motd
-    # on shell login. Use install -m 0644 to overwrite the stock Debian motd.
-    local motd_tmp
+    # MOTD: substitute {{VERSION}} + {{MESH_FP}}, drop into /etc/motd.
+    # PAM reads /etc/motd on shell login. Mesh fingerprint comes from the
+    # public key on disk (read directly to avoid waiting on the unit to
+    # bind during phase5 — phase7 will have written the key by the time
+    # we're here on a v1.0 install, or the placeholder stays until next run).
+    local motd_tmp mesh_fp
     motd_tmp="$(mktemp)"
-    sed "s/{{VERSION}}/${version}/g" \
+    if [[ -s /var/lib/signal/keys/ed25519.pub ]]; then
+        mesh_fp="$(python3 -c "
+import base64, hashlib, sys
+pub = open('/var/lib/signal/keys/ed25519.pub','rb').read()
+h = hashlib.sha256(pub).digest()[:15]
+b = base64.b32encode(h).decode('ascii').rstrip('=')
+print('-'.join(b[i:i+4] for i in range(0, len(b), 4)))
+" 2>/dev/null)"
+    fi
+    mesh_fp="${mesh_fp:-(not yet generated — run phase 7)}"
+    sed -e "s|{{VERSION}}|${version}|g" \
+        -e "s|{{MESH_FP}}|${mesh_fp}|g" \
         "${REPO_DIR}/config/motd/signal.motd" >"${motd_tmp}"
     install -m 0644 "${motd_tmp}" /etc/motd
     rm -f "${motd_tmp}"

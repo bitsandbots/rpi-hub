@@ -8,9 +8,13 @@ budget on a Pi Zero 2 W because the slowest single call (vcgencmd) is
 
 from __future__ import annotations
 
+import json
 import os
 import shutil
+import socket
 import subprocess
+import urllib.error
+import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -128,3 +132,62 @@ def build_version() -> str:
         return v or "dev"
     except OSError:
         return "dev"
+
+
+# -- per-service readiness probes (Phases 6–9) ---------------------------
+#
+# These are local-loopback HTTP probes with a tight budget. Every probe
+# returns one of three strings, never None:
+#
+#   "ready"        — the service responded
+#   "not-running"  — connection refused / timeout (unit inactive or absent)
+#   "unknown"      — anything else; surfaced for diagnostics
+#
+# The endpoint composes all probes in parallel-ish fashion (they share
+# the request budget). On a fresh Pi where most optional services are
+# inactive, each probe falls through to "not-running" in ~5ms.
+
+PROBE_TIMEOUT_S = 0.4
+
+
+def _probe_local_http(url: str) -> str:
+    try:
+        with urllib.request.urlopen(url, timeout=PROBE_TIMEOUT_S) as resp:
+            return "ready" if 200 <= resp.status < 500 else "unknown"
+    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, OSError):
+        return "not-running"
+
+
+def _probe_json_field(url: str, field: str) -> str | None:
+    """Hit a JSON endpoint and return a single string field, or None."""
+
+    try:
+        with urllib.request.urlopen(url, timeout=PROBE_TIMEOUT_S) as resp:
+            body = json.loads(resp.read())
+    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, json.JSONDecodeError, OSError):
+        return None
+    if not isinstance(body, dict):
+        return None
+    v = body.get(field)
+    return str(v) if v is not None else None
+
+
+@dataclass(frozen=True)
+class ServicesInfo:
+    retrieve: str  # Phase 6
+    assist: str    # Phase 6
+    listen: str    # Phase 8
+    notes: str     # Phase 9A
+    mesh: str      # Phase 7
+    mesh_fingerprint: str | None  # surfaced for owner-to-owner trust
+
+
+def services() -> ServicesInfo:
+    return ServicesInfo(
+        retrieve=_probe_local_http("http://127.0.0.1:8100/health"),
+        assist=_probe_local_http("http://127.0.0.1:8200/health"),
+        listen=_probe_local_http("http://127.0.0.1:8300/health"),
+        notes=_probe_local_http("http://127.0.0.1:8400/health"),
+        mesh=_probe_local_http("http://127.0.0.1:8500/health"),
+        mesh_fingerprint=_probe_json_field("http://127.0.0.1:8500/identity", "fingerprint"),
+    )

@@ -110,6 +110,65 @@ check_unit signal-status.service
 check_http "http://127.0.0.1/api/status" 200
 check_json "http://127.0.0.1/api/status"
 
+# Phases 6–9: every optional service ships with ConditionPathExists=
+# guards, so a missing index / model / dongle means the unit is
+# "inactive" not "failed". Treat that as a warning, not a failure.
+check_optional_unit() {
+    local unit="$1"
+    if systemctl is-active --quiet "$unit"; then
+        ok "$unit is active"
+    elif systemctl list-unit-files --no-legend --no-pager 2>/dev/null \
+            | awk '{print $1}' | grep -qx "$unit"; then
+        warn "$unit installed but not active (probably missing data — expected)"
+    else
+        warn "$unit not installed (expected if its phase wasn't run)"
+    fi
+}
+
+section "Phase 6: RAG assistant (optional)"
+check_optional_unit signal-retrieve.service
+check_optional_unit signal-assist.service
+check_optional_unit signal-llama.service
+if systemctl is-active --quiet signal-retrieve.service; then
+    check_http "http://127.0.0.1/api/retrieve?q=test&k=1" 200
+fi
+
+section "Phase 7: Mesh (optional)"
+check_optional_unit signal-mesh.service
+if systemctl is-active --quiet signal-mesh.service; then
+    check_http "http://127.0.0.1/api/mesh/identity" 200
+    fp="$(curl -s --max-time 2 http://127.0.0.1/api/mesh/identity \
+           | python3 -c "import sys,json;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)"
+    [[ -n "$fp" ]] && ok "mesh fingerprint: $fp" || warn "mesh fingerprint missing — keypair generation may have failed"
+fi
+
+section "Phase 8: Listen (optional)"
+check_optional_unit signal-listen.service
+check_optional_unit signal-listen-same.service
+if systemctl is-active --quiet signal-listen.service; then
+    check_http "http://127.0.0.1/api/listen/state" 200
+fi
+
+section "Phase 9A: Notes (optional)"
+check_optional_unit signal-notes.service
+if systemctl is-active --quiet signal-notes.service; then
+    check_http "http://127.0.0.1/api/notes?limit=1" 200
+fi
+if [[ -s /etc/signal/notes-owner-token ]]; then
+    ok "owner token present at /etc/signal/notes-owner-token (0600)"
+else
+    warn "no owner token — moderation endpoints will refuse with 503"
+fi
+
+section "Phase 9B: Packs (optional)"
+if [[ -d /var/www/signal-portal/print ]] && compgen -G "/var/www/signal-portal/print/*.pdf" >/dev/null; then
+    ok "/print/ has PDFs ($(ls /var/www/signal-portal/print/*.pdf 2>/dev/null | wc -l) files)"
+elif [[ -f /var/www/signal-portal/print/index.html ]]; then
+    warn "/print/ index present but no PDFs — pack PDFs not staged"
+else
+    warn "no pack applied (--pack=<name> at install time)"
+fi
+
 section "Summary"
 printf '  pass=%d  warn=%d  fail=%d\n' "$PASS" "$WARN" "$FAIL"
 

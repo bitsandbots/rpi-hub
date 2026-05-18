@@ -118,6 +118,17 @@ def test_build_version_missing(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) 
     assert system.build_version() == "dev"
 
 
+def _pinned_services() -> system.ServicesInfo:
+    return system.ServicesInfo(
+        retrieve="not-running",
+        assist="not-running",
+        listen="not-running",
+        notes="not-running",
+        mesh="not-running",
+        mesh_fingerprint=None,
+    )
+
+
 def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
     # Pin every probe so the response schema is fully populated and
     # independent of the host running pytest.
@@ -135,7 +146,19 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
     )
     monkeypatch.setattr(system, "dhcp_clients", lambda: 2)
     monkeypatch.setattr(system, "time_source", lambda: "none")
-    monkeypatch.setattr(system, "build_version", lambda: "v0.5.0-phase5")
+    monkeypatch.setattr(system, "build_version", lambda: "v1.0.0")
+    monkeypatch.setattr(
+        system,
+        "services",
+        lambda: system.ServicesInfo(
+            retrieve="ready",
+            assist="ready",
+            listen="not-running",
+            notes="ready",
+            mesh="ready",
+            mesh_fingerprint="ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
+        ),
+    )
 
     r = client.get("/status")
     assert r.status_code == 200
@@ -147,7 +170,15 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
         "voltage": {"throttled": "0x0", "undervoltage": False},
         "dhcp_clients": 2,
         "time_source": "none",
-        "build_version": "v0.5.0-phase5",
+        "build_version": "v1.0.0",
+        "services": {
+            "retrieve": "ready",
+            "assist": "ready",
+            "listen": "not-running",
+            "notes": "ready",
+            "mesh": "ready",
+            "mesh_fingerprint": "ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
+        },
     }
 
 
@@ -166,6 +197,7 @@ def test_status_endpoint_handles_all_unknowns(client: TestClient, monkeypatch: p
         lambda: system.VoltageInfo(throttled=None, undervoltage=None),
     )
     monkeypatch.setattr(system, "dhcp_clients", lambda: None)
+    monkeypatch.setattr(system, "services", _pinned_services)
 
     r = client.get("/status")
     assert r.status_code == 200
@@ -175,3 +207,12 @@ def test_status_endpoint_handles_all_unknowns(client: TestClient, monkeypatch: p
     assert body["storage"]["kiwix_bytes_free"] is None
     assert body["voltage"]["undervoltage"] is None
     assert body["dhcp_clients"] is None
+    assert body["services"]["mesh_fingerprint"] is None
+
+
+def test_services_probe_returns_not_running_for_unreachable() -> None:
+    # Real probe against a port nothing is listening on — must come back
+    # as "not-running", never raise.
+    svc = system.services()
+    for field in ("retrieve", "assist", "listen", "notes", "mesh"):
+        assert getattr(svc, field) in ("ready", "not-running", "unknown")

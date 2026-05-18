@@ -85,6 +85,38 @@
     if (stamp) stamp.textContent = "Status service unreachable";
   }
 
+  function renderServices(svc) {
+    if (!svc) return;
+    var rows = document.querySelectorAll("#services-list li");
+    rows.forEach(function (li) {
+      var key = li.getAttribute("data-svc");
+      var state = svc[key] || "unknown";
+      var stateEl = li.querySelector(".services-list__state");
+      var dotEl = li.querySelector(".services-list__dot");
+      if (stateEl) stateEl.textContent = state;
+      li.classList.remove(
+        "services-list__row--ready",
+        "services-list__row--off",
+        "services-list__row--unknown"
+      );
+      if (state === "ready") li.classList.add("services-list__row--ready");
+      else if (state === "not-running") li.classList.add("services-list__row--off");
+      else li.classList.add("services-list__row--unknown");
+      if (dotEl) { /* dot color is driven by row class via CSS */ }
+    });
+    var fp = svc.mesh_fingerprint;
+    var fpRow = $("#services-fp");
+    if (fpRow) {
+      if (fp) {
+        var code = fpRow.querySelector("code");
+        if (code) code.textContent = fp;
+        fpRow.hidden = false;
+      } else {
+        fpRow.hidden = true;
+      }
+    }
+  }
+
   function renderData(data) {
     var banner = $("#api-banner");
     if (banner) banner.classList.add("hidden");
@@ -99,6 +131,8 @@
 
     var clients = (typeof data.dhcp_clients === "number") ? data.dhcp_clients : "—";
     setMetric($("#m-clients"), clients, clients === 0 ? "Just you (hub itself)" : "");
+
+    renderServices(data.services);
 
     var stamp = $("#m-stamp");
     if (stamp) {

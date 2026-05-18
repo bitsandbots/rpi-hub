@@ -763,5 +763,66 @@ main {
   font-size: 0.9rem;
 }
 
+/* -- Status page: services block (v1.0 polish) --------------------------- */
 
+.services-block {
+  margin: var(--s-5) 0;
+  padding: var(--s-4);
+  background: var(--c-silver-soft);
+  border-radius: var(--r-card);
+}
+.services-block__hint {
+  color: var(--c-ink-muted);
+  font-size: 0.9rem;
+  margin: 0 0 var(--s-3) 0;
+}
+.services-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: var(--s-2);
+}
+.services-list li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) var(--s-3);
+  background: #fff;
+  border-radius: var(--r-card);
+  font-size: 0.95rem;
+}
+.services-list__dot {
+  display: inline-block;
+  width: 0.6rem;
+  height: 0.6rem;
+  border-radius: 50%;
+  background: var(--c-silver-edge);
+}
+.services-list__row--ready .services-list__dot { background: var(--c-good); }
+.services-list__row--off   .services-list__dot { background: var(--c-silver-edge); }
+.services-list__row--unknown .services-list__dot { background: var(--c-warn); }
+.services-list__state {
+  margin-left: auto;
+  color: var(--c-ink-muted);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+}
+.services-block__fp {
+  margin: var(--s-3) 0 0 0;
+  padding: var(--s-2) var(--s-3);
+  background: #fff;
+  border-radius: var(--r-card);
+  font-size: 0.9rem;
+}
+.services-block__fp code {
+  font-weight: 700;
+  color: var(--c-navy);
+}
+.services-block__fp small {
+  display: block;
+  color: var(--c-ink-muted);
+  margin-top: var(--s-1);
+}
 
