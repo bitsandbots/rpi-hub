@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
-# SIGNAL uninstaller — reverses install.sh through Phase 3.
+# SIGNAL uninstaller — reverses install.sh through Phase 4.
 #
 # Idempotent. Leaves package binaries installed (apt removal is the user's
 # call) but disables the service, unlinks configs, removes the dhcpcd block,
-# and drops the iptables rule.
+# and drops the iptables rule. Phase 4's static assets live under
+# /var/www/signal-portal and are removed wholesale by remove_nginx_site.
 
 set -euo pipefail
 

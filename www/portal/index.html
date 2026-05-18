@@ -2,67 +2,92 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
-  <title>SIGNAL — Offline InfoHub</title>
-  <style>
-    :root { color-scheme: light dark; }
-    html, body { margin: 0; padding: 0; height: 100%; }
-    body {
-      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-      line-height: 1.5;
-      background: #f5f5f4;
-      color: #1c1917;
-      display: flex; align-items: center; justify-content: center;
-    }
-    @media (prefers-color-scheme: dark) {
-      body { background: #1c1917; color: #f5f5f4; }
-      .card { background: #292524; box-shadow: 0 1px 0 #44403c inset; }
-      .pill { background: #44403c; color: #f5f5f4; }
-    }
-    .card {
-      max-width: 32rem;
-      margin: 1rem;
-      padding: 1.75rem 2rem;
-      background: #ffffff;
-      border-radius: 0.75rem;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
-    }
-    h1 { margin: 0 0 0.25rem 0; font-size: 1.5rem; letter-spacing: 0.02em; }
-    .sub { margin: 0 0 1.25rem 0; opacity: 0.7; font-size: 0.95rem; }
-    .pill {
-      display: inline-block;
-      padding: 0.15rem 0.55rem;
-      border-radius: 999px;
-      background: #e7e5e4;
-      font-size: 0.75rem;
-      font-weight: 600;
-      letter-spacing: 0.04em;
-      text-transform: uppercase;
-    }
-    ul { padding-left: 1.1rem; }
-    li { margin: 0.25rem 0; }
-    .muted { opacity: 0.6; }
-    code { font-size: 0.9em; }
-    footer { margin-top: 1.25rem; font-size: 0.8rem; opacity: 0.55; }
-  </style>
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="SIGNAL InfoHub — offline survival library served from a local Raspberry Pi. No internet required.">
+  <title>SIGNAL InfoHub</title>
+  <link rel="stylesheet" href="/assets/css/signal.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='50%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>S</text><text x='65%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>l</text></svg>">
+  <script src="/assets/js/contrast.js"></script>
 </head>
 <body>
-  <main class="card">
-    <span class="pill">Hub online</span>
-    <h1>SIGNAL InfoHub</h1>
-    <p class="sub">You are connected to a local resilience node. No internet here — everything you need is on this device.</p>
+  <a class="skip-link" href="#main">Skip to main content</a>
 
-    <p><strong>Available now</strong></p>
-    <ul>
-      <li>Captive portal (this page)</li>
-      <li class="muted">Library — coming in Phase 3</li>
-      <li class="muted">Field guides &amp; assistant — coming in Phases 4–6</li>
-    </ul>
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="SIGNAL">
+        <span class="b-first">Sig</span><span class="b-second">nal</span>
+        <span class="brand-sub">Offline InfoHub</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">High contrast: off</button>
+      </div>
+    </div>
+  </header>
 
-    <p class="muted">Bookmark <code>http://hub.local/</code> to return here.</p>
+  <main id="main">
+    <div class="container">
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 id="intro-h">You're connected to a local resilience node.</h1>
+        <p>Everything here lives on this device. No internet uplink is used or needed. Pick a category to start reading.</p>
+      </section>
 
-    <footer>SIGNAL v0.2 · Phase 2 · Open SSID, no internet egress</footer>
+      <nav class="tile-grid" aria-label="Categories">
+        <a class="tile" href="/library/" data-state="ready">
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">Lib</span>
+          <h2 class="tile__title">Library</h2>
+          <p class="tile__desc">Browse every offline collection installed on this hub.</p>
+        </a>
+
+        <a class="tile" href="/library/" data-state="ready">
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">Enc</span>
+          <h2 class="tile__title">Encyclopedia</h2>
+          <p class="tile__desc">General reference — Wikipedia and Wiktionary if installed.</p>
+        </a>
+
+        <a class="tile" href="/library/" data-state="ready">
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">How</span>
+          <h2 class="tile__title">How-To</h2>
+          <p class="tile__desc">Step-by-step guides from WikiHow and field manuals.</p>
+        </a>
+
+        <a class="tile" href="/library/" data-state="ready">
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">Med</span>
+          <h2 class="tile__title">Medicine</h2>
+          <p class="tile__desc">First-aid, triage, and clinical references for non-experts.</p>
+        </a>
+
+        <a class="tile" href="/library/" data-state="ready">
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">Map</span>
+          <h2 class="tile__title">Maps</h2>
+          <p class="tile__desc">OpenStreetMap regional bundles — works fully offline.</p>
+        </a>
+
+        <a class="tile" href="/status.html" data-state="ready">
+          <span class="tile__state">Live</span>
+          <span class="tile__icon" aria-hidden="true">Sys</span>
+          <h2 class="tile__title">Status</h2>
+          <p class="tile__desc">Uptime, storage, voltage, connected clients.</p>
+        </a>
+      </nav>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/library/">Open library</a>
+        <a href="/status.html">System status</a>
+        <a href="http://hub.local/">hub.local home</a>
+      </nav>
+    </div>
   </main>
+
+  <footer class="site-footer">
+    SIGNAL <code>v0.4</code> · Phase 4 · Open SSID · No internet egress · MIT licensed
+  </footer>
 </body>
 </html>

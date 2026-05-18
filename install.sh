@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SIGNAL installer — Phase 3 (Content layer).
+# SIGNAL installer — Phase 1 (Bare AP).
 #
 # Idempotent: re-running should be a no-op if everything is already in place.
 # Re-runs upgrade configs from the repo in-place; service is restarted only
@@ -24,14 +24,20 @@
 #   - Create /var/lib/kiwix as the ZIM payload directory
 #   - Install signal-kiwix.service (stays inactive until ZIMs appear)
 #
-# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=3
-# runs Phase 1, Phase 2, then Phase 3. Default is the highest phase shipped
-# at this tag.
+# Phase 4 scope (additive):
+#   - Re-sync the portal tree (new assets/ + status.html)
+#   - Re-install the nginx config (now carries /assets/ + /api/ blocks)
+#   - Reload nginx (validated)
+#   - No new packages, no new services
+#
+# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=4
+# runs Phase 1, Phase 2, Phase 3, then Phase 4. Default is the highest phase
+# shipped at this tag.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE="${PHASE:-3}"
+PHASE="${PHASE:-4}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
 
 log() { printf '[signal-install] %s\n' "$*" >&2; }
@@ -218,13 +224,42 @@ phase3() {
     log "Phase 3 complete."
 }
 
+phase4() {
+    log "Phase 4 — Frontend (CoreConduit landing + status page)"
+
+    # Everything Phase 4 ships is static: an updated nginx config (carries
+    # /assets/ + /api/ blocks), a richer www/portal/ tree (assets/css,
+    # assets/js, assets/fonts, status.html), and the rewritten index.html.
+    #
+    # phase2() already installed nginx and synced the portal tree from
+    # ${REPO_DIR}/www/portal. Re-running those two helpers here is the
+    # cleanest way to pick up the new files: install_tree is rsync-based so
+    # this is a near-no-op when nothing changed.
+    ensure_nginx_site
+    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+
+    if ! nginx -t 2>/dev/null; then
+        nginx -t  # re-run loud so the error reaches the log
+        die "nginx config did not validate; aborting"
+    fi
+    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+
+    if [[ ! -s /var/www/signal-portal/assets/fonts/exo2-700.woff2 ]]; then
+        log "note: brand fonts are missing — page falls back to system fonts."
+        log "      run scripts/fetch_fonts.sh on a workstation, re-bake the image."
+    fi
+
+    log "Phase 4 complete. Open http://hub.local/ on a connected client."
+}
+
 main() {
     require_root
     case "$PHASE" in
         1) phase1 ;;
         2) phase1; phase2 ;;
         3) phase1; phase2; phase3 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 3)" ;;
+        4) phase1; phase2; phase3; phase4 ;;
+        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 4)" ;;
     esac
 }
 

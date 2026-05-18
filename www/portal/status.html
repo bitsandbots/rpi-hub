@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="SIGNAL InfoHub system status — uptime, storage, voltage, connected clients.">
+  <title>SIGNAL — System status</title>
+  <link rel="stylesheet" href="/assets/css/signal.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='50%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>S</text><text x='65%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>l</text></svg>">
+  <script src="/assets/js/contrast.js"></script>
+  <script src="/assets/js/status.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="SIGNAL">
+        <span class="b-first">Sig</span><span class="b-second">nal</span>
+        <span class="brand-sub">System status</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">High contrast: off</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 id="intro-h">System status</h1>
+        <p id="m-stamp">Loading status…</p>
+      </section>
+
+      <section class="status-grid" aria-label="Metrics">
+        <article class="metric" id="m-uptime" aria-labelledby="m-uptime-l">
+          <p class="metric__label" id="m-uptime-l">Uptime</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+        <article class="metric" id="m-storage" aria-labelledby="m-storage-l">
+          <p class="metric__label" id="m-storage-l">Library free space</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+        <article class="metric" id="m-voltage" aria-labelledby="m-voltage-l">
+          <p class="metric__label" id="m-voltage-l">Power</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+        <article class="metric" id="m-clients" aria-labelledby="m-clients-l">
+          <p class="metric__label" id="m-clients-l">Connected clients</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+      </section>
+
+      <div id="api-banner" class="api-banner" role="status">
+        <strong>Heads up.</strong>
+        <span class="api-banner__msg">The status service isn't running yet — Phase 5 adds it.</span>
+        Until then this page is a placeholder. On the Pi: <code>systemctl status signal-status</code>.
+      </div>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/">← Back to hub</a>
+        <a href="/library/">Open library</a>
+      </nav>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    SIGNAL <code>v0.4</code> · Phase 4 · Status view — JS required only on this page
+  </footer>
+
+  <noscript>
+    <p style="max-width:36rem;margin:1rem auto;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+      The status page needs JavaScript to fetch live metrics. Category navigation
+      on the rest of the hub works without JavaScript.
+    </p>
+  </noscript>
+</body>
+</html>
