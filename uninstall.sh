@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SIGNAL uninstaller — reverses install.sh for Phase 1.
+# SIGNAL uninstaller — reverses install.sh through Phase 2.
 #
 # Idempotent. Leaves package binaries installed (apt removal is the user's
 # call) but disables the service, unlinks configs, removes the dhcpcd block,
@@ -24,8 +24,24 @@ drop_iptables() {
     command -v netfilter-persistent >/dev/null && netfilter-persistent save >/dev/null || true
 }
 
+remove_nginx_site() {
+    rm -f /etc/nginx/sites-enabled/signal-portal
+    rm -f /etc/nginx/sites-available/signal-portal
+    rm -rf /var/www/signal-portal
+    # Restore the stock default site if Debian's copy is still around.
+    if [[ -f /etc/nginx/sites-available/default && ! -L /etc/nginx/sites-enabled/default ]]; then
+        ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
+    fi
+    if command -v nginx >/dev/null && nginx -t 2>/dev/null; then
+        systemctl reload nginx.service 2>/dev/null || true
+    fi
+}
+
 main() {
     require_root
+
+    remove_nginx_site
+
     systemctl disable --now signal-ap.service 2>/dev/null || true
     rm -f /etc/systemd/system/signal-ap.service
     systemctl daemon-reload
@@ -39,7 +55,7 @@ main() {
     sysctl --system >/dev/null
     systemctl restart dhcpcd 2>/dev/null || true
 
-    log "SIGNAL Phase 1 uninstalled. Packages (hostapd, dnsmasq, iptables-persistent) left in place."
+    log "SIGNAL uninstalled. Packages (hostapd, dnsmasq, nginx, iptables-persistent) left in place."
 }
 
 main "$@"

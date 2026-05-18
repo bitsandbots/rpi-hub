@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SIGNAL installer — Phase 1 (Bare AP).
+# SIGNAL installer — Phase 2 (Captive portal).
 #
 # Idempotent: re-running should be a no-op if everything is already in place.
 # Re-runs upgrade configs from the repo in-place; service is restarted only
@@ -13,13 +13,20 @@
 #   - Apply iptables FORWARD drop on wlan0 cross-interface traffic
 #   - Enable signal-ap.service
 #
-# Phases 2+ will append their own steps below the Phase 1 block, gated by
-# the PHASE env var (default: all phases that have shipped at this tag).
+# Phase 2 scope (additive):
+#   - Install nginx
+#   - Link the signal-portal site config + landing page into /etc and /var/www
+#   - Drop the stock nginx default site so it can't shadow us
+#   - Reload nginx (validated with nginx -t first)
+#
+# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=2
+# runs Phase 1, then Phase 2. Default is the highest phase shipped at this
+# tag.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE="${PHASE:-1}"
+PHASE="${PHASE:-2}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
 
 log() { printf '[signal-install] %s\n' "$*" >&2; }
@@ -121,7 +128,8 @@ phase1() {
     apt_install hostapd dnsmasq iptables iptables-persistent netfilter-persistent
 
     install_config "${REPO_DIR}/config/hostapd/hostapd.conf"  /etc/hostapd/hostapd.conf  || true
-    install_config "${REPO_DIR}/config/dnsmasq/signal.conf"   /etc/dnsmasq.d/signal.conf || true
+    local dnsmasq_changed=0
+    install_config "${REPO_DIR}/config/dnsmasq/signal.conf"   /etc/dnsmasq.d/signal.conf && dnsmasq_changed=1
     apply_country_code
     ensure_hostapd_default
     ensure_dhcpcd_block
@@ -131,16 +139,62 @@ phase1() {
 
     systemctl restart dhcpcd
     systemctl start signal-ap.service
+    # If dnsmasq config changed (e.g. Phase 2 wildcard line), reload so the
+    # new rules are live without bouncing hostapd.
+    [[ $dnsmasq_changed -eq 1 ]] && systemctl reload dnsmasq 2>/dev/null || true
 
     log "Phase 1 complete. Look for SSID 'SIGNAL_INFOHUB'."
     log "Status: systemctl status signal-ap"
+}
+
+# Sync a directory tree using rsync semantics (idempotent, mode-aware).
+install_tree() {
+    local src="$1" dst="$2"
+    install -d "$dst"
+    # cp -ru would skip files with newer mtimes on disk; we always want repo
+    # to win, so use rsync if available, otherwise fall back to cp -a.
+    if command -v rsync >/dev/null; then
+        rsync -a --delete "${src}/" "${dst}/"
+    else
+        rm -rf "${dst:?}/"*
+        cp -a "${src}/." "${dst}/"
+    fi
+}
+
+ensure_nginx_site() {
+    local available="/etc/nginx/sites-available/signal-portal"
+    local enabled="/etc/nginx/sites-enabled/signal-portal"
+    install -m 0644 "${REPO_DIR}/config/nginx/signal-portal.conf" "$available"
+    [[ -L "$enabled" ]] || ln -s "$available" "$enabled"
+    # Stock nginx ships a default_server that would shadow ours.
+    rm -f /etc/nginx/sites-enabled/default
+}
+
+phase2() {
+    log "Phase 2 — Captive portal"
+
+    apt_install nginx
+
+    ensure_nginx_site
+    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+
+    # Validate before reload so a typo doesn't take the AP offline.
+    if ! nginx -t 2>/dev/null; then
+        nginx -t  # re-run without quiet so the error reaches the log
+        die "nginx config did not validate; aborting"
+    fi
+    systemctl enable nginx.service
+    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+
+    log "Phase 2 complete. Connect a client and the captive sheet should open."
 }
 
 main() {
     require_root
     case "$PHASE" in
         1) phase1 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 1)" ;;
+        2) phase1; phase2 ;;
+        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 2)" ;;
     esac
 }
 

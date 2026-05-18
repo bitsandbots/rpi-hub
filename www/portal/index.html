@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <title>SIGNAL — Offline InfoHub</title>
+  <style>
+    :root { color-scheme: light dark; }
+    html, body { margin: 0; padding: 0; height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      line-height: 1.5;
+      background: #f5f5f4;
+      color: #1c1917;
+      display: flex; align-items: center; justify-content: center;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #1c1917; color: #f5f5f4; }
+      .card { background: #292524; box-shadow: 0 1px 0 #44403c inset; }
+      .pill { background: #44403c; color: #f5f5f4; }
+    }
+    .card {
+      max-width: 32rem;
+      margin: 1rem;
+      padding: 1.75rem 2rem;
+      background: #ffffff;
+      border-radius: 0.75rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+    }
+    h1 { margin: 0 0 0.25rem 0; font-size: 1.5rem; letter-spacing: 0.02em; }
+    .sub { margin: 0 0 1.25rem 0; opacity: 0.7; font-size: 0.95rem; }
+    .pill {
+      display: inline-block;
+      padding: 0.15rem 0.55rem;
+      border-radius: 999px;
+      background: #e7e5e4;
+      font-size: 0.75rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    ul { padding-left: 1.1rem; }
+    li { margin: 0.25rem 0; }
+    .muted { opacity: 0.6; }
+    code { font-size: 0.9em; }
+    footer { margin-top: 1.25rem; font-size: 0.8rem; opacity: 0.55; }
+  </style>
+</head>
+<body>
+  <main class="card">
+    <span class="pill">Hub online</span>
+    <h1>SIGNAL InfoHub</h1>
+    <p class="sub">You are connected to a local resilience node. No internet here — everything you need is on this device.</p>
+
+    <p><strong>Available now</strong></p>
+    <ul>
+      <li>Captive portal (this page)</li>
+      <li class="muted">Library — coming in Phase 3</li>
+      <li class="muted">Field guides &amp; assistant — coming in Phases 4–6</li>
+    </ul>
+
+    <p class="muted">Bookmark <code>http://hub.local/</code> to return here.</p>
+
+    <footer>SIGNAL v0.2 · Phase 2 · Open SSID, no internet egress</footer>
+  </main>
+</body>
+</html>
