@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SIGNAL installer — Phase 2 (Captive portal).
+# SIGNAL installer — Phase 3 (Content layer).
 #
 # Idempotent: re-running should be a no-op if everything is already in place.
 # Re-runs upgrade configs from the repo in-place; service is restarted only
@@ -19,14 +19,19 @@
 #   - Drop the stock nginx default site so it can't shadow us
 #   - Reload nginx (validated with nginx -t first)
 #
-# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=2
-# runs Phase 1, then Phase 2. Default is the highest phase shipped at this
-# tag.
+# Phase 3 scope (additive):
+#   - Install kiwix-tools
+#   - Create /var/lib/kiwix as the ZIM payload directory
+#   - Install signal-kiwix.service (stays inactive until ZIMs appear)
+#
+# PHASE selects how far up the stack to go. Phases are cumulative: PHASE=3
+# runs Phase 1, Phase 2, then Phase 3. Default is the highest phase shipped
+# at this tag.
 
 set -euo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PHASE="${PHASE:-2}"
+PHASE="${PHASE:-3}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
 
 log() { printf '[signal-install] %s\n' "$*" >&2; }
@@ -189,12 +194,37 @@ phase2() {
     log "Phase 2 complete. Connect a client and the captive sheet should open."
 }
 
+phase3() {
+    log "Phase 3 — Kiwix content layer"
+
+    apt_install kiwix-tools
+
+    install -d -m 0755 /var/lib/kiwix
+
+    install -m 0644 "${REPO_DIR}/systemd/signal-kiwix.service" /etc/systemd/system/signal-kiwix.service
+    systemctl daemon-reload
+    systemctl enable signal-kiwix.service
+
+    # Start now if any ZIMs are present; otherwise the ConditionPathExistsGlob
+    # in the unit keeps it inactive. Either way, surface the state.
+    if compgen -G "/var/lib/kiwix/*.zim" >/dev/null; then
+        systemctl restart signal-kiwix.service
+        log "signal-kiwix started; library available at http://hub.local/library/"
+    else
+        log "/var/lib/kiwix is empty — signal-kiwix stays inactive."
+        log "Run content/fetch.sh on a workstation, then rsync into /var/lib/kiwix/."
+    fi
+
+    log "Phase 3 complete."
+}
+
 main() {
     require_root
     case "$PHASE" in
         1) phase1 ;;
         2) phase1; phase2 ;;
-        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 2)" ;;
+        3) phase1; phase2; phase3 ;;
+        *) die "PHASE=$PHASE not implemented yet (this tag ships Phase 3)" ;;
     esac
 }
 

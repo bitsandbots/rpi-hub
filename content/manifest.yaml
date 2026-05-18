@@ -1,0 +1,64 @@
+# Purpose: ZIM payload manifest. Lists the offline-library content set the
+#          hub should serve. content/fetch.sh reads this on a workstation
+#          to download files; content/verify.sh re-hashes against it.
+# Unit:    n/a (data file consumed by fetch.sh and verify.sh)
+# Phase:   3
+#
+# Tiers (controls which subset fetch.sh pulls):
+#   minimal — fits on an 8 GB SD card; suitable for Pi Zero 2 W gift builds
+#   core    — fits on 64 GB; sane default for Pi 4
+#   full    — fits on 256 GB+ SSD; assistant-enabled build (Phase 6)
+#
+# The URLs below point at Kiwix's CDN. Kiwix rebuilds ZIMs on a rolling
+# schedule, so the dated filenames here drift over time. To refresh: visit
+# https://library.kiwix.org/, find the current file for each entry, and
+# update both the `url` and the `sha256` (which can be left blank for a
+# first fetch — fetch.sh will print the hash so you can lock it in).
+
+version: 1
+
+zims:
+  # ---------- minimal tier (Pi Zero 2 W) -------------------------------
+  - name: wikipedia_en_simple_all_nopic.zim
+    url: https://download.kiwix.org/zim/wikipedia/wikipedia_en_simple_all_nopic_2024-06.zim
+    size_mb: 350
+    sha256: ""
+    description: Simple English Wikipedia, no images. Every article, easy reading level.
+    tier: minimal
+
+  - name: wikihow_en_maxi.zim
+    url: https://download.kiwix.org/zim/wikihow/wikihow_en_maxi_2024-04.zim
+    size_mb: 11000
+    sha256: ""
+    description: WikiHow English, full edition. How-to guides covering cooking, first aid, repair, survival.
+    tier: minimal
+
+  # ---------- core tier ------------------------------------------------
+  - name: wiktionary_en_all_nopic.zim
+    url: https://download.kiwix.org/zim/wiktionary/wiktionary_en_all_nopic_2024-04.zim
+    size_mb: 1700
+    sha256: ""
+    description: English Wiktionary, no images. Dictionary, thesaurus, etymology.
+    tier: core
+
+  - name: medical_en_all_maxi.zim
+    url: https://download.kiwix.org/zim/other/medical_en_all_maxi_2024-04.zim
+    size_mb: 5500
+    sha256: ""
+    description: WHO and curated medical wiki content. Reference only — see CONTENT_GUIDE for limits.
+    tier: core
+
+  # ---------- full tier (assistant-enabled) ----------------------------
+  - name: wikipedia_en_all_nopic.zim
+    url: https://download.kiwix.org/zim/wikipedia/wikipedia_en_all_nopic_2024-09.zim
+    size_mb: 51200
+    sha256: ""
+    description: English Wikipedia, no images. Every article (~50 GB on disk).
+    tier: full
+
+  - name: gutenberg_en_all.zim
+    url: https://download.kiwix.org/zim/gutenberg/gutenberg_en_all_2023-08.zim
+    size_mb: 65000
+    sha256: ""
+    description: Project Gutenberg English library — every public-domain book they host.
+    tier: full

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SIGNAL uninstaller — reverses install.sh through Phase 2.
+# SIGNAL uninstaller — reverses install.sh through Phase 3.
 #
 # Idempotent. Leaves package binaries installed (apt removal is the user's
 # call) but disables the service, unlinks configs, removes the dhcpcd block,
@@ -37,9 +37,21 @@ remove_nginx_site() {
     fi
 }
 
+remove_kiwix() {
+    systemctl disable --now signal-kiwix.service 2>/dev/null || true
+    rm -f /etc/systemd/system/signal-kiwix.service
+    # Intentionally leave /var/lib/kiwix and its ZIMs in place. Re-fetching
+    # tens of GB of content is the kind of "destructive" the user has to
+    # ask for explicitly — `rm -rf /var/lib/kiwix` is one extra command.
+}
+
 main() {
     require_root
 
+    # Tear down in reverse phase order. Kiwix and nginx are the user-visible
+    # services; bring them down before the AP layer so a watcher sees the
+    # outage propagate top-down.
+    remove_kiwix
     remove_nginx_site
 
     systemctl disable --now signal-ap.service 2>/dev/null || true
@@ -55,7 +67,8 @@ main() {
     sysctl --system >/dev/null
     systemctl restart dhcpcd 2>/dev/null || true
 
-    log "SIGNAL uninstalled. Packages (hostapd, dnsmasq, nginx, iptables-persistent) left in place."
+    log "SIGNAL uninstalled. Packages (hostapd, dnsmasq, nginx, kiwix-tools, iptables-persistent) left in place."
+    log "Library content at /var/lib/kiwix/ preserved — delete manually if you want it gone."
 }
 
 main "$@"
