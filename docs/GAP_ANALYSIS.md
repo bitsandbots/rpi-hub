@@ -1,139 +1,191 @@
 # Gap Analysis — v1.2.1
 
-What this document is: an explicit, file-cited inventory of work the
-codebase claims (in docs, in comments, in `Known limitations`
-sections) but does **not** yet do, plus inconsistencies and surfaces
-that are shipped but undocumented. Updated whenever a tag goes out.
+What this document is: the **single source of truth for open work** on
+SIGNAL. Every row is verified against the live repo on **2026-05-18**
+(post-v1.2.1). Rows have file:line citations or they don't ship here.
 
-> **Note on the destructive doc-cleanup pass that produced this file:**
-> The per-phase `PHASE_<N>.md` and `V1.x.md` files were deleted in the
-> same commit that introduced this gap analysis. Their per-phase
-> "Known limitations going into Phase N+1" sections are subsumed
-> here, with one row per surviving open item and a column citing the
-> tag the limitation first appeared in (so the historic context is
-> still reachable via `git show <tag>`).
+Three categories only:
+
+1. **Hardware-gated** — scaffold ships; final wiring needs specific kit
+   on a bench.
+2. **Operator workflow** — no engineering; downloads, builders, or
+   field-customisation steps the operator runs once during provisioning.
+3. **Polish track** — non-blocking, slated for v1.3.
+
+Anything previously listed here that has shipped has been deleted in
+the same commit that closed it. The rows that vanish from this file
+are the rows that vanish from the backlog — keep that invariant.
+
+> History note: this file absorbed `docs/REMAINING_TASKS.md` in the
+> v1.2.1+ docs-consolidation pass. Items that read "Closed v1.2.x" in
+> earlier revisions are now simply absent.
 
 ---
 
-## 1. Hardware-gated TODOs
+## 1. Hardware-gated engineering
 
-Each of these is **deliberately deferred** until specific kit is on a
-bench. The scaffold code ships so the integration is purely additive
-when hardware arrives.
+Each row is deliberately deferred until specific kit lands on a bench.
+Scaffold code ships so integration is purely additive when hardware
+arrives.
 
-| Area | What's missing | Scaffold in repo | Hardware needed | First flagged |
-|---|---|---|---|---|
-| **Audio WS endpoint** (Phase 8.3) | FastAPI WebSocket route consuming `AudioFanout` | `listen/signal_listen/audio_bridge.py` (bounded-queue producer/many-consumers fanout) | Pi 4 + RTL-SDR dongle to tune buffer sizes | v1.1 |
-| **LoRa link layer** (Phase 7.1) | Reticulum daemon wiring + bridge↔Reticulum I/O | `mesh/signal_mesh/lora_bridge.py`, `systemd/signal-reticulum.service` | RAK4631 USB hat | v1.0 |
-| **Wi-Fi mesh data plane** (Phase 7.3) | BATMAN-adv kernel module config + ping validation | `mesh/signal_mesh/wifi_bridge.py`, `systemd/signal-batman.service`, `scripts/batman_setup.sh` | Second USB Wi-Fi adapter on non-overlapping channel | v1.1 |
-| **Three-node mesh testbed write-up** | `docs/MESH_TESTBED.md` with 72-hour run results | none | Three Pi 4/5 + LoRa hats | v1.0 |
-| **Pack PDFs** | Printable field cards for each regional pack | `packs/<name>/pack.yaml` schema + `scripts/apply_pack.sh` staging | Design pass, not hardware — listed here because it's the last remaining post-v1.2 software item not in code | v1.0 |
-| **APRS scanner** (Phase 8.5) | Decoder + UI | schema only | Pi 4/5 + dongle parked on 144.39 MHz | v1.0 |
+| Item | Hardware needed | Scaffold in repo | What's left |
+|---|---|---|---|
+| **Phase 7.1 — LoRa data plane** | RAK4631 USB hat | `mesh/signal_mesh/lora_bridge.py`, `systemd/signal-reticulum.service` | Reticulum daemon wiring; bridge ↔ Reticulum I/O exercised against the radio |
+| **Phase 7.3 — Wi-Fi mesh data plane** | Second USB Wi-Fi adapter on a non-overlapping channel | `mesh/signal_mesh/wifi_bridge.py`, `systemd/signal-batman.service`, `scripts/batman_setup.sh` | BATMAN-adv kernel module config + ping validation; add `AF_NETLINK` to `signal-mesh.service` sandbox (currently `AF_INET AF_INET6 AF_UNIX` at `systemd/signal-mesh.service:69`) |
+| **Phase 8.3 — Audio WebSocket route** | Pi 4 + RTL-SDR dongle | `listen/signal_listen/audio_bridge.py` (`AudioFanout` producer/many-consumer) | FastAPI WebSocket route consuming the fanout; buffer-size tuning |
+| **Phase 8.5 — APRS scanner** | Pi 4/5 + RTL-SDR parked on 144.39 MHz | Schema-only mention in `listen/signal_listen/__init__.py` | Decoder + UI page (full new page + tile probe) |
+| **Three-node mesh testbed write-up** | Three Pi 4/5 + LoRa hats | none | 72-hour run + `docs/MESH_TESTBED.md` |
 
-## 2. Documented claims with no shipped code
+Single-dongle caveat (carry into bring-up): `signal-listen-same` and
+`dump1090-mutability` both want exclusive access to one RTL-SDR. With
+one dongle, pick one. With two, pin each to a serial number via
+`DEVICE=` in `config/dump1090/dump1090-mutability.default` and the
+matching env override on `signal-listen-same.service`. See
+`docs/OVERVIEW.md` §7.4.
 
-None as of v1.2.1.
+ADS-B (Phase 8.4) is **shipped** in v1.2.1: install-time detection via
+`scripts/detect_rtlsdr.sh`, `dump1090-mutability` enabled on detection,
+`/adsb/` UI live, status row wired.
 
-Items previously in this section (signed mesh envelopes, QR
-fingerprint generator, dump1090 install gate, ADS-B status surface)
-all shipped in v1.2 → v1.2.1.
+## 2. Operator workflow (provisioning, not engineering)
 
-## 3. Code that's under-documented
+Without these, the device boots green but the library is empty and the
+field cards aren't printable. None require Pi-side work.
 
-Surfaces a fresh contributor would have to read source to discover:
+### 2a. ZIM payload
 
-| Surface | File:line | Why it's missing from docs |
+Driven by `content/manifest.yaml` via `./content/fetch.sh <tier>` on a
+workstation with internet. Pick a tier sized to the target Pi:
+
+| Tier | Approx. size | Hardware target | ZIMs |
+|---|---|---|---|
+| `minimal` | ~12 GB | Pi Zero 2 W + 16 GB SD | Simple Wikipedia (nopic), WikiHow |
+| `core` | ~20 GB | Pi 4 + 64 GB SD | + Wiktionary (nopic), WHO medical |
+| `full` | ~150 GB | Pi 5 + 256 GB+ SSD | + full English Wikipedia (nopic), Project Gutenberg |
+
+Full manifest fields, sha256 pinning workflow, and refresh procedure
+in `docs/CONTENT_GUIDE.md`.
+
+### 2b. Model weights (assistant tier only)
+
+`./models/fetch_models.sh` downloads two GGUFs into
+`payload/var/lib/signal/models/`:
+
+- `qwen2.5-1.5b-instruct-q4_k_m.gguf` — generation
+- `bge-small-en-v1.5-q8_0.gguf` — embedding
+
+Both from Hugging Face. The shipped script has empty sha256 fields;
+lock them in after first fetch (same pattern as the ZIM manifest).
+
+### 2c. Pack PDFs (build step)
+
+All 16 field-card HTML sources are written and committed across the
+five packs (`packs/general-purpose | gulf-coast | mountain-west |
+pacific-northwest | urban-resilience`). Shared template at
+`packs/_template/`. PDFs are gitignored (build artefacts). Currently
+**zero** are built.
+
+```bash
+./scripts/build_pack_pdfs.sh        # walks every packs/*/print/*.html
+./scripts/apply_pack.sh <name>      # validates → stages PDFs
+```
+
+`apply_pack.sh` fails loudly with a pointer to the builder if a PDF is
+missing — unmissable at provision time, not silent.
+
+## 3. Polish track (v1.3)
+
+Non-blocking. Each row is "would improve the experience" not "blocks
+shipping."
+
+### 3a. Frontend polish
+
+| Item | Pages | Notes |
 |---|---|---|
-| `peers.html` QR `<img>` `onerror` fallback | `www/portal/peers.html:38-46`, `www/portal/assets/js/peers.js:33-44` | Pattern is unique to peers page; the "tile-probe" doc only covers landing tiles |
-| Polling cadence per page | `assets/js/status.js`, `listen.js`, `peers.js`, `board.js`, `adsb.js` | Each page picks its own (3s … 15s); no central rationale doc |
-| Single-dongle mutual exclusion between `signal-listen-same` and `dump1090-mutability` | `docs/OVERVIEW.md` §7.4 calls it out; install.sh's logged hint only references one side | Documented in OVERVIEW from v1.2.1; not yet inline in the units |
-| `signal-mesh-keygen.service` purpose | `systemd/signal-mesh-keygen.service` header | Header explains it; no top-level doc until OVERVIEW v1.2.1 |
-| ADS-B file-based probe semantics (mtime + JSON) | `api/signal_status/system.py:_probe_adsb` | Documented in OVERVIEW v1.2.1 §5.1; not in the unit's comment header |
-| Owner token shared across `signal-notes` and `signal-mesh` moderation | `/etc/signal/notes-owner-token` is reused | OVERVIEW v1.2.1 §5.6 mentions it; the original notes-board doc was the only place |
+| Pick one canonical service-down UX pattern | `ask`, `listen`, `peers`, `board`, `adsb`, `status` | Two patterns coexist: `ask-defer` / `ask-noanswer` (Ask, Listen) vs `board-status` (Peers, Board, ADS-B). Consider unifying — currently visually consistent but class-named differently. |
+| `<noscript>` snippet drift risk | all portal pages | Blocks are byte-identical today; future edits could drift. Document the canonical copy at the top of `www/portal/assets/js/README.md` so reviewers catch drift, or accept the drift risk in exchange for no build step. |
 
-## 4. Frontend inconsistencies
+### 3b. Security / sandbox (track for v1.3)
 
-Surfaced by the v1.2.1 frontend audit. None block the user — they're
-polish items.
+- Split `X-Owner-Token` into per-domain tokens (currently shared between
+  `signal-notes` DELETE/wipe and `signal-mesh` peer trust/block via
+  `/etc/signal/notes-owner-token`). Convenient but conflates two trust
+  domains.
+- Add `AF_NETLINK` to `signal-mesh` sandbox once the BATMAN bridge
+  actually attaches (BATMAN uses netlink). Tracked alongside §1 Phase 7.3.
+- Document the captive portal's HTTP-only design + "bring your own
+  ACME bootstrap" out-of-scope guidance for HTTPS portals. Should land
+  as a one-section addendum to `docs/OVERVIEW.md` §6 or a new
+  `docs/SECURITY_NOTES.md` if it grows.
+- Opt-in ADS-B position-rounding flag — `aircraft.json` is exposed at
+  `/adsb/` to anyone on the SSID, which is PII-adjacent for some
+  deployments.
 
-| Inconsistency | Pages affected | Suggested fix |
+### 3c. Test-coverage gaps
+
+| Surface | What's untested | Risk |
 |---|---|---|
-| Service-down UX pattern differs page-to-page | `ask.html` (silent fallthrough), `listen.html` (inline hardware banner), `peers.html` (image-error hide), `board.html` (inline error), `adsb.html` (calm status text), `status.html` (page-wide banner) | Pick one canonical pattern (probably "calm inline message in the page's primary status region"); apply to all |
-| `<noscript>` copy and placement varies | All pages with one | Lift to a shared snippet; standardise tone |
-| Polling cadence rationale absent | `status.js` 5s, `listen.js` 5s/15s, `peers.js` 10s, `board.js` 8s, `adsb.js` 3s | Document the rationale (or unify) in `assets/js/README.md` or in each file's header |
-| `aria-live` vs `role="alert"` choice varies | `status.html` (no region), `ask.html` (`role="alert"`), `listen/peers/board/adsb` (`aria-live="polite"`) | Use `role="alert"` only for content that must announce immediately on appearance (banners on `defer`); use `aria-live="polite"` otherwise |
-| ADS-B table lacks `<caption>` | `adsb.html` | Add `<caption class="sr-only">Aircraft in range</caption>` |
-| `listen.html` hardware banner has no `aria-hidden` when not shown | `listen.html:39-41` | Add `aria-hidden="true"` initial state; flip on show |
-| Status page footer says "Phase 4" while `<noscript>` references Phase 5 | `status.html` | Update footer to "v1.2.1 · signal-status" |
-
-## 5. Test-coverage gaps
-
-| Surface | What's untested | Risk if it regresses |
-|---|---|---|
-| FastAPI `/identity.svg` endpoint | No endpoint-level test (FastAPI testclient not installed on the dev image we ship; tests live in CI) | Operator scans a corrupted QR → can't paste fingerprint |
-| `signal-mesh-keygen.service` integration | Only `identity.load_or_create()` is unit-tested; the systemd unit's ordering vs. `signal-mesh.service` isn't exercised | First boot ships with keys but daemon fails to load them |
-| QR encoder round-trip through a real decoder | We assert structural invariants but never decode our own output | A QR that "looks right" but is unreadable by phone cameras |
-| `phase8_adsb()` in install.sh | No automated test (would need fake `lsusb` in CI) | Detector regression silently disables dump1090 enablement |
-| End-to-end `POST /api/notes` → `signal-mesh /notes/publish` signing path | `test_publish_note_signs_with_real_key_when_available` covers the signing in isolation; no test that drives the cross-service hop | Notes fail to fan out to mesh without a journalctl entry |
 | Read-only root | `scripts/readonly_root.sh` has no test harness | Toggling overlayfs on a live device with no recovery path |
+| `phase8_adsb()` in install.sh | No automated test (would need fake `lsusb` in CI) | Detector regression silently disables dump1090 enablement |
+| End-to-end notes → mesh fan-out | Signing path covered in isolation; no test drives the cross-service hop | Notes fail to fan out to mesh without a journalctl entry |
 
-## 6. Security / sandbox surface
+## 4. Closed (recently)
 
-Already audited in v1.0 polish and v1.2 (LoadCredential rewiring).
-Outstanding items:
+For anyone reading this and wondering where the older rows went —
+they're tracked in `CHANGELOG.md`. The most recent sweep closed:
 
-- The `X-Owner-Token` is shared between `signal-notes` (DELETE / wipe)
-  and `signal-mesh` (peer trust / block) via `/etc/signal/notes-owner-token`.
-  Convenient but conflates two trust domains. Pre-v2 consideration: separate tokens.
-- `signal-mesh` sandbox permits `RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX`.
-  Once LoRa / BATMAN bridges land, we may need to add `AF_NETLINK` (BATMAN uses
-  netlink). Plan for that in the v1.3 pre-flight.
-- The captive portal's wildcard DNS + nginx `302` is HTTP-only by design.
-  Document that anyone needing HTTPS for in-portal logins should bring
-  their own ACME bootstrap (out of scope for the offline build).
-- ADS-B aircraft positions are PII-adjacent for some operators. The
-  `aircraft.json` mtime+content is exposed via `/adsb/` to anyone on
-  the SSID. Future flag: an opt-in obfuscation layer that rounds
-  positions to a configurable precision.
-
-## 7. Tooling
-
-| Gap | Detail |
-|---|---|
-| No CI-side QR decoder check | Would catch encoder regressions across SVG renderers |
-| No Lighthouse runner in CI | Phase 4 acceptance is "Lighthouse mobile ≥ 95"; verified manually only |
-| No image-bake validation in CI | `scripts/bake_image.sh` is Linux-only and chroot-heavy; we run it manually |
-| No upgrade path test | Going from `v1.1.0 → v1.2.0 → v1.2.1` via `install.sh` against a long-running deployment is not exercised; could break the LoadCredential rewiring on a node that still has the v1.1 unit semantics in memory |
-
-## 8. Source-of-truth dependencies
-
-| Document | Status | Where it currently lives |
-|---|---|---|
-| `docs/OVERVIEW.md` | **Canonical** v1.2.1 reference (this doc's sibling) | New as of v1.2.1 |
-| `CHANGELOG.md` | **Canonical** per-release notes | Root |
-| `CLAUDE.md` | **Canonical** working guidance for Claude | Root |
-| `README.md` | **Canonical** top-of-funnel intro | Root |
-| `signal-wizard.html` | **Canonical** build checklist UI | Root |
-| `Blueprint_Overview.html` | **Canonical** visual blueprint (operator) | Root, new as of v1.2.1 |
-| `docs/CONTENT_GUIDE.md` | **Canonical** library content workflow | docs/ |
-| `docs/CROSS_OS_TEST_MATRIX.md` | **Canonical** captive-portal probe matrix | docs/ |
-| `Project_SIGNAL_*.docx` (3 files) | **Frozen pre-implementation specs** — useful historical context, may diverge from shipped state | Root |
-
-The per-phase `PHASE_<N>.md` and `V1.x.md` files were retired in the
-v1.2.1 docs-consolidation pass. The information they carried is now
-in `OVERVIEW.md` (current state) + `CHANGELOG.md` (release history) +
-this gap analysis (open work). Their pre-removal content remains in
-git history under the corresponding release tags.
+- Per-phase test rows (`mesh/signal_mesh/tests/test_identity_endpoint.py`,
+  `test_keygen_unit_ordering.py`, `test_qrcode_decode.py`).
+- All four tooling rows (`qr-decoder` and `bake-image-lint` jobs in
+  `.github/workflows/lint-and-test.yml`, `.github/workflows/lighthouse.yml`,
+  `.github/workflows/upgrade-path.yml` + `scripts/test_upgrade_path.sh`).
+- Pack PDF authoring — HTML sources for all 16 cards now live under
+  `packs/<name>/print/`; `scripts/build_pack_pdfs.sh` compiles them on
+  the workstation (chromium headless, wkhtmltopdf fallback);
+  `scripts/apply_pack.sh` validates each manifest entry has a built
+  PDF before staging. Shared template at `packs/_template/`. Only the
+  one-shot operator build step (§2c) remains.
+- All frontend a11y items previously listed: `<caption class="sr-only">`
+  on the ADS-B table, initial `aria-hidden="true"` on
+  `listen.html`'s hardware banner, `status.html` footer version, polling
+  cadence README, `role="alert"` vs `aria-live` reconciliation.
+- Inline doc rows: QR `<img onerror>` comment, single-dongle
+  mutual-exclusion in `signal-listen-same.service` and
+  `config/dump1090/dump1090-mutability.default`, `signal-mesh-keygen.service`
+  Why-line, ADS-B file-based probe semantics, shared owner-token note
+  in both service `main.py` files.
 
 ---
 
 ## How to use this doc
 
-- **Filing a new gap**: add a row to §1, §3, §4, or §5 with a
-  file:line citation. Don't write speculation here — only items
-  cross-referenced to code or to a shipped doc.
+- **Filing a new gap**: add a row in §1, §2, or §3 with a file:line
+  citation. Speculation doesn't ship here — only items cross-referenced
+  to code or to a sibling doc.
 - **Closing a gap**: delete the row in the same commit that closes
-  it, and add a line to the corresponding `CHANGELOG.md` entry.
-- **Spotting drift**: when a tag ships, sweep this doc for any
-  hardware-gated row whose hardware is now plausible to acquire, and
+  it, and add the closure line to `CHANGELOG.md [Unreleased]`.
+- **Spotting drift**: when a tag ships, sweep §1 for any
+  hardware-gated row whose hardware is plausibly acquirable, and
   promote it to the active backlog.
+
+## Source-of-truth map
+
+| Document | Role |
+|---|---|
+| `docs/OVERVIEW.md` | Canonical system reference (purpose, architecture, tech stack, setup, API, frontend pages, runbooks, module map) |
+| `docs/GAP_ANALYSIS.md` (this file) | Single canonical open-work list |
+| `docs/CONTENT_GUIDE.md` | Library content workflow |
+| `docs/CROSS_OS_TEST_MATRIX.md` | Captive-portal probe matrix per OS |
+| `CHANGELOG.md` | Per-release notes |
+| `README.md` | Top-of-funnel intro |
+| `CLAUDE.md` | Working guidance for Claude |
+| `Blueprint_Overview.html` | Visual blueprint for operators |
+| `signal-wizard.html` | Interactive build checklist UI |
+| `Project_SIGNAL_*.docx` | Frozen pre-implementation specs (historical) |
+
+Retired in the v1.2.1 docs-consolidation pass (recoverable via the
+release tags `v0.1.0-phase1` … `v1.0.0`):
+
+- `docs/PHASE_<N>.md` (one per phase)
+- `docs/V1.1.md`, `docs/V1.2.md`
+- `docs/REMAINING_TASKS.md` (folded into this file)

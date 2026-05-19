@@ -40,6 +40,9 @@ assistant/embeddings_cache/
 /var/lib/kiwix/
 /var/lib/signal/
 
+# Pack field-card PDFs — built from .html sources by scripts/build_pack_pdfs.sh
+packs/*/print/*.pdf
+
 # Secrets
 *.pem
 *.key

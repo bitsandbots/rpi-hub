@@ -1,0 +1,65 @@
+# Lighthouse mobile audit for the portal pages.
+# Phase introduced: 4 (acceptance: Lighthouse mobile >= 95).
+# Closes GAP §7 row "No Lighthouse runner in CI".
+#
+# Strategy: serve www/portal/ as a static site behind nginx in a container,
+# then run Lighthouse against each top-level page in mobile emulation mode.
+# We do NOT spin up the FastAPI back-ends here — every page is designed
+# to render fallbacks when its probe endpoint is absent (see the tile-probe
+# pattern in CLAUDE.md). That keeps the workflow scoped to frontend
+# regressions only, which is what Phase 4's acceptance line is gating.
+name: lighthouse
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  lighthouse-mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Stage portal tree
+        run: |
+          mkdir -p _site
+          cp -r www/portal/. _site/
+          # Stub out the API endpoints so tile probes degrade cleanly
+          # instead of hanging. Each tile's fetch() resolves a 404 quickly,
+          # which is exactly the "service unavailable" UX we want measured.
+          ls _site
+
+      - name: Serve portal on :8080
+        run: |
+          docker run -d --name portal -p 8080:80 \
+            -v "$PWD/_site:/usr/share/nginx/html:ro" \
+            nginx:1.27-alpine
+          # Wait for nginx to come up.
+          for i in 1 2 3 4 5 6 7 8 9 10; do
+            if curl -sf http://127.0.0.1:8080/index.html >/dev/null; then
+              echo "nginx is up (attempt $i)."
+              break
+            fi
+            sleep 1
+          done
+          curl -sf http://127.0.0.1:8080/index.html >/dev/null
+
+      - name: Run Lighthouse CI (mobile)
+        uses: treosh/lighthouse-ci-action@12.1.0
+        with:
+          urls: |
+            http://127.0.0.1:8080/index.html
+            http://127.0.0.1:8080/status.html
+            http://127.0.0.1:8080/ask.html
+            http://127.0.0.1:8080/listen.html
+            http://127.0.0.1:8080/peers.html
+            http://127.0.0.1:8080/board.html
+            http://127.0.0.1:8080/adsb.html
+          configPath: ./.github/lighthouse/lighthouserc.json
+          uploadArtifacts: true
+          temporaryPublicStorage: false
+
+      - name: Tear down nginx
+        if: always()
+        run: docker rm -f portal || true
