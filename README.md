@@ -50,7 +50,7 @@ off-grid communities.
 | 7     | Pi 4/5        | USB LoRa hat, second USB Wi-Fi adapter |
 | 8     | Pi 4/5        | RTL-SDR Blog v4, telescoping antenna |
 
-Detailed hardware notes in [`docs/HARDWARE.md`](./docs/HARDWARE.md).
+Per-tier capability matrix and add-on detail: [`docs/OVERVIEW.md`](./docs/OVERVIEW.md) §1 *Hardware tiers*.
 
 ## Install (Phase 1)
 

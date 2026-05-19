@@ -32,11 +32,18 @@
     <div class="container">
       <section class="intro" aria-labelledby="intro-h">
         <h1 id="intro-h">Listen</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
         <p>
           Receive-only. NOAA weather alerts are monitored continuously when no
           one is tuned elsewhere. Pick a mode to override.
         </p>
-        <p id="listen-hwbanner" class="ask-noanswer" hidden>
+        <p id="listen-hwbanner" class="ask-noanswer" aria-live="polite" aria-hidden="true" hidden>
           No RTL-SDR dongle detected. Plug one in and refresh; nothing else on the hub depends on the radio.
         </p>
       </section>
@@ -76,11 +83,5 @@
   <footer class="site-footer">
     SIGNAL · Phase 8 · Receive-only · Transmit deliberately absent
   </footer>
-
-  <noscript>
-    <p style="max-width:36rem;margin:1rem auto;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
-      The Listen page needs JavaScript. The rest of the hub works without it.
-    </p>
-  </noscript>
 </body>
 </html>

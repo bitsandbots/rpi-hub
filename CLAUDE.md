@@ -147,8 +147,10 @@ specific hardware on a bench:
 - **`Blueprint_Overview.html`** — visual blueprint for operators (SVG
   architecture diagram, service grid, hardware tiers, port inventory).
 - **`signal-wizard.html`** — interactive build checklist.
-- **`CHANGELOG.md`** — per-release notes (supersedes the old
-  `docs/V1.x.md` deltas).
+- **`CHANGELOG.md`** — per-release notes (canonical; the `docs/V1.x.md`
+  and `docs/PHASE_<N>.md` deltas these notes once pointed at were
+  retired in the v1.2.1 docs-consolidation pass and live in git
+  history at the corresponding release tags).
 - **`Project_SIGNAL_*.docx`** — original engineering specs (frozen
   pre-implementation, useful for historical context; current state
   may differ).
@@ -168,7 +170,7 @@ corresponding release tags (`v0.1.0-phase1` … `v1.0.0`).
    probe wired in `index.html`, install step in `install.sh`, removal
    in `uninstall.sh`, doc update, commit, tag.
 3. If you introduce a new port, add it to the port map in
-   `docs/PHASE_7.md` and bind only to 127.0.0.1.
+   `docs/OVERVIEW.md` §2 and bind only to 127.0.0.1.
 4. If you add an optional capability, surface it in
    `api/signal_status/system.py:services()` so the status page reflects
    it automatically.

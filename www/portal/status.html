@@ -32,10 +32,17 @@
     <div class="container">
       <section class="intro" aria-labelledby="intro-h">
         <h1 id="intro-h">System status</h1>
-        <p id="m-stamp">Loading status…</p>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
+        <p id="m-stamp" aria-live="polite">Loading status…</p>
       </section>
 
-      <section class="status-grid" aria-label="Metrics">
+      <section class="status-grid" aria-label="Metrics" aria-live="polite">
         <article class="metric" id="m-uptime" aria-labelledby="m-uptime-l">
           <p class="metric__label" id="m-uptime-l">Uptime</p>
           <p class="metric__value">—</p>
@@ -78,6 +85,14 @@
         </p>
       </section>
 
+      <!--
+        Page-wide banner exception: status.html is the canonical
+        device-health view, so an outage of /api/status warrants a
+        page-wide notice rather than an inline status region (the
+        canonical pattern used on ask/listen/board/adsb/peers). The
+        role stays role="status" — polite, not assertive — because the
+        banner appears on a known stale state, not a fresh failure.
+      -->
       <div id="api-banner" class="api-banner" role="status">
         <strong>Heads up.</strong>
         <span class="api-banner__msg">The status service isn't running yet — Phase 5 adds it.</span>
@@ -92,14 +107,7 @@
   </main>
 
   <footer class="site-footer">
-    SIGNAL <code>v0.4</code> · Phase 4 · Status view — JS required only on this page
+    SIGNAL <code>v1.2.1</code> · signal-status · Status view — JS required only on this page
   </footer>
-
-  <noscript>
-    <p style="max-width:36rem;margin:1rem auto;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
-      The status page needs JavaScript to fetch live metrics. Category navigation
-      on the rest of the hub works without JavaScript.
-    </p>
-  </noscript>
 </body>
 </html>

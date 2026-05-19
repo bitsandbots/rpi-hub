@@ -27,3 +27,27 @@ Validation:
 * Each `print[].file` must exist in `packs/<name>/print/`.
 * `noaa.preset_frequencies_mhz` is read by signal-listen at install time
   if Phase 8 is enabled; otherwise ignored cleanly.
+
+## Field-card sources
+
+The `.pdf` files referenced in `print:` are **generated artifacts**, not
+checked into git. Each PDF has a same-name `.html` source in
+`packs/<name>/print/<slug>.html`. The HTML uses the shared stylesheet at
+`packs/_template/card.css` and the canonical structure from
+`packs/_template/card-template.html`.
+
+Workflow:
+
+1. Author or edit `packs/<name>/print/<slug>.html`.
+2. Run `./scripts/build_pack_pdfs.sh` once on the workstation — it walks
+   every `packs/*/print/*.html` and emits a sibling `.pdf` (idempotent;
+   skips PDFs newer than their source).
+3. Then `./scripts/apply_pack.sh <name>` stages the resulting PDFs into
+   `./payload/var/www/signal-portal/print/`.
+
+PDFs are gitignored (`packs/*/print/*.pdf`). Re-running the build is the
+only way to refresh them, and that is also the contract: source-of-truth
+is the HTML, never the binary.
+
+`apply_pack.sh` will error out with a pointer to `build_pack_pdfs.sh` if
+a referenced `.pdf` is missing from `packs/<name>/print/`.

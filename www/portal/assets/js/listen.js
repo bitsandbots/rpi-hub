@@ -23,9 +23,19 @@
     return (hz / 1e6).toFixed(3) + " MHz";
   }
 
+  function setHwBanner(visible) {
+    var hw = $("#listen-hwbanner");
+    if (!hw) return;
+    hw.hidden = !visible;
+    hw.setAttribute("aria-hidden", visible ? "false" : "true");
+  }
+
   function refreshState() {
     fetch(ENDPOINT + "/state", { cache: "no-store" })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
       .then(function (state) {
         var modeEl = $("#listen-mode");
         var freqEl = $("#listen-freq");
@@ -33,8 +43,7 @@
         if (modeEl) modeEl.textContent = state.mode || "idle";
         if (freqEl) freqEl.textContent = fmtFreq(state.frequency_hz);
         if (labelEl) labelEl.textContent = state.label || "—";
-        var hw = $("#listen-hwbanner");
-        if (hw) hw.hidden = !!state.dongle_present;
+        setHwBanner(!state.dongle_present);
       })
       .catch(function () { /* leave previous render */ });
   }

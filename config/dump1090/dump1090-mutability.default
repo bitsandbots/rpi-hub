@@ -10,6 +10,15 @@
 # dongle at provision time. Without it, the upstream default keeps
 # START_DUMP1090="no" and the unit stays inactive — which is what we
 # want when no dongle is present.
+#
+# Mutually exclusive with signal-listen-same.service — a single
+# RTL-SDR dongle is claimed by whichever service starts first. Run
+# both only with two dongles + DEVICE= pinned to a serial number.
+# See docs/OVERVIEW.md §7.4.
+#
+# Status probe: api/signal_status/system.py::_probe_adsb watches
+# ${JSON_DIR}/aircraft.json. Fresh mtime (≤30s) + parseable JSON =
+# "ready"; aircraft count comes from the JSON's "aircraft" array.
 
 # Activate the service. Without this the upstream init logic refuses
 # to start dump1090 even if systemd enables the unit.

@@ -21,6 +21,7 @@
     hide($("#ask-defer"));
     hide($("#ask-answer"));
     hide($("#ask-noanswer"));
+    hide($("#ask-error"));
   }
 
   function renderDefer(body) {
@@ -59,6 +60,10 @@
     show($("#ask-noanswer"));
   }
 
+  function renderError() {
+    show($("#ask-error"));
+  }
+
   function submit(ev) {
     ev.preventDefault();
     var q = ($("#ask-q") || {}).value;
@@ -89,7 +94,7 @@
       })
       .catch(function () {
         hide($("#ask-status"));
-        renderNoAnswer();
+        renderError();
       });
   }
 

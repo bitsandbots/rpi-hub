@@ -27,30 +27,53 @@
     return Math.round(dt / 86400) + "d ago";
   }
 
+  function setStatus(msg) {
+    var el = $("#peers-status");
+    if (!el) return;
+    if (msg) {
+      el.textContent = msg;
+      el.hidden = false;
+    } else {
+      el.textContent = "";
+      el.hidden = true;
+    }
+  }
+
   function refreshIdentity() {
     fetch(ENDPOINT + "/identity", { cache: "no-store" })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
       .then(function (body) {
         var fp = $("#peers-fp");
         if (fp) fp.textContent = body.fingerprint || "—";
-        // QR image is set in HTML; if the mesh service is offline the
-        // <img> 404s and renders the alt text. Hide it in that case so
-        // the page stays calm.
+        // Hide the QR figure on 404 (mesh offline or keygen not yet run).
+        // The fingerprint text above is the canonical fallback — a broken
+        // image icon would imply something is wrong when the page is fine.
         var qr = $("#peers-qr");
         if (qr) {
-          qr.addEventListener("error", function () { qr.hidden = true; }, { once: true });
+          qr.addEventListener("error", function () {
+            qr.hidden = true;
+            setStatus("Mesh identity not generated yet — QR will appear after first boot completes.");
+          }, { once: true });
         }
       })
       .catch(function () {
         var qr = $("#peers-qr");
         if (qr) qr.hidden = true;
+        setStatus("The mesh service isn't reachable right now.");
       });
   }
 
   function refreshPeers() {
     fetch(ENDPOINT + "/peers", { cache: "no-store" })
-      .then(function (r) { return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      })
       .then(function (body) {
+        setStatus("");
         var rows = $("#peers-rows");
         var empty = $("#peers-empty");
         if (!rows) return;
@@ -78,7 +101,9 @@
           rows.appendChild(li);
         });
       })
-      .catch(function () { /* leave previous render */ });
+      .catch(function () {
+        setStatus("The mesh service isn't reachable right now.");
+      });
   }
 
   function init() {

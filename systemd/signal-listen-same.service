@@ -7,6 +7,9 @@
 # The pipeline holds the dongle whenever it is active. signal-listen's
 # /tune endpoint stops this unit on a user tune request and brings it
 # back when the user stops tuning.
+#
+# Mutually exclusive with dump1090-mutability — a single RTL-SDR dongle
+# is claimed by whichever service starts first. See docs/OVERVIEW.md §7.4.
 
 [Unit]
 Description=SIGNAL SAME alert decoder pipeline (rtl_fm + multimon-ng)

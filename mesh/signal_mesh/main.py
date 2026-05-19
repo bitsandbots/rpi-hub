@@ -39,6 +39,8 @@ app = FastAPI(
 _PEERS = peers.PeerTable()
 _BUNDLE: identity.IdentityBundle | None = None
 _OUTBOUND_SEQ = 0  # per-process monotonic; persists for the unit's lifetime
+# Shared owner token: the same file gates peer-block on mesh and DELETE
+# on notes. See OVERVIEW v1.2.1 §5.6.
 OWNER_TOKEN_PATH = Path(os.environ.get("SIGNAL_MESH_TOKEN_FILE", "/etc/signal/notes-owner-token"))
 
 

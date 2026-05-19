@@ -555,6 +555,9 @@ phase8() {
 phase8_adsb() {
     # Phase 8.4 — gate dump1090-mutability on a real dongle being present.
     #
+    # Mutually exclusive with signal-listen-same — a single RTL-SDR dongle
+    # is claimed by whichever service starts first. See docs/OVERVIEW.md §7.4.
+    #
     # The package install above is unconditional (cheap; ~250 KB), so an
     # operator who plugs in a dongle later can flip the service on with
     # `systemctl enable --now dump1090-mutability` and the config we
@@ -587,6 +590,7 @@ phase8_adsb() {
             || log "dump1090-mutability failed to start; check journalctl -u dump1090-mutability"
         log "Phase 8.4 — RTL-SDR dongle detected; dump1090-mutability enabled."
         log "    aircraft.json lands at /run/dump1090-mutability/, served at /adsb/"
+        log "    signal-status probes that file's mtime+contents (see api/signal_status/system.py:_probe_adsb)"
     else
         # Leave the unit disabled so it does not race signal-listen-same
         # for the same single-dongle setup. Operator can opt in later.

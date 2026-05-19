@@ -198,6 +198,14 @@ def _probe_adsb() -> tuple[str, int | None]:
     and that file's mtime is the cleanest readiness signal: anything
     older than ~30s means the decoder is wedged or stopped, regardless
     of whether the unit thinks it's active.
+
+    Semantics:
+
+    * Freshness comes from ``aircraft.json`` mtime — must be within
+      ``ADSB_STALE_SECONDS``.
+    * Aircraft count is ``len(body["aircraft"])`` from the JSON payload.
+    * Falls back to ``("not-running", None)`` if the file is missing
+      or older than the staleness ceiling.
     """
 
     try:

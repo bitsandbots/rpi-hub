@@ -431,7 +431,7 @@
 
   <!-- =====================  SERVICE GRID  ===================== -->
   <section>
-    <h2 class="section-h"><span>Services · ports · responsibilities</span><span class="v ok">11 units</span></h2>
+    <h2 class="section-h"><span>Services · ports · responsibilities</span><span class="v ok">14 units</span></h2>
     <div class="grid-svc">
       <div class="svc svc--core">
         <div class="svc-h"><strong>signal-ap</strong><span class="svc-port">target unit</span></div>
@@ -547,7 +547,7 @@
 
   <!-- =====================  PORT MAP  ===================== -->
   <section>
-    <h2 class="section-h"><span>Port inventory</span><span class="v ok">1 public · 8 loopback</span></h2>
+    <h2 class="section-h"><span>Port inventory</span><span class="v ok">3 public · 9 loopback</span></h2>
     <table class="dataref">
       <thead>
         <tr><th>Port</th><th>Listener</th><th>Bind</th><th>Path / Purpose</th></tr>
@@ -685,18 +685,20 @@
           <td class="dim">Second USB Wi-Fi adapter</td>
         </tr>
         <tr>
+          <td>APRS scanner (Phase 8.5)</td>
+          <td class="mono">listen/signal_listen/__init__.py schema-only</td>
+          <td class="dim">Pi 4/5 + RTL-SDR on 144.39 MHz</td>
+        </tr>
+        <tr>
           <td>Three-node mesh testbed write-up</td>
           <td class="dim">—</td>
           <td class="dim">Three Pi 4/5 + LoRa hats</td>
         </tr>
-        <tr>
-          <td>Pack PDFs</td>
-          <td class="mono">packs/&lt;name&gt;/pack.yaml schema present</td>
-          <td class="dim">Design pass, not engineering</td>
-        </tr>
       </tbody>
     </table>
     <p class="lede" style="margin-top: 14px;">
+      Pack PDF authoring shipped (HTML sources + <span class="mono">build_pack_pdfs.sh</span>);
+      only the workstation build step remains and is tracked under operator workflow.
       Full gap analysis with file:line citations:
       <a class="docs" href="docs/GAP_ANALYSIS.md">docs/GAP_ANALYSIS.md</a>.
     </p>

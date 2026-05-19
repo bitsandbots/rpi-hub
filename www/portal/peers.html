@@ -32,11 +32,19 @@
     <div class="container">
       <section class="intro" aria-labelledby="intro-h">
         <h1 id="intro-h">Mesh peers</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
         <p>
           Other SIGNAL nodes this hub has seen on the mesh. Unverified peers
           are visible but their content is flagged — the owner scans a peer's
           QR fingerprint and marks it trusted to lift the banner.
         </p>
+        <p id="peers-status" class="board-status" aria-live="polite" hidden></p>
       </section>
 
       <section class="peers-identity">
@@ -47,6 +55,10 @@
           this node from their Peers page.
         </p>
         <figure class="peers-identity__qr">
+          <!-- Fallback pattern: /api/mesh/identity.svg 404s on a hub whose
+               keygen oneshot has not run yet. peers.js attaches an onerror
+               handler that hides this figure; the fingerprint text above
+               stays as the canonical owner-to-owner trust handoff. -->
           <img id="peers-qr" src="/api/mesh/identity.svg"
                alt="QR code of this node's mesh fingerprint"
                width="232" height="232" loading="lazy" decoding="async">
@@ -54,7 +66,7 @@
         </figure>
       </section>
 
-      <section class="peers-list" aria-label="Peers">
+      <section class="peers-list" aria-label="Peers" aria-live="polite">
         <h2>Seen on the mesh</h2>
         <ol id="peers-rows" class="peers-rows"></ol>
         <p id="peers-empty" class="board-empty" hidden>No peers seen yet — try moving closer or check antenna.</p>
@@ -70,11 +82,5 @@
   <footer class="site-footer">
     SIGNAL · Phase 7 · Reticulum + BATMAN-adv · Mesh TX local-only
   </footer>
-
-  <noscript>
-    <p style="max-width:36rem;margin:1rem auto;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
-      The Peers page needs JavaScript to render the live peer list. The rest of the hub works without it.
-    </p>
-  </noscript>
 </body>
 </html>

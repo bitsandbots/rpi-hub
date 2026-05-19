@@ -32,6 +32,13 @@
     <div class="container">
       <section class="intro" aria-labelledby="intro-h">
         <h1 id="intro-h">Search the library with help from a small assistant</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
         <p>
           The assistant only summarises passages it actually found in the library.
           Every claim links back to the source. Drug doses, severe injuries,
@@ -82,6 +89,14 @@
         <p><a href="/library/" class="btn">Open the library</a></p>
       </section>
 
+      <section id="ask-error" class="ask-noanswer" aria-live="polite" hidden>
+        <p>
+          The assistant isn't reachable right now. You can still search the
+          offline library directly.
+        </p>
+        <p><a href="/library/" class="btn">Open the library</a></p>
+      </section>
+
       <nav class="subnav" aria-label="More">
         <a href="/">← Back to hub</a>
         <a href="/library/">Open library</a>
@@ -93,12 +108,5 @@
   <footer class="site-footer">
     SIGNAL · Phase 6 · Grounded, cited, deferential · No internet egress
   </footer>
-
-  <noscript>
-    <p style="max-width:36rem;margin:1rem auto;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
-      The Ask page needs JavaScript to query the assistant. You can still
-      use the library directly: <a href="/library/">open the library</a>.
-    </p>
-  </noscript>
 </body>
 </html>

@@ -163,6 +163,7 @@
   .version-pill.v10 { color: var(--signal); border-color: var(--signal); }
   .version-pill.v11 { color: var(--amber); border-color: var(--amber); }
   .version-pill.v12 { color: var(--blue); border-color: var(--blue); }
+  .version-pill.vnext { color: var(--amber-hot); border-color: var(--amber-hot); }
 </style>
 </head>
 <body>
@@ -180,17 +181,18 @@
     </div>
   </header>
 
-  <!-- v1.2 shipped banner. Independent of per-user check state; this is
+  <!-- v1.2.1 shipped banner. Independent of per-user check state; this is
        the canonical project status. Refreshed by repo tags, not by clicks. -->
   <div style="margin:0 0 1rem 0; padding:0.9rem 1.1rem; background:rgba(46,205,98,0.12); border-left:3px solid var(--signal,#2ecd62); border-radius:6px;">
-    <strong>v1.2 shipped.</strong>
+    <strong>v1.2.1 shipped.</strong>
     All nine phases landed (1 → 2 → 3 → 4 → 5 → 6 → 9 → 8 → 7) per the approved sequencing,
-    plus every post-v1.0 follow-up that doesn't require bench hardware:
-    radio data-plane scaffolds, audio fanout, ADS-B UI, mesh-propagated notes,
-    read-only root (v1.1), signed mesh envelopes via LoadCredential, and
-    QR fingerprint codes on <code>/api/mesh/identity.svg</code> (v1.2).
-    This wizard's checklist below is your personal copy —
-    use it to track your own re-build / regional adaptation.
+    plus every non-hardware-gated follow-up: radio data-plane scaffolds, audio fanout,
+    read-only root, mesh-propagated notes (v1.1); signed mesh envelopes via
+    <code>LoadCredential</code> + QR fingerprint codes on
+    <code>/api/mesh/identity.svg</code> (v1.2); dump1090-mutability install-gated
+    on USB dongle detection with a live aircraft count on the status page (v1.2.1).
+    The checklist below is your personal copy — use it to track your own
+    re-build, regional adaptation, or v1.3+ composition (see <em>Outlook</em>).
   </div>
 
   <div class="rail">
@@ -230,8 +232,11 @@
           <span class="b">:8080</span> kiwix-serve<br/>
           <span class="b">:8100</span> signal-retrieve<br/>
           <span class="b">:8200</span> signal-assist<br/>
+          <span class="b">:8201</span> llama · bge-small<br/>
+          <span class="b">:8202</span> llama · Qwen2.5<br/>
           <span class="b">:8300</span> signal-listen<br/>
-          <span class="b">:8400</span> signal-notes
+          <span class="b">:8400</span> signal-notes<br/>
+          <span class="b">:8500</span> signal-mesh
         </div>
       </div>
 
@@ -288,7 +293,8 @@ const STEPS = [
       { type: 'table', headers: ['Version', 'Phases', 'Capability'], rows: [
         ['v1.0', '1–5', 'Bare AP → Captive portal → Content → Frontend → Status'],
         ['v1.1', '6', 'Constrained RAG assistant (grounded, cited, deferential)'],
-        ['v1.2', '7–9', 'Mesh networking · RTL-SDR radio · Notes board + regional packs']
+        ['v1.2', '7–9', 'Mesh networking · RTL-SDR radio · Notes board + regional packs'],
+        ['v1.3+', '—', 'Outlook directions — user-side compositions (e.g. AREDN), not roadmap phases']
       ]},
       { type: 'h', text: 'How Claude Code works this plan' },
       { type: 'checks', items: [
@@ -603,15 +609,17 @@ const STEPS = [
       { type: 'table', headers: ['Tile', 'Phase', 'Visible when'], rows: [
         ['Listen', '8', 'signal-listen detects a dongle'],
         ['Peers', '7', 'signal-mesh is running'],
+        ['ADS-B', '8.4', 'dump1090-mutability detects a dongle (v1.2.1)'],
         ['Print', '9B', 'Active pack includes field cards']
       ]},
-      { type: 'callout', kind: '', title: 'Design rule', body: 'Every tile must self-disable cleanly when its service isn\'t running. A user with the minimal Zero 2 W gift build sees Library + Status only. Adding a dongle reveals Listen on next refresh. Joining a mesh reveals Peers. <strong>The UI shape follows the actual capabilities of the deployed unit.</strong>' },
+      { type: 'callout', kind: '', title: 'Design rule', body: 'Every tile must self-disable cleanly when its service isn\'t running. A user with the minimal Zero 2 W gift build sees Library + Status only. Adding a dongle reveals Listen (and ADS-B, on dongle detection) on next refresh. Joining a mesh reveals Peers. <strong>The UI shape follows the actual capabilities of the deployed unit.</strong>' },
       { type: 'h', text: 'Integration acceptance' },
       { type: 'checks', items: [
         { id: 'int-1', label: 'Minimal Zero 2 W gift build shows only Library + Status', desc: 'Verify with a fresh image, no add-ons. Tiles should not appear for missing services.', tag: 'test' },
         { id: 'int-2', label: 'Adding a USB RTL-SDR dongle reveals Listen on next refresh', desc: 'Detection logic is honest — no manual config needed to surface the tile.', tag: 'test' },
         { id: 'int-3', label: 'Joining a mesh peer reveals Peers tile within one refresh', desc: 'signal-mesh status determines visibility.', tag: 'test' },
-        { id: 'int-4', label: 'Status page enumerates running / installed-but-disabled / absent capabilities', desc: 'No hidden behaviors. Capability discoverability invariant.', tag: 'test' }
+        { id: 'int-4', label: 'ADS-B tile + status row appear iff dump1090-mutability is running (v1.2.1)', desc: '<code>scripts/detect_rtlsdr.sh</code> gates install-time enablement; <code>_probe_adsb()</code> in <code>api/signal_status/system.py</code> surfaces live aircraft count beside the dot.', tag: 'test' },
+        { id: 'int-5', label: 'Status page enumerates running / installed-but-disabled / absent capabilities', desc: 'No hidden behaviors. Capability discoverability invariant.', tag: 'test' }
       ]},
       { type: 'h', text: 'v1.2 open questions' },
       { type: 'checks', items: [
@@ -628,13 +636,51 @@ const STEPS = [
 
   // ========================================================== 11
   {
+    id: 'outlook',
+    tag: 'OUTLOOK · v1.3+ DIRECTIONS',
+    legend: 'v1.3+ Outlook',
+    label: 'v1.3+',
+    version: '',
+    title: 'Compositions, <span class="accent">not phases</span>',
+    blurb: 'v1.2 closes the original nine-phase plan. Everything below is a <strong>direction held open</strong> — a composition a SIGNAL owner can layer on top, or a polish item awaiting bench hardware — not work the project commits to build on a release cadence. The bar to move any of these onto an active roadmap is the same: a real partner pulling them in (an ARES club, a deployment site, a regional pack maintainer), and an intact gift-ability and receive-only story.',
+    body: [
+      { type: 'h', text: 'AREDN · licensed-operator composition' },
+      { type: 'callout', kind: '', title: 'How a licensed amateur composes SIGNAL with AREDN', body: 'A licensed operator with an existing AREDN router connects a SIGNAL Pi via Ethernet and treats the AREDN mesh as a high-bandwidth regional uplink. The Phase 9 notes board and Phase 8 ADS-B feed can publish onto the mesh; Winlink email and inter-site VoIP become reachable from a captive-portal client; a single SIGNAL node becomes a regional aggregator. <strong>No <code>signal-aredn</code> service ships.</strong> License gating, hardware compatibility (Ubiquiti / MikroTik), firmware flashing, and antenna alignment are AREDN-side concerns the operator already owns. SIGNAL itself stays receive-only and gift-able to non-licensed recipients.' },
+      { type: 'rules', items: [
+        { name: 'Why this is not Phase 10 today', body: 'Most SIGNAL deployments will not have a co-located ham operator. Building, testing, and maintaining a phase a minority of users will exercise taxes the rest of the project, and the AREDN-supported hardware list drifts release to release — pinning becomes ongoing maintenance, not a one-shot setup.' },
+        { name: 'What would move it onto the roadmap', body: 'A partner ARES / RACES / EmComm group willing to be the design partner — and Phase 7 mesh validated on a real three-node bench first. Until both hold, AREDN sits in this file, not the build queue.' },
+        { name: 'Invariants the composition must respect', body: 'No internet egress, no phone-home, read-only content with the notes board as the only write path, MIT-licensed, capability-discoverable. AREDN composition respects all five because the Pi itself does not change shape — the licensed operator brings their own radio.' }
+      ]},
+      { type: 'h', text: 'Other directions held open' },
+      { type: 'checks', items: [
+        { id: 'out-1', label: 'Three-node mesh testbed write-up (Phase 7 acceptance gate)', desc: 'Needs three Pi 4/5 + LoRa hats on a bench for a 72-hour run; output lands as <code>docs/MESH_TESTBED.md</code>.', tag: 'test' },
+        { id: 'out-2', label: 'Phase 7.1 LoRa data plane — Reticulum daemon wiring', desc: 'Scaffold ships at <code>mesh/signal_mesh/lora_bridge.py</code> + <code>systemd/signal-reticulum.service</code>. Needs RAK4631 USB hat to exercise bridge ↔ Reticulum I/O against a real radio.', tag: 'service' },
+        { id: 'out-3', label: 'Phase 7.3 Wi-Fi mesh data plane — BATMAN-adv kernel module config', desc: 'Scaffold ships at <code>mesh/signal_mesh/wifi_bridge.py</code> + <code>signal-batman.service</code> + <code>scripts/batman_setup.sh</code>. Needs second USB Wi-Fi adapter; also add <code>AF_NETLINK</code> to signal-mesh sandbox once attached.', tag: 'service' },
+        { id: 'out-4', label: 'Phase 8.3 Listen audio WebSocket route', desc: '<code>AudioFanout</code> primitive ships in v1.1 at <code>listen/signal_listen/audio_bridge.py</code>. FastAPI WebSocket route + buffer tuning needs Pi 4 + RTL-SDR dongle on a bench.', tag: 'service' },
+        { id: 'out-5', label: 'Phase 8.5 APRS scanner (144.39 MHz US)', desc: 'Schema-only mention today. Decoder + full UI page + tile probe land when a partner with the kit asks.', tag: 'service' },
+        { id: 'out-6', label: 'Pack PDF build pass', desc: 'All 14 field-card HTML sources committed under <code>packs/*/print/</code>; PDFs are build artefacts (gitignored). One-shot operator step via <code>scripts/build_pack_pdfs.sh</code>; <code>apply_pack.sh</code> fails loud if missing.', tag: 'decision' },
+        { id: 'out-7', label: 'Community-contributed regional packs', desc: 'Pack manifest format is documented in <code>docs/CONTENT_GUIDE.md</code>. Opening it to community PRs is the obvious next lift; held until the in-house first wave is field-validated.', tag: 'decision' }
+      ]},
+      { type: 'h', text: 'Polish track (v1.3, non-blocking)' },
+      { type: 'checks', items: [
+        { id: 'out-8', label: 'Unify service-down UX pattern across portal pages', desc: 'Two patterns coexist: <code>ask-defer</code> / <code>ask-noanswer</code> (Ask, Listen) vs <code>board-status</code> (Peers, Board, ADS-B). Visually consistent today; risk of drift on next edit.', tag: 'config' },
+        { id: 'out-9', label: 'Split <code>X-Owner-Token</code> into per-domain tokens', desc: 'Currently shared between <code>signal-notes</code> DELETE/wipe and <code>signal-mesh</code> peer trust/block. Convenient but conflates two trust domains.', tag: 'decision' },
+        { id: 'out-10', label: 'Opt-in ADS-B position-rounding flag', desc: '<code>aircraft.json</code> is exposed at <code>/adsb/</code> to anyone on the SSID — PII-adjacent for some deployments.', tag: 'decision' },
+        { id: 'out-11', label: 'Test harness for <code>scripts/readonly_root.sh</code>', desc: 'Toggling overlayfs on a live device with no recovery path is the highest-risk untested surface.', tag: 'test' }
+      ]},
+      { type: 'callout', kind: 'accept', title: 'Design principle held', body: 'Every direction above must respect the same five invariants: <strong>no internet egress · no phone-home · read-only content · MIT · capability-discoverable.</strong> Anything that requires breaking one is out of scope by construction — that includes a transmit-capable SIGNAL build, a hosted telemetry endpoint, or auto-routing captive-portal clients to arbitrary external services.' }
+    ]
+  },
+
+  // ========================================================== 12
+  {
     id: 'complete',
     tag: 'PROTOCOL · COMPLETE',
     legend: 'Complete',
     label: 'Done',
     version: '',
-    title: 'Signal <span class="accent">v1.2 candidate</span>',
-    blurb: 'You have walked the full nine-phase protocol. The number below is your acceptance-criteria coverage across the entire build. Re-run this wizard at every tagged commit and every release boundary — eval-driven build means the gates apply forward, not just at first ship.',
+    title: 'Signal <span class="accent">v1.2.1 shipped</span>',
+    blurb: 'You have walked the full nine-phase protocol plus the v1.3+ outlook. The number below is your acceptance-criteria coverage across v1.0 base, v1.1 RAG, v1.2 mesh / radio / notes, v1.2.1 ADS-B install gate, and the held-open directions. Re-run this wizard at every tagged commit and every release boundary — eval-driven build means the gates apply forward, not just at first ship.',
     body: [],
     isComplete: true
   }
@@ -762,7 +808,7 @@ function renderContent() {
   const content = document.getElementById('content');
 
   const vPill = step.version
-    ? `<span class="version-pill ${step.version === 'v1.0' ? 'v10' : step.version === 'v1.1' ? 'v11' : 'v12'}">${step.version}</span>`
+    ? `<span class="version-pill ${step.version === 'v1.0' ? 'v10' : step.version === 'v1.1' ? 'v11' : step.version === 'v1.2' ? 'v12' : 'vnext'}">${step.version}</span>`
     : '';
 
   let html = `<span class="br-tl"></span><span class="br-br"></span>
@@ -776,7 +822,7 @@ function renderContent() {
     const total = totalItems();
     html += `<div class="complete">
       <div class="big-num">${done}<span class="total">/${total}</span></div>
-      <div class="readiness-label">acceptance items confirmed across v1.0 → v1.2</div>
+      <div class="readiness-label">acceptance items confirmed across v1.0 → v1.2.1 + v1.3+ outlook</div>
     </div>`;
   } else {
     html += renderBody(step.body);
@@ -819,7 +865,7 @@ function renderSidebar() {
   const total = totalItems();
   document.getElementById('meta-status').textContent =
     done === 0 ? 'Initializing' :
-    done === total ? 'Complete · v1.2' :
+    done === total ? 'Complete · v1.2.1 + outlook' :
     'In Progress';
 }
 

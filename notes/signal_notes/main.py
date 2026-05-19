@@ -33,6 +33,8 @@ app = FastAPI(
     openapi_url=None,
 )
 
+# Shared owner token: the same file gates DELETE on notes and peer-block
+# on mesh. See OVERVIEW v1.2.1 §5.6.
 OWNER_TOKEN_PATH = Path(os.environ.get("SIGNAL_NOTES_TOKEN_FILE", "/etc/signal/notes-owner-token"))
 
 

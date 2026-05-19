@@ -38,8 +38,21 @@ tier=$(yq -r '.tier' "$manifest")
 DEST="$DEST_KIWIX" "$REPO_DIR/content/fetch.sh" "$tier"
 
 # 2) Stage printable PDFs. PDFs live in packs/<name>/print/ on the
-#    workstation; we rsync the directory into the portal tree.
+#    workstation; we rsync the directory into the portal tree. The PDFs
+#    themselves are built from sibling .html sources by
+#    scripts/build_pack_pdfs.sh — fail loudly if a referenced PDF is
+#    missing so the operator can run the builder before re-baking.
 if [[ -d "$PACK_DIR/print" ]]; then
+    n=$(yq -r '.print | length' "$manifest")
+    missing=()
+    for i in $(seq 0 $((n - 1))); do
+        f=$(yq -r ".print[$i].file" "$manifest")
+        [[ -f "$PACK_DIR/print/$f" ]] || missing+=("$f")
+    done
+    if (( ${#missing[@]} )); then
+        log "missing PDFs: ${missing[*]}"
+        die "run scripts/build_pack_pdfs.sh on the workstation first"
+    fi
     mkdir -p "$DEST_PRINT"
     rsync -a --delete "$PACK_DIR/print/" "$DEST_PRINT/" 2>/dev/null \
         || cp -a "$PACK_DIR/print/." "$DEST_PRINT/"

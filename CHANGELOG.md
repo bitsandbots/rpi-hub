@@ -9,6 +9,38 @@ commit.
 
 ## [Unreleased]
 
+### Docs
+
+- Docs consolidation pass. `docs/REMAINING_TASKS.md` folded into
+  `docs/GAP_ANALYSIS.md`; the latter is now the single canonical
+  open-work list, restructured around three categories
+  (hardware-gated · operator workflow · polish track). Every row
+  re-verified against the live repo on 2026-05-18.
+- `docs/GAP_ANALYSIS.md` §5 / §7 — closed the test-coverage and tooling
+  rows already shipped: `test_identity_endpoint.py`,
+  `test_keygen_unit_ordering.py`, `test_qrcode_decode.py`,
+  `qr-decoder` + `bake-image-lint` jobs, `lighthouse.yml`,
+  `upgrade-path.yml`, `scripts/test_upgrade_path.sh`.
+- Pack PDFs reframed as an operator workflow item, not hardware-gated
+  (HTML sources + `scripts/build_pack_pdfs.sh` + `_template/` all ship).
+- `README.md` — fixed dead link to `docs/HARDWARE.md` (now points to
+  `OVERVIEW.md` §1 *Hardware tiers*).
+- `CLAUDE.md` — fixed dead refs to `docs/V1.x.md` and `docs/PHASE_7.md`;
+  port-map authority is now `docs/OVERVIEW.md` §2.
+- `CHANGELOG.md` — removed `See docs/V1.x.md` / `See docs/PHASE_<N>.md`
+  pointers (those files were retired in v1.2.1; the prose lives in git
+  history at each tag).
+- `Blueprint_Overview.html` "What's left" table — removed Pack PDFs
+  row (no longer hardware-gated), added Phase 8.5 APRS scanner.
+
+### Changed
+
+- `config/dump1090/dump1090-mutability.default` header — added inline
+  single-dongle mutual-exclusion note (mirrors
+  `systemd/signal-listen-same.service:11-12`) and inline reference to
+  the file-based ADS-B status probe semantics
+  (`api/signal_status/system.py::_probe_adsb`).
+
 ## [1.2.1] — 2026-05-18
 
 Phase 8.4 install gate. dump1090-mutability now enables itself only
@@ -44,7 +76,7 @@ item from v1.1's hardware-gated backlog.
 ## [1.2.0] — 2026-05-18
 
 Polish release closing two of the four non-hardware-gated items
-deferred past v1.1. See `docs/V1.2.md`.
+deferred past v1.1.
 
 ### Added
 
@@ -81,7 +113,7 @@ deferred past v1.1. See `docs/V1.2.md`.
 
 ## [1.1.0] — 2026-05-18
 
-Post-v1.0 follow-ups bundled. See `docs/V1.1.md` for the full write-up.
+Post-v1.0 follow-ups bundled.
 
 ### Added
 
@@ -180,37 +212,42 @@ ships in a single image. Approved sequencing was
   the mesh fingerprint inline.
 - `CLAUDE.md` rewritten for v1.0 shipped state.
 
+> The per-phase entries below were the cut-over tags during initial
+> build-up. The `docs/PHASE_<N>.md` write-ups they once pointed at
+> were retired in v1.2.1; the prose lives in git history at each tag,
+> and the *current* state of every phase is in `docs/OVERVIEW.md`.
+
 ## [0.8.0-phase8] — 2026-05-18
 
-See `docs/PHASE_8.md`. RTL-SDR Listen + NOAA SAME alert banner.
+RTL-SDR Listen + NOAA SAME alert banner.
 
 ## [0.9.0-phase9] — 2026-05-18
 
-See `docs/PHASE_9.md`. Notes board + regional content packs.
+Notes board + regional content packs.
 
 ## [0.6.0-phase6] — 2026-05-18
 
-See `docs/PHASE_6.md`. RAG assistant (Pi 5 only).
+RAG assistant (Pi 5 only).
 
 ## [0.5.0-phase5] — 2026-05-18
 
-See `docs/PHASE_5.md`. Status API + image bake + factory reset + MOTD.
+Status API + image bake + factory reset + MOTD.
 
 ## [0.4.0-phase4] — 2026-05-18
 
-See `docs/PHASE_4.md`. CoreConduit frontend + status view.
+CoreConduit frontend + status view.
 
 ## [0.3.0-phase3] — 2026-05-18
 
-See `docs/PHASE_3.md`. Kiwix content layer + `/library/` proxy.
+Kiwix content layer + `/library/` proxy.
 
 ## [0.2.0-phase2] — 2026-05-18
 
-See `docs/PHASE_2.md`. Captive portal redirect + nginx default-server.
+Captive portal redirect + nginx default-server.
 
 ## [0.1.0-phase1] — 2026-05-18
 
-See `docs/PHASE_1.md`. Bare AP — hostapd + dnsmasq + `signal-ap.service`.
+Bare AP — hostapd + dnsmasq + `signal-ap.service`.
 
 [Unreleased]: https://github.com/coreconduit/signal/compare/v1.2.1...HEAD
 [1.2.1]: https://github.com/coreconduit/signal/releases/tag/v1.2.1
