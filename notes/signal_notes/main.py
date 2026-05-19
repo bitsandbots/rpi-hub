@@ -33,8 +33,10 @@ app = FastAPI(
     openapi_url=None,
 )
 
-# Shared owner token: the same file gates DELETE on notes and peer-block
-# on mesh. See OVERVIEW v1.2.1 §5.6.
+# Per-domain owner token: this file gates DELETE + wipe on notes.
+# signal-mesh has its own file (`/etc/signal/mesh-owner-token`) for peer
+# trust/block actions so the two trust domains can be rotated
+# independently. See OVERVIEW §5.5–5.6.
 OWNER_TOKEN_PATH = Path(os.environ.get("SIGNAL_NOTES_TOKEN_FILE", "/etc/signal/notes-owner-token"))
 
 

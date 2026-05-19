@@ -9,6 +9,88 @@ commit.
 
 ## [Unreleased]
 
+### Verified
+
+- Pack PDF build pipeline end-to-end on a Bookworm workstation with
+  chromium: `scripts/build_pack_pdfs.sh` renders all 16 cards in <30s,
+  every `pack.yaml` `.print[].file` entry resolves to a non-empty PDF
+  on disk. PDFs remain gitignored (one-time per-workstation step).
+  `docs/GAP_ANALYSIS.md` §2c updated to note the verification + the
+  chromium / google-chrome / chromium-browser / wkhtmltopdf
+  auto-detection in the builder.
+
+### Tests
+
+- New `tests/test_readonly_root.py` — 9-case harness for
+  `scripts/readonly_root.sh`. Static layer pins: the three subcommands
+  exist, `enable`/`disable` call `require_root` early, the fstab
+  begin/end markers appear in both the writer and the `sed` remover
+  (otherwise disable would leave the block forever), and the
+  initramfs hook path is cleaned up by `disable`. Dynamic layer
+  exercises `status` (the only read-only path) under a stubbed
+  `findmnt`/`du` on `PATH` and asserts the three label lines the
+  `docs/OVERVIEW.md §7.1` runbook tells operators to look for.
+  Closes `docs/GAP_ANALYSIS.md` §3c row "Read-only root".
+- New `tests/test_notes_mesh_e2e.py` — drives `POST /api/notes` end to
+  end into `signal-mesh /notes/publish`, then verifies the resulting
+  signed envelope against the mesh app's public key. Bridges the two
+  FastAPI apps by intercepting `urllib.request.urlopen` (the call
+  `notes/signal_notes/mesh_client.publish` makes) and re-emitting it
+  against an in-memory `TestClient` for the mesh app. Catches drift
+  in JSON schema, canonical body shape, or sign/verify pairing — none
+  of the isolated suites covered all three together. Closes
+  `docs/GAP_ANALYSIS.md` §3c row "End-to-end notes → mesh fan-out".
+
+### Docs
+
+- `docs/OVERVIEW.md §4.6` — new "Captive portal HTTPS — explicitly out
+  of scope" section. Documents why the portal stays HTTP-only (captive-
+  portal probes fail on TLS; no CA reachable; threat model already
+  allows passive observation on the open SSID) and what an operator
+  who needs HTTPS must bring themselves. Closes `docs/GAP_ANALYSIS.md`
+  §3b row "Document the captive portal's HTTP-only design".
+- `docs/GAP_ANALYSIS.md` §3c — closed the `phase8_adsb()` install
+  detector row. `tests/test_install_phase8.py` shipped in commit
+  a3037a5 (static guards on `install.sh` + dynamic stubbed-`lsusb`
+  exercise of `scripts/detect_rtlsdr.sh`); the row was never deleted.
+
+### Security
+
+- Opt-in ADS-B position-rounding (`signal-adsb-shield`). The operator
+  writes a precision (0–4 decimal places) into
+  `/etc/signal/adsb-precision`; both `signal-adsb-shield.timer` and its
+  oneshot service carry `ConditionPathExists=` so nothing runs until
+  the file appears. When active, the timer ticks the script once per
+  second; the script rounds per-aircraft `lat`/`lon` and atomically
+  writes `aircraft.shielded.json` next to the raw output. nginx
+  prefers the shielded copy via `location = /adsb/aircraft.json` with
+  an `if (-f)` rewrite to a named internal location (safe-`if` pattern
+  — static file selection only, no `proxy_pass` involved). New script
+  `scripts/adsb_shield.py`, units `systemd/signal-adsb-shield.{service,timer}`,
+  install/uninstall wiring in `install.sh:phase8_adsb` and
+  `uninstall.sh:remove_listen`, docs in `docs/OVERVIEW.md §7.4`, tests
+  in `tests/test_adsb_shield.py` (12 cases pinning the rounding +
+  precision-file contracts). Closes `docs/GAP_ANALYSIS.md` §3b row
+  "Opt-in ADS-B position-rounding flag".
+- Split owner token into per-domain files:
+  `/etc/signal/notes-owner-token` continues to gate `signal-notes`
+  DELETE + wipe; `/etc/signal/mesh-owner-token` is the new file gating
+  `signal-mesh` peer trust/block (`POST /api/mesh/peers/{fp}/{trust,block}`).
+  `install.sh:ensure_owner_tokens` provisions both. For pre-v1.3
+  deployments that landed when only the notes file existed,
+  `signal-mesh` falls back to `notes-owner-token` so the upgrade is
+  non-breaking — re-running `install.sh` provisions the dedicated
+  mesh token and the fallback stops applying. Touch points:
+  `install.sh`, `uninstall.sh`, `systemd/signal-mesh.service`
+  (`Environment=SIGNAL_MESH_TOKEN_FILE=…`),
+  `mesh/signal_mesh/main.py` (`OWNER_TOKEN_PATH` +
+  `LEGACY_OWNER_TOKEN_PATH`), `notes/signal_notes/main.py` (comment
+  only — path unchanged), `scripts/healthcheck.sh` (new mesh-token
+  check), `docs/OVERVIEW.md` §5.5–§5.6. New
+  `mesh/signal_mesh/tests/test_owner_token.py` pins the fallback
+  contract. Closes `docs/GAP_ANALYSIS.md` §3b row "Split
+  `X-Owner-Token` into per-domain tokens".
+
 ### Docs
 
 - Docs consolidation pass. `docs/REMAINING_TASKS.md` folded into
@@ -40,6 +122,20 @@ commit.
   `systemd/signal-listen-same.service:11-12`) and inline reference to
   the file-based ADS-B status probe semantics
   (`api/signal_status/system.py::_probe_adsb`).
+- Portal CSS — renamed `.ask-noanswer` → `.svc-fallback` and
+  `.board-status` (+ `--error`) → `.svc-status` so cross-page reuse
+  no longer carries a misleading per-page prefix. Class structure is
+  unchanged; `.ask-defer` stays as-is (genuine alert-card on both ask
+  deferrals and NOAA SAME banners). Touch points: `signal.css`,
+  `ask.html`, `listen.html`, `peers.html`, `board.html`, `adsb.html`,
+  `board.js` (sole `classList.toggle` call site). Closes
+  `docs/GAP_ANALYSIS.md` §3a row "Pick one canonical service-down UX
+  pattern".
+- `www/portal/assets/js/README.md` — documented the canonical
+  `<noscript>` block (verbatim copy + page list) and the
+  `.svc-status` / `.svc-fallback` / `.ask-defer` taxonomy so future
+  edits don't drift. Closes `docs/GAP_ANALYSIS.md` §3a row
+  "`<noscript>` snippet drift risk".
 
 ## [1.2.1] — 2026-05-18
 

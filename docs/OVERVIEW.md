@@ -286,6 +286,41 @@ overlay (notes board + DHCP leases live on tmpfs anyway). Keys, ZIMs,
 index, weights, and `/etc/signal/` are explicitly carved out of the
 overlay so re-deployable identity survives reboots.
 
+### 4.6 Captive portal HTTPS — explicitly out of scope
+
+The portal listens on **HTTP only**. This is a deliberate design
+choice, not a TODO. Three reasons:
+
+1. **Captive-portal detection fails on TLS.** iOS / macOS / Android /
+   Windows all run their captive-portal probes against
+   well-known HTTP URLs (`apple.com/library/test/success.html`,
+   `connectivitycheck.gstatic.com/generate_204`, …). When those probes
+   hit our nginx default-server `302` to landing, the OS pops the
+   captive sheet. If the portal answered on TLS with a self-signed cert,
+   the probe would mark the network as "no internet" and **never show
+   the sheet** — operators would have to type `http://hub.local/`
+   manually, which defeats the whole captive-portal UX.
+2. **No CA reachable.** An offline hub by definition cannot complete
+   an ACME challenge, so any "real" cert is impossible. Self-signed
+   means a browser warning on every fetch, which trains users to
+   click through warnings — worse than HTTP.
+3. **Threat model already allows passive observation.** The SSID is
+   open by spec. Anyone on the AP can already see every byte; TLS
+   between the client and the loopback nginx wouldn't change that.
+   The data being served is read-only public-domain library content
+   plus an ephemeral notes board — nothing that warrants the operational
+   complexity TLS would add here.
+
+**Operators who need HTTPS** (e.g., a deployment that also hosts a
+private static IP behind it, or a hub paired with a public-trust
+hostname) should bring their own ACME bootstrap **outside this repo**:
+provision a cert via a one-off internet-connected step, ship it onto
+the device manually, and add a TLS server block to
+`config/nginx/signal-portal.conf` alongside the existing `:80`
+default-server. The captive-portal detection problem above does not go
+away — the operator must accept that some clients will not see the
+auto-pop sheet.
+
 ---
 
 ## 5. API reference
@@ -385,7 +420,9 @@ GET    /api/notes/health             → { ready, note_count }
 
 - Text-only, 280-char hard cap, control-chars stripped, URLs **not** clickable.
 - SQLite over `RuntimeDirectory=` tmpfs → wipes on reboot.
-- Owner token at `/etc/signal/notes-owner-token` (32 hex, 0600).
+- Owner token at `/etc/signal/notes-owner-token` (32 hex, 0600). Distinct
+  from the mesh owner token (§5.6) so the two trust domains rotate
+  independently.
 - On every successful POST the service fires `signal-mesh /notes/publish`
   best-effort; mesh-less hubs are unaffected.
 
@@ -422,6 +459,12 @@ Replay protection: per-peer monotonic sequence numbers (wall-clock is
 advisory because nodes may have no time source). The private key is
 delivered into `signal-mesh.service` via systemd `LoadCredential=`
 (see §6.6); the daemon never opens `/var/lib/signal/keys/` at runtime.
+
+Owner token at `/etc/signal/mesh-owner-token` (32 hex, 0600), distinct
+from the notes owner token in §5.5. For pre-v1.3 single-token
+deployments the service falls back to `/etc/signal/notes-owner-token`
+if `mesh-owner-token` is absent; a re-run of `install.sh` provisions
+the dedicated file and the fallback stops applying.
 
 ---
 
@@ -537,6 +580,26 @@ Single-dongle hubs cannot run NOAA SAME (`signal-listen-same`) and
 ADS-B (`dump1090-mutability`) simultaneously — the second to start
 will lose the device-claim race. Disable the mode you're not using,
 or attach a second dongle and pin `DEVICE=1` in the right config file.
+
+**Opt-in position-rounding.** `aircraft.json` is exposed at `/adsb/`
+to anyone on the open SSID. For deployments where exposing precise
+tracks is PII-adjacent (homes near a base, scheduled-flight predictability,
+etc.), the operator can have `signal-adsb-shield.timer` round per-aircraft
+`lat`/`lon` before nginx serves the file:
+
+```bash
+# 0 ≈ 110 km, 1 ≈ 11 km, 2 ≈ 1.1 km, 3 ≈ 110 m, 4 ≈ 11 m
+echo 1 | sudo tee /etc/signal/adsb-precision   # opt in at ~11 km
+sudo rm /etc/signal/adsb-precision             # opt out
+```
+
+Both `signal-adsb-shield.timer` and its service carry
+`ConditionPathExists=/etc/signal/adsb-precision`, so without the file
+nothing runs and nginx falls through to the raw `aircraft.json`. When
+the file exists, the timer wakes the script once per second; it writes
+`aircraft.shielded.json` atomically next to the raw output and nginx
+prefers it via `location = /adsb/aircraft.json` (see
+`config/nginx/signal-portal.conf`).
 
 ### 7.5 Mesh key rotation
 

@@ -546,13 +546,18 @@ main {
 }
 .ask-answer__how summary { cursor: pointer; }
 
-.ask-noanswer {
+/* Canonical "soft service-down" card. Used wherever a feature is offline
+ * or no result was produced and the page wants to offer a workaround
+ * (link to library, hardware-missing notice, etc.). Pair with .svc-status
+ * (inline one-liner) for transient form-feedback / loading states. The
+ * heavy red-bordered alert card is .ask-defer (role="alert"). */
+.svc-fallback {
   margin: var(--s-4) 0;
   padding: var(--s-4);
   background: var(--c-silver-soft);
   border-radius: var(--r-card);
 }
-.ask-noanswer .btn {
+.svc-fallback .btn {
   display: inline-block;
   padding: var(--s-2) var(--s-4);
   background: var(--c-blue);
@@ -617,13 +622,17 @@ main {
   cursor: pointer;
 }
 .board-form button:hover { background: #1a5ec1; }
-.board-status {
+/* Canonical "inline status line" — single short message, no CTA. Use for
+ * transient form feedback (board post), loading states (adsb), or
+ * service-unreachable notices (peers). Pair with .svc-fallback (padded
+ * card) when the page wants to offer a workaround link. */
+.svc-status {
   margin: 0;
   min-height: 1.25rem;
   font-size: 0.9rem;
   color: var(--c-ink-muted);
 }
-.board-status--error { color: var(--c-bad); }
+.svc-status--error { color: var(--c-bad); }
 
 .board-notes {
   list-style: none;

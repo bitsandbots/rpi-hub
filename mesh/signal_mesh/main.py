@@ -39,9 +39,13 @@ app = FastAPI(
 _PEERS = peers.PeerTable()
 _BUNDLE: identity.IdentityBundle | None = None
 _OUTBOUND_SEQ = 0  # per-process monotonic; persists for the unit's lifetime
-# Shared owner token: the same file gates peer-block on mesh and DELETE
-# on notes. See OVERVIEW v1.2.1 §5.6.
-OWNER_TOKEN_PATH = Path(os.environ.get("SIGNAL_MESH_TOKEN_FILE", "/etc/signal/notes-owner-token"))
+# Per-domain owner token: the mesh file gates /peers/{fp}/{trust,block};
+# the notes file gates /api/notes DELETE + wipe. They are independent so
+# the two trust domains can be rotated separately. The legacy fallback
+# below preserves pre-v1.3 single-token deployments — drop it once
+# install.sh stops being able to land on a token-less /etc/signal.
+OWNER_TOKEN_PATH = Path(os.environ.get("SIGNAL_MESH_TOKEN_FILE", "/etc/signal/mesh-owner-token"))
+LEGACY_OWNER_TOKEN_PATH = Path("/etc/signal/notes-owner-token")
 
 
 def _next_seq() -> int:
@@ -124,14 +128,19 @@ def _get_identity() -> identity.Identity:
     return _get_bundle().identity
 
 
+def _read_owner_token() -> str | None:
+    for path in (OWNER_TOKEN_PATH, LEGACY_OWNER_TOKEN_PATH):
+        try:
+            token = path.read_text().strip()
+        except OSError:
+            continue
+        if token:
+            return token
+    return None
+
+
 def _require_owner(token_header: str | None) -> None:
-    try:
-        expected = OWNER_TOKEN_PATH.read_text().strip()
-    except OSError:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="owner moderation not configured",
-        )
+    expected = _read_owner_token()
     if not expected:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,

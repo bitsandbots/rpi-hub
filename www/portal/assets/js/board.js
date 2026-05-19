@@ -65,7 +65,7 @@
     var el = $("#board-status");
     if (!el) return;
     el.textContent = msg || "";
-    el.classList.toggle("board-status--error", !!isError);
+    el.classList.toggle("svc-status--error", !!isError);
   }
 
   function submit(ev) {

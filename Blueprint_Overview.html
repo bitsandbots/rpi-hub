@@ -246,6 +246,7 @@
     <div class="meta">
       <div>Owner<strong>CoreConduit</strong></div>
       <div>Status<strong style="color: var(--signal);">v1.2.1 SHIPPED</strong></div>
+      <div>Polish<strong style="color: var(--amber);">UNRELEASED LANDING</strong></div>
       <div>Targets<strong>Pi Zero 2 W · Pi 4 · Pi 5</strong></div>
     </div>
   </header>
@@ -264,6 +265,23 @@
     for the build checklist see
     <a class="docs" href="signal-wizard.html">signal-wizard.html</a>.
   </p>
+
+  <div class="callout" style="border-left-color: var(--amber); background: rgba(255, 179, 71, 0.06);">
+    <strong style="color: var(--amber);">Unreleased polish landing on top of v1.2.1</strong>
+    The pending tree adds opt-in ADS-B position-rounding
+    (<code>signal-adsb-shield</code>, gated on
+    <code>/etc/signal/adsb-precision</code>), a split owner-token model
+    (<code>/etc/signal/{notes,mesh}-owner-token</code> with a non-breaking
+    legacy fallback), an explicit captive-portal HTTPS out-of-scope note
+    in <a class="docs" href="docs/OVERVIEW.md">OVERVIEW</a> §4.6, and
+    test harnesses for <code>readonly_root.sh</code> and the cross-service
+    notes&nbsp;→&nbsp;mesh fan-out. Service-down classes are unified as
+    <code>.svc-status</code> / <code>.svc-fallback</code> / <code>.ask-defer</code>
+    across every portal page. See
+    <a class="docs" href="CHANGELOG.md">CHANGELOG</a> <em>[Unreleased]</em>
+    for the full set; the headline shipped tag remains v1.2.1 until
+    cut.
+  </div>
 
   <!-- =====================  ARCHITECTURE DIAGRAM  ===================== -->
   <section>
@@ -431,7 +449,7 @@
 
   <!-- =====================  SERVICE GRID  ===================== -->
   <section>
-    <h2 class="section-h"><span>Services · ports · responsibilities</span><span class="v ok">14 units</span></h2>
+    <h2 class="section-h"><span>Services · ports · responsibilities</span><span class="v ok">14 units · +1 opt-in</span></h2>
     <div class="grid-svc">
       <div class="svc svc--core">
         <div class="svc-h"><strong>signal-ap</strong><span class="svc-port">target unit</span></div>
@@ -492,6 +510,11 @@
         <div class="svc-h"><strong>dump1090-mutability</strong><span class="svc-port">file output</span></div>
         <div class="svc-purpose">ADS-B decoder. Writes aircraft.json; nginx /adsb/ aliases the directory. Gated on lsusb hit.</div>
         <div class="svc-tag opt">OPTIONAL · v1.2.1</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>signal-adsb-shield</strong><span class="svc-port">timer · 1 s</span></div>
+        <div class="svc-purpose">Opt-in PII shield. Rounds per-aircraft lat/lon and writes aircraft.shielded.json; nginx prefers it over raw. ConditionPathExists=/etc/signal/adsb-precision.</div>
+        <div class="svc-tag opt">OPTIONAL · Unreleased</div>
       </div>
       <div class="svc svc--scaff">
         <div class="svc-h"><strong>signal-reticulum</strong><span class="svc-port">LoRa</span></div>
@@ -571,7 +594,7 @@
 
   <!-- =====================  PHASE TIMELINE  ===================== -->
   <section>
-    <h2 class="section-h"><span>Phase timeline</span><span class="v ok">9 phases + 2 polish</span></h2>
+    <h2 class="section-h"><span>Phase timeline</span><span class="v ok">9 phases + 2 polish + Unreleased</span></h2>
     <div class="rail">
       <div class="rail-step done"><span class="num">01</span><span class="name">Bare AP</span><span class="tag">v0.1</span></div>
       <div class="rail-step done"><span class="num">02</span><span class="name">Captive portal</span><span class="tag">v0.2</span></div>
@@ -584,12 +607,17 @@
       <div class="rail-step done"><span class="num">07</span><span class="name">Mesh control plane</span><span class="tag">v1.0</span></div>
       <div class="rail-step poly"><span class="num">+1</span><span class="name">Post-v1 polish</span><span class="tag">v1.1</span></div>
       <div class="rail-step poly"><span class="num">+2</span><span class="name">Sign + QR + ADS-B gate</span><span class="tag">v1.2.1</span></div>
+      <div class="rail-step poly"><span class="num">+3</span><span class="name">Shield + token split + harnesses</span><span class="tag">Unreleased</span></div>
     </div>
     <p class="lede" style="margin-top: 14px;">
       Approved sequencing was <code>1 → 2 → 3 → 4 → 5 → 6 → 9 → 8 → 7</code>
       so each tag was end-to-end demoable on real hardware. Polish
       releases v1.1 and v1.2 closed the post-v1.0 software backlog;
-      v1.2.1 added the dump1090 install gate.
+      v1.2.1 added the dump1090 install gate. The Unreleased polish on
+      top of v1.2.1 lands opt-in ADS-B position-rounding, the
+      <code>notes</code>/<code>mesh</code> owner-token split, and the
+      <code>readonly_root</code> + cross-service notes&nbsp;→&nbsp;mesh
+      test harnesses.
     </p>
   </section>
 
@@ -636,6 +664,11 @@
           <td>ADS-B (dump1090)</td>
           <td class="h o">w/ dongle</td><td class="h o">w/ dongle</td><td class="h o">w/ dongle</td>
           <td class="dim">single-dongle mutex with SAME</td>
+        </tr>
+        <tr>
+          <td>ADS-B position-rounding (shield)</td>
+          <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
+          <td class="dim">opt-in: write 0–4 into <span class="mono">/etc/signal/adsb-precision</span></td>
         </tr>
         <tr>
           <td>RAG assistant</td>
@@ -705,7 +738,7 @@
   </section>
 
   <footer class="site">
-    <span>SIGNAL · v1.2.1 · MIT</span>
+    <span>SIGNAL · v1.2.1 (+ Unreleased polish) · MIT</span>
     <span>
       <a href="README.md">README</a> ·
       <a href="docs/OVERVIEW.md">Overview</a> ·

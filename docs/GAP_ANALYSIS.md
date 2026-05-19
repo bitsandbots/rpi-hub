@@ -82,16 +82,20 @@ lock them in after first fetch (same pattern as the ZIM manifest).
 All 16 field-card HTML sources are written and committed across the
 five packs (`packs/general-purpose | gulf-coast | mountain-west |
 pacific-northwest | urban-resilience`). Shared template at
-`packs/_template/`. PDFs are gitignored (build artefacts). Currently
-**zero** are built.
+`packs/_template/`. PDFs are gitignored (build artefacts), so every
+fresh workstation clone needs to render them once:
 
 ```bash
 ./scripts/build_pack_pdfs.sh        # walks every packs/*/print/*.html
 ./scripts/apply_pack.sh <name>      # validates → stages PDFs
 ```
 
-`apply_pack.sh` fails loudly with a pointer to the builder if a PDF is
-missing — unmissable at provision time, not silent.
+The builder accepts chromium / google-chrome / chromium-browser /
+wkhtmltopdf — whichever is on PATH first. Verified end-to-end with
+chromium on Bookworm: all 16 cards render in <30s, every manifest
+entry resolves to a non-empty PDF on disk. `apply_pack.sh` fails
+loudly with a pointer to the builder if a PDF is missing —
+unmissable at provision time, not silent.
 
 ## 3. Polish track (v1.3)
 
@@ -100,34 +104,20 @@ shipping."
 
 ### 3a. Frontend polish
 
-| Item | Pages | Notes |
-|---|---|---|
-| Pick one canonical service-down UX pattern | `ask`, `listen`, `peers`, `board`, `adsb`, `status` | Two patterns coexist: `ask-defer` / `ask-noanswer` (Ask, Listen) vs `board-status` (Peers, Board, ADS-B). Consider unifying — currently visually consistent but class-named differently. |
-| `<noscript>` snippet drift risk | all portal pages | Blocks are byte-identical today; future edits could drift. Document the canonical copy at the top of `www/portal/assets/js/README.md` so reviewers catch drift, or accept the drift risk in exchange for no build step. |
+_All rows closed in v1.2.x — canonical service-down classes
+(`.svc-status` / `.svc-fallback` / `.ask-defer`) and the canonical
+`<noscript>` block are documented at the top of
+`www/portal/assets/js/README.md`. New rows file here as they appear._
 
 ### 3b. Security / sandbox (track for v1.3)
 
-- Split `X-Owner-Token` into per-domain tokens (currently shared between
-  `signal-notes` DELETE/wipe and `signal-mesh` peer trust/block via
-  `/etc/signal/notes-owner-token`). Convenient but conflates two trust
-  domains.
 - Add `AF_NETLINK` to `signal-mesh` sandbox once the BATMAN bridge
   actually attaches (BATMAN uses netlink). Tracked alongside §1 Phase 7.3.
-- Document the captive portal's HTTP-only design + "bring your own
-  ACME bootstrap" out-of-scope guidance for HTTPS portals. Should land
-  as a one-section addendum to `docs/OVERVIEW.md` §6 or a new
-  `docs/SECURITY_NOTES.md` if it grows.
-- Opt-in ADS-B position-rounding flag — `aircraft.json` is exposed at
-  `/adsb/` to anyone on the SSID, which is PII-adjacent for some
-  deployments.
 
 ### 3c. Test-coverage gaps
 
-| Surface | What's untested | Risk |
-|---|---|---|
-| Read-only root | `scripts/readonly_root.sh` has no test harness | Toggling overlayfs on a live device with no recovery path |
-| `phase8_adsb()` in install.sh | No automated test (would need fake `lsusb` in CI) | Detector regression silently disables dump1090 enablement |
-| End-to-end notes → mesh fan-out | Signing path covered in isolation; no test drives the cross-service hop | Notes fail to fan out to mesh without a journalctl entry |
+_All rows closed in v1.3 (see `CHANGELOG.md [Unreleased]`). New rows
+file here as they appear._
 
 ## 4. Closed (recently)
 
@@ -154,6 +144,10 @@ they're tracked in `CHANGELOG.md`. The most recent sweep closed:
   `config/dump1090/dump1090-mutability.default`, `signal-mesh-keygen.service`
   Why-line, ADS-B file-based probe semantics, shared owner-token note
   in both service `main.py` files.
+- Frontend §3a rows: service-down classes unified as
+  `.svc-status` / `.svc-fallback` / `.ask-defer`; canonical
+  `<noscript>` block documented in `www/portal/assets/js/README.md`
+  so reviewers catch drift.
 
 ---
 

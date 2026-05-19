@@ -89,6 +89,12 @@ remove_listen() {
        && grep -q "SIGNAL" /etc/default/dump1090-mutability 2>/dev/null; then
         rm -f /etc/default/dump1090-mutability
     fi
+    # Phase 8.4 polish — adsb-shield (opt-in position-rounder).
+    systemctl disable --now signal-adsb-shield.timer 2>/dev/null || true
+    rm -f /etc/systemd/system/signal-adsb-shield.service \
+          /etc/systemd/system/signal-adsb-shield.timer \
+          /etc/signal/adsb-precision \
+          /run/dump1090-mutability/aircraft.shielded.json
 }
 
 remove_notes() {
@@ -96,7 +102,7 @@ remove_notes() {
     # to clean up beyond the service + token + print tree.
     systemctl disable --now signal-notes.service 2>/dev/null || true
     rm -f /etc/systemd/system/signal-notes.service
-    rm -f /etc/signal/notes-owner-token
+    rm -f /etc/signal/notes-owner-token /etc/signal/mesh-owner-token
     rm -rf /var/www/signal-portal/print
 }
 

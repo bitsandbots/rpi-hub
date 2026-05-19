@@ -33,6 +33,7 @@ LoadCredential=ed25519_pub:/var/lib/signal/keys/ed25519.pub
 
 Environment=PYTHONPATH=/opt/signal
 Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=SIGNAL_MESH_TOKEN_FILE=/etc/signal/mesh-owner-token
 WorkingDirectory=/opt/signal
 
 ExecStart=/usr/bin/python3 -m uvicorn mesh.signal_mesh.main:app \

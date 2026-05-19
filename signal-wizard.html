@@ -194,6 +194,18 @@
     The checklist below is your personal copy — use it to track your own
     re-build, regional adaptation, or v1.3+ composition (see <em>Outlook</em>).
   </div>
+  <div style="margin:0 0 1rem 0; padding:0.9rem 1.1rem; background:rgba(255,179,71,0.10); border-left:3px solid var(--amber,#ffb347); border-radius:6px;">
+    <strong>Unreleased polish landing on top of v1.2.1.</strong>
+    Opt-in ADS-B position-rounding (<code>signal-adsb-shield</code>),
+    split owner tokens (<code>notes-owner-token</code> /
+    <code>mesh-owner-token</code> with non-breaking legacy fallback),
+    captive-portal HTTPS out-of-scope note in
+    <code>docs/OVERVIEW.md §4.6</code>, and test harnesses for
+    <code>scripts/readonly_root.sh</code> and the cross-service
+    notes&nbsp;→&nbsp;mesh fan-out. See <code>CHANGELOG.md</code>
+    <em>[Unreleased]</em> for the full set — the headline shipped tag
+    remains v1.2.1 until cut.
+  </div>
 
   <div class="rail">
     <div class="rail-label">
@@ -661,12 +673,12 @@ const STEPS = [
         { id: 'out-6', label: 'Pack PDF build pass', desc: 'All 14 field-card HTML sources committed under <code>packs/*/print/</code>; PDFs are build artefacts (gitignored). One-shot operator step via <code>scripts/build_pack_pdfs.sh</code>; <code>apply_pack.sh</code> fails loud if missing.', tag: 'decision' },
         { id: 'out-7', label: 'Community-contributed regional packs', desc: 'Pack manifest format is documented in <code>docs/CONTENT_GUIDE.md</code>. Opening it to community PRs is the obvious next lift; held until the in-house first wave is field-validated.', tag: 'decision' }
       ]},
-      { type: 'h', text: 'Polish track (v1.3, non-blocking)' },
-      { type: 'checks', items: [
-        { id: 'out-8', label: 'Unify service-down UX pattern across portal pages', desc: 'Two patterns coexist: <code>ask-defer</code> / <code>ask-noanswer</code> (Ask, Listen) vs <code>board-status</code> (Peers, Board, ADS-B). Visually consistent today; risk of drift on next edit.', tag: 'config' },
-        { id: 'out-9', label: 'Split <code>X-Owner-Token</code> into per-domain tokens', desc: 'Currently shared between <code>signal-notes</code> DELETE/wipe and <code>signal-mesh</code> peer trust/block. Convenient but conflates two trust domains.', tag: 'decision' },
-        { id: 'out-10', label: 'Opt-in ADS-B position-rounding flag', desc: '<code>aircraft.json</code> is exposed at <code>/adsb/</code> to anyone on the SSID — PII-adjacent for some deployments.', tag: 'decision' },
-        { id: 'out-11', label: 'Test harness for <code>scripts/readonly_root.sh</code>', desc: 'Toggling overlayfs on a live device with no recovery path is the highest-risk untested surface.', tag: 'test' }
+      { type: 'h', text: 'Recently closed (Unreleased polish on top of v1.2.1)' },
+      { type: 'callout', kind: '', title: 'What the pending tree closes', body: 'Every item the wizard previously listed under <em>Polish track (v1.3, non-blocking)</em> is closed in the Unreleased section of <code>CHANGELOG.md</code>. No outstanding polish-track work remains — new rows will land here as they appear.' },
+      { type: 'rules', items: [
+        { name: 'Split owner tokens', body: 'Per-domain owner tokens shipped — <code>/etc/signal/notes-owner-token</code> gates <code>signal-notes</code> DELETE/wipe; <code>/etc/signal/mesh-owner-token</code> gates <code>signal-mesh</code> peer trust/block. <code>signal-mesh</code> falls back to the notes token for pre-Unreleased deployments so the upgrade is non-breaking. Pinned by <code>mesh/signal_mesh/tests/test_owner_token.py</code>.' },
+        { name: 'Opt-in ADS-B position-rounding', body: '<code>signal-adsb-shield</code> (oneshot + 1 s timer) rounds per-aircraft lat/lon and writes <code>aircraft.shielded.json</code> next to the raw output; nginx prefers the shielded file via a safe-<code>if</code> static rewrite. Both units carry <code>ConditionPathExists=/etc/signal/adsb-precision</code>, so without the precision file nothing runs and the raw feed is served. 12-case test harness at <code>tests/test_adsb_shield.py</code>.' },
+        { name: 'readonly_root test harness', body: '<code>tests/test_readonly_root.py</code> — 9 cases. Static layer pins the three subcommands, <code>require_root</code> call sites, fstab markers in writer + sed remover, and initramfs hook cleanup. Dynamic layer drives <code>status</code> under stubbed <code>findmnt</code>/<code>du</code> and asserts the operator-visible label lines.' }
       ]},
       { type: 'callout', kind: 'accept', title: 'Design principle held', body: 'Every direction above must respect the same five invariants: <strong>no internet egress · no phone-home · read-only content · MIT · capability-discoverable.</strong> Anything that requires breaking one is out of scope by construction — that includes a transmit-capable SIGNAL build, a hosted telemetry endpoint, or auto-routing captive-portal clients to arbitrary external services.' }
     ]

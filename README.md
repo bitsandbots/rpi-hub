@@ -15,6 +15,12 @@ off-grid communities.
 > QR fingerprint endpoint at `/api/mesh/identity.svg`, and the Phase 8.4
 > dump1090-mutability install gate with a live ADS-B status row.
 >
+> Unreleased polish landing on top of v1.2.1: opt-in ADS-B
+> position-rounding (`signal-adsb-shield`), split `notes`/`mesh` owner
+> tokens, captive-HTTPS out-of-scope note, and test harnesses for
+> `scripts/readonly_root.sh` and the cross-service notes → mesh fan-out.
+> See [`CHANGELOG.md`](./CHANGELOG.md) `[Unreleased]` for the full set.
+>
 > Canonical references:
 > - [`docs/OVERVIEW.md`](./docs/OVERVIEW.md) — system reference (architecture, setup, API)
 > - [`docs/GAP_ANALYSIS.md`](./docs/GAP_ANALYSIS.md) — what's still gated on bench hardware

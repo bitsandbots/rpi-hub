@@ -598,21 +598,44 @@ phase8_adsb() {
         log "Phase 8.4 — no RTL-SDR dongle detected; dump1090-mutability stays disabled."
         log "    Plug a dongle in and run: sudo systemctl enable --now dump1090-mutability"
     fi
+
+    # Phase 8.4 polish — install the opt-in position-rounder. Both the
+    # service and timer carry ConditionPathExists=/etc/signal/adsb-precision,
+    # so this is dormant until the operator creates that file. We
+    # `enable --now` the timer unconditionally; condition-checks make
+    # the actual ticking opt-in.
+    install -d -m 0755 /opt/signal/scripts
+    install -m 0755 "${REPO_DIR}/scripts/adsb_shield.py" /opt/signal/scripts/adsb_shield.py
+    install -m 0644 "${REPO_DIR}/systemd/signal-adsb-shield.service" \
+        /etc/systemd/system/signal-adsb-shield.service
+    install -m 0644 "${REPO_DIR}/systemd/signal-adsb-shield.timer" \
+        /etc/systemd/system/signal-adsb-shield.timer
+    systemctl daemon-reload
+    systemctl enable --now signal-adsb-shield.timer 2>/dev/null || true
+    log "Phase 8.4 polish — adsb-shield timer installed (opt in: echo 1 >/etc/signal/adsb-precision)"
 }
 
-ensure_owner_token() {
-    # Generate a 32-hex-char token if one is not already on disk. The
-    # token gates DELETE /api/notes/{id} and POST /api/notes/wipe — the
-    # owner shells into the device to read it.
-    local token_file="/etc/signal/notes-owner-token"
+ensure_owner_tokens() {
+    # Generate 32-hex-char tokens for the two trust domains if they are
+    # not already on disk. The notes token gates DELETE /api/notes/{id}
+    # and POST /api/notes/wipe; the mesh token gates POST
+    # /api/mesh/peers/{fp}/{trust,block}. The owner shells into the
+    # device to read each one.
+    #
+    # signal-mesh falls back to notes-owner-token when mesh-owner-token
+    # is absent (pre-v1.3 deployments stay single-token until the
+    # operator chooses to split).
     install -d -m 0755 /etc/signal
-    if [[ ! -s "$token_file" ]]; then
-        # /dev/urandom + tr is universal; openssl/uuidgen aren't always
-        # in Bookworm minimal images.
-        tr -dc 'a-f0-9' </dev/urandom | head -c 32 >"$token_file"
-        chmod 0600 "$token_file"
-        log "generated owner token at $token_file (cat it as root)"
-    fi
+    local f
+    for f in /etc/signal/notes-owner-token /etc/signal/mesh-owner-token; do
+        if [[ ! -s "$f" ]]; then
+            # /dev/urandom + tr is universal; openssl/uuidgen aren't always
+            # in Bookworm minimal images.
+            tr -dc 'a-f0-9' </dev/urandom | head -c 32 >"$f"
+            chmod 0600 "$f"
+            log "generated owner token at $f (cat it as root)"
+        fi
+    done
 }
 
 phase9() {
@@ -622,8 +645,8 @@ phase9() {
     install -d -m 0755 /opt/signal/notes
     install_tree "${REPO_DIR}/notes" /opt/signal/notes
 
-    # Owner-moderation token. One-time generation; never overwritten.
-    ensure_owner_token
+    # Owner-moderation tokens (notes + mesh). One-time generation; never overwritten.
+    ensure_owner_tokens
 
     # Refresh portal so board.html + board.js are served.
     install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
@@ -656,7 +679,8 @@ phase9() {
     fi
 
     log "Phase 9 complete. http://hub.local/board.html serves the board."
-    log "Owner token: cat /etc/signal/notes-owner-token (root only)"
+    log "Owner tokens: cat /etc/signal/notes-owner-token (notes moderation)"
+    log "               cat /etc/signal/mesh-owner-token  (mesh peer trust/block)"
 }
 
 main() {

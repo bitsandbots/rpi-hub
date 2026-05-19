@@ -141,6 +141,13 @@ if systemctl is-active --quiet signal-mesh.service; then
            | python3 -c "import sys,json;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)"
     [[ -n "$fp" ]] && ok "mesh fingerprint: $fp" || warn "mesh fingerprint missing — keypair generation may have failed"
 fi
+if [[ -s /etc/signal/mesh-owner-token ]]; then
+    ok "mesh owner token present at /etc/signal/mesh-owner-token (0600)"
+elif [[ -s /etc/signal/notes-owner-token ]]; then
+    warn "mesh owner token not split out — falling back to legacy notes-owner-token (run install.sh to provision)"
+else
+    warn "no mesh owner token — peer trust/block endpoints will refuse with 503"
+fi
 
 section "Phase 8: Listen (optional)"
 check_optional_unit signal-listen.service
