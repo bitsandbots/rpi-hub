@@ -110,8 +110,10 @@ Exit codes:
 
 When deciding what to include:
 
-1. **Bias toward how-to over reference.** WikiHow is more useful in an
-   emergency than Wikipedia. Pick the survival-oriented content first.
+1. **Bias toward how-to over reference.** Practical guides (iFixit,
+   the zimgit-post-disaster / water / food-preparation / knots bundle)
+   are more useful in an emergency than encyclopedic prose. Pick the
+   survival-oriented content first.
 2. **English-only by default.** Multilingual ZIMs roughly double the
    payload. Make language an explicit regional-pack decision (Phase 9B)
    rather than a default.
@@ -141,10 +143,15 @@ by default.
 
 | Content | Tier | On-disk | Notes |
 |---|---|---|---|
-| Simple Wikipedia (no images) | minimal | ~350 MB | Surprisingly complete |
-| WikiHow (full) | minimal | ~11 GB | The biggest minimal-tier file |
-| Wiktionary (no images) | core | ~1.7 GB | Dictionary + thesaurus + etymology |
-| Medical wiki | core | ~5.5 GB | Reference only — not clinical |
+| Simple Wikipedia (no images) | minimal | ~940 MB | Surprisingly complete |
+| zimgit-post-disaster | minimal | ~615 MB | Shelter, sanitation, recovery |
+| zimgit-water | minimal | ~20 MB | Sourcing, purification, storage |
+| zimgit-food-preparation | minimal | ~93 MB | Cook without modern utilities |
+| zimgit-knots | minimal | ~27 MB | Illustrated knot reference |
+| iFixit (all) | minimal | ~3.4 GB | Repair guides — electronics, appliances |
+| Wiktionary (no images) | core | ~8.7 GB | Dictionary + thesaurus + etymology |
+| WikEM | core | ~46 MB | Wiki of Emergency Medicine — physician-curated |
+| zimgit-medicine | core | ~67 MB | Consumer-level medical reference |
 | Wikipedia full (no images) | full | ~50 GB | English, every article |
 | Project Gutenberg English | full | ~65 GB | Every public-domain book |
 | OSM world basic | full | ~40 GB | Replace with regional pack if possible |

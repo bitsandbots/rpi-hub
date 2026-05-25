@@ -34,7 +34,7 @@ off-grid communities.
 
 - An open Wi-Fi network (`SIGNAL_INFOHUB`) on a Raspberry Pi
 - A captive portal that drops every connected client onto a local landing page
-- A Kiwix-served library of Wikipedia, WikiHow, medical references, maps
+- A Kiwix-served library of Wikipedia, iFixit, survival guides, WikEM clinical reference, maps
 - An optional small-model assistant (Pi 5 only) that summarizes the library with citations
 - Optional RTL-SDR radio (NOAA alerts, FM, ham bands, ADS-B)
 - Optional mesh networking between SIGNAL nodes (Reticulum + BATMAN-adv)

@@ -288,7 +288,7 @@ const STEPS = [
       { type: 'checks', items: [
         { id: 'ov1', label: 'Pi configured as Wi-Fi AP with no internet uplink required', desc: 'hostapd broadcasts the SSID; dnsmasq runs DHCP and wildcard DNS. The device serves locally only.', tag: 'scaffold' },
         { id: 'ov2', label: 'Captive-portal DNS redirection auto-routes clients to the local site', desc: 'Phones detect they\'re on a captive network on join. iOS, Android, Windows, Fedora all pop the portal sheet.', tag: 'scaffold' },
-        { id: 'ov3', label: 'Kiwix-served ZIM archives mounted', desc: 'Wikipedia, WikiHow, medical references, OpenStreetMap. Browsable offline through the landing page.', tag: 'scaffold' },
+        { id: 'ov3', label: 'Kiwix-served ZIM archives mounted', desc: 'Wikipedia, iFixit, WikEM clinical reference, survival guides, OpenStreetMap. Browsable offline through the landing page.', tag: 'scaffold' },
         { id: 'ov4', label: 'Mobile-friendly landing page in CoreConduit visual language', desc: 'Silver theme, Exo 2 display, Plus Jakarta Sans body, IBM Plex Mono code. Bundled locally — no CDN.', tag: 'scaffold' },
         { id: 'ov5', label: 'Single-command install: <code>install.sh</code> brings a fresh Pi OS Lite to a working hub', desc: 'Idempotent. Re-running on a configured Pi converges, does not break.', tag: 'scaffold' },
         { id: 'ov6', label: 'Battery + status monitoring surfaced on the landing page', desc: 'Voltage, uptime, free storage, connected clients. Read-only.', tag: 'scaffold' }
@@ -378,7 +378,7 @@ const STEPS = [
         { id: 'p3-2', label: 'Author <code>content/fetch.sh</code> and <code>content/verify.sh</code>', desc: 'Run on a workstation, not on the Pi. SD card is too slow for the download phase.', tag: 'scaffold' },
         { id: 'p3-3', label: 'Install <code>kiwix-tools</code>; configure <code>signal-kiwix.service</code>', desc: 'Serves <code>/var/lib/kiwix/*.zim</code> on 127.0.0.1:8080. Localhost only.', tag: 'service' },
         { id: 'p3-4', label: 'nginx <code>location /library/</code> proxies to kiwix-serve, stripping the prefix', desc: 'Public-facing path is /library/; internal port stays hidden.', tag: 'config' },
-        { id: 'p3-5', label: 'Document recommended starter payload in <code>docs/CONTENT_GUIDE.md</code>', desc: 'Wikipedia no-images, WikiHow, Wiktionary, Project Gutenberg, OpenStreetMap regional.', tag: 'decision' }
+        { id: 'p3-5', label: 'Document recommended starter payload in <code>docs/CONTENT_GUIDE.md</code>', desc: 'Wikipedia no-images, iFixit, WikEM, Wiktionary, Project Gutenberg, OpenStreetMap regional.', tag: 'decision' }
       ]},
       { type: 'callout', kind: 'accept', title: 'Acceptance · Phase 3', body: '<code>curl http://hub.local/library/</code> returns the Kiwix index. Browsing a Wikipedia article on a phone works without internet.' }
     ]
@@ -506,7 +506,7 @@ const STEPS = [
         ['gulf-coast', 'Hurricane prep, flood maps, mosquito-borne, NOAA TX/LA/MS/AL/FL', 'Gulf states residents'],
         ['mountain-west', 'Wildfire, altitude medicine, winter survival, Rockies tiles, NOAA CO/UT/WY/MT', 'Mountain West residents'],
         ['urban-resilience', 'Power outage, water disruption, civil unrest first aid, transit maps', 'Major US metros'],
-        ['general-purpose', 'Wikipedia no-images, WikiHow, medical refs, Gutenberg, global OSM index', 'Default if --pack unset']
+        ['general-purpose', 'Wikipedia no-images, iFixit, WikEM, survival guides, Gutenberg, global OSM index', 'Default if --pack unset']
       ]},
       { type: 'checks', items: [
         { id: 'p9-5', label: 'Pack manifest format: ZIMs + map tiles + NOAA stations + FIPS codes', desc: 'MIT-licensed manifests; underlying content keeps its own licenses (Wikipedia CC, OSM ODbL, etc).', tag: 'config' },

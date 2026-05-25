@@ -11,8 +11,9 @@ version: 1
 tier: core
 zims:
   - wikipedia_en_simple_all_nopic.zim
-  - wikihow_en_maxi.zim
-  - medical_en_all_maxi.zim
+  - zimgit-post-disaster_en.zim
+  - wikem_en_all_maxi.zim
+  - zimgit-medicine_en.zim
 print:
   - file: hurricane-prep.pdf
     title: Hurricane prep — 72 hours before landfall

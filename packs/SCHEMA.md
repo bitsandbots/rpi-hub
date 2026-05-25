@@ -8,7 +8,7 @@ version: 1
 tier: core                       # minimal | core | full — drives storage budget
 zims:                            # subset of content/manifest.yaml names
   - wikipedia_en_simple_all_nopic.zim
-  - wikihow_en_maxi.zim
+  - ifixit_en_all.zim
 print:                           # printable PDFs served under /print/
   - file: water-purification.pdf
     title: Water purification — field methods

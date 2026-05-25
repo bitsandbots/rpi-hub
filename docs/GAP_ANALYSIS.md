@@ -59,8 +59,8 @@ workstation with internet. Pick a tier sized to the target Pi:
 
 | Tier | Approx. size | Hardware target | ZIMs |
 |---|---|---|---|
-| `minimal` | ~12 GB | Pi Zero 2 W + 16 GB SD | Simple Wikipedia (nopic), WikiHow |
-| `core` | ~20 GB | Pi 4 + 64 GB SD | + Wiktionary (nopic), WHO medical |
+| `minimal` | ~5 GB | Pi Zero 2 W + 16 GB SD | Simple Wikipedia (nopic), zimgit survival bundle, iFixit |
+| `core` | ~13.6 GB | Pi 4 + 64 GB SD | + Wiktionary (nopic), WikEM, zimgit-medicine |
 | `full` | ~150 GB | Pi 5 + 256 GB+ SSD | + full English Wikipedia (nopic), Project Gutenberg |
 
 Full manifest fields, sha256 pinning workflow, and refresh procedure

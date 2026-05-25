@@ -12,7 +12,7 @@ into one tuned for a specific region's failure modes.
 
 | Pack | Use case |
 |------|----------|
-| `general-purpose` | Default; Wikipedia/WikiHow/medical/Gutenberg + global OSM |
+| `general-purpose` | Default; Wikipedia/iFixit/WikEM/survival/Gutenberg + global OSM |
 | `pacific-northwest` | Cascadia earthquake, tsunami, Pacific flora/fauna |
 | `gulf-coast` | Hurricane prep, flood maps, mosquito-borne disease |
 | `mountain-west` | Wildfire, altitude medicine, winter survival |

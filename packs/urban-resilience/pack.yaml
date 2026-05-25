@@ -11,8 +11,9 @@ version: 1
 tier: core
 zims:
   - wikipedia_en_simple_all_nopic.zim
-  - wikihow_en_maxi.zim
-  - medical_en_all_maxi.zim
+  - zimgit-post-disaster_en.zim
+  - zimgit-water_en.zim
+  - wikem_en_all_maxi.zim
 print:
   - file: power-outage-first-72h.pdf
     title: Power outage — first 72 hours at home
