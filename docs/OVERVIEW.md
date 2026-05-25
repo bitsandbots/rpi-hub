@@ -493,9 +493,10 @@ language (navy / silver / blue / orange) shared across them.
 - `<noscript>` notices explain JS-required features and link to the library.
 - AA-compliant contrast on every text/background pair in both modes.
 
-See `docs/GAP_ANALYSIS.md` §4 for per-page inconsistencies that the
-docs pass surfaced (polling cadence, aria-live placement, table caption
-on ADS-B).
+The per-page a11y inconsistencies (polling cadence, aria-live
+placement, ADS-B table caption) that earlier revisions tracked all
+closed in v1.2.x; see `CHANGELOG.md` and `www/portal/assets/js/README.md`
+for the canonical conventions.
 
 ---
 
