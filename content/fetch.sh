@@ -88,8 +88,12 @@ for i in $(seq 0 $((count - 1))); do
 
     log "get    $name"
     log "       $url"
-    curl --fail --location --retry 3 --retry-delay 5 \
-        --progress-bar -o "$out.partial" "$url"
+    # -C - resumes from $out.partial's current size if the previous run died
+    # mid-stream. --retry-all-errors makes --retry catch "connection reset by
+    # peer" (curl 56) too, not just connect-time failures. Together they keep
+    # an 8 GB Wiktionary download robust to flaky links.
+    curl --fail --location --retry 5 --retry-delay 5 --retry-all-errors \
+        -C - --progress-bar -o "$out.partial" "$url"
 
     actual=$(sha256sum "$out.partial" | cut -d' ' -f1)
     if [[ -n "$expected" && "$expected" != "null" ]]; then
