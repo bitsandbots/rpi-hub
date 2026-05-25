@@ -9,6 +9,30 @@ commit.
 
 ## [Unreleased]
 
+### Fixed
+
+- `models/fetch_models.sh` — added `-C -` for resume + `--retry-all-errors`
+  + bumped `--retry` 3→5, mirroring the `ab8a014` fix already applied
+  to `content/fetch.sh`. A real mid-stream hang on the qwen GGUF at
+  940 MB / 84% would otherwise have wasted the partial download on
+  every restart. Locked both sha256s from the verified workstation
+  fetch (qwen `6a1a2eb…`, bge `ec38e8d…`); re-running now reports
+  `cached` for both. Closes `docs/GAP_ANALYSIS.md` §2b row
+  "lock sha256s after first fetch".
+- `install.sh` — twelve error-catching gaps closed (commit `9a39c48`):
+  unknown args now `die` instead of silent shift, `trap ERR` surfaces
+  line + command on failure, `--pack=NAME` validated at parse time,
+  `SIGNAL_COUNTRY_CODE` validated as `^[A-Z]{2}$`, `apt-get` failures
+  get actionable diagnostics, `dhcpcd` + `signal-ap` start failures
+  point at common causes and `journalctl`, new `nginx_reload_or_start`
+  helper collapses six swallowed-error sites and surfaces the real
+  reload error, phase 7 mesh fingerprint probe is now a 6×0.5 s retry
+  loop matching phase 5, `signal-adsb-shield.timer` enable failure
+  now warns instead of silently swallowing, `dnsmasq` reload rewritten
+  as explicit `if` block. Dry-run harness at `/tmp/sigdr/dryrun.sh`
+  walks `--phase=all` cleanly with `exit=0` and both new warning
+  paths firing.
+
 ### Verified
 
 - Pack PDF build pipeline end-to-end on a Bookworm workstation with

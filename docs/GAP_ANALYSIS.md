@@ -74,8 +74,10 @@ in `docs/CONTENT_GUIDE.md`.
 - `qwen2.5-1.5b-instruct-q4_k_m.gguf` — generation
 - `bge-small-en-v1.5-q8_0.gguf` — embedding
 
-Both from Hugging Face. The shipped script has empty sha256 fields;
-lock them in after first fetch (same pattern as the ZIM manifest).
+Both from Hugging Face. sha256s locked in `models/fetch_models.sh` as
+of commit 1945e9e (qwen 6a1a2eb…, bge ec38e8da…). Re-running the
+script reports `cached` for both once the files are on disk; bump the
+shas alongside any future URL change.
 
 ### 2c. Pack PDFs (build step)
 
