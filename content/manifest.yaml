@@ -63,7 +63,7 @@ zims:
   - name: ifixit_en_all.zim
     url: https://download.kiwix.org/zim/ifixit/ifixit_en_all_2025-12.zim
     size_mb: 3405
-    sha256: ""
+    sha256: "9bb5f3408707fd0300c6ef47a425c3217187f144cd9154a928183816aa72eead"
     description: iFixit repair guides — electronics, appliances, vehicles, tools.
     tier: minimal
 
@@ -71,21 +71,21 @@ zims:
   - name: wiktionary_en_all_nopic.zim
     url: https://download.kiwix.org/zim/wiktionary/wiktionary_en_all_nopic_2026-05.zim
     size_mb: 8701
-    sha256: ""
+    sha256: "0f08b3faf89542dd336f4efb47d290460b54b711bd8b103f0de5c0902743e2b3"
     description: English Wiktionary, no images. Dictionary, thesaurus, etymology.
     tier: core
 
   - name: wikem_en_all_maxi.zim
     url: https://download.kiwix.org/zim/other/wikem_en_all_maxi_2026-04.zim
     size_mb: 46
-    sha256: ""
+    sha256: "d28e41a2c2a7d8946564c009dca38bb213f0b112118b362b26755c50dc58d770"
     description: WikEM — Wiki of Emergency Medicine. Physician-curated clinical reference.
     tier: core
 
   - name: zimgit-medicine_en.zim
     url: https://download.kiwix.org/zim/other/zimgit-medicine_en_2024-08.zim
     size_mb: 67
-    sha256: ""
+    sha256: "a86c31b93e9800aae2cd812ef18cbf9c087a7537784c62fbc259db7f9f9d18c0"
     description: Consumer-level medical reference — symptoms, first aid, common conditions.
     tier: core
 
