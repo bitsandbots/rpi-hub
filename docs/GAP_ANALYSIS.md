@@ -113,6 +113,18 @@ _All rows closed in v1.2.x — canonical service-down classes
 
 - Add `AF_NETLINK` to `signal-mesh` sandbox once the BATMAN bridge
   actually attaches (BATMAN uses netlink). Tracked alongside §1 Phase 7.3.
+- Unconditional `signal-adsb-shield` install in `phase8_adsb`.
+  `install.sh:618` early-returns when `dpkg -s dump1090-mutability`
+  reports the package absent, which means the shield units at
+  `install.sh:647-650` are skipped on any Bookworm mirror that lacks
+  `dump1090-mutability`. The shield is independent of dump1090 (it
+  rounds whatever `aircraft.json` it finds, on whatever cadence the
+  operator opts into via `/etc/signal/adsb-precision`), so the gate
+  is wrong: it ties a privacy primitive's installation to the
+  decoder's availability. Fix: move the shield install block above
+  the `dpkg -s` check, or split it into its own phase8_adsb_shield()
+  helper that runs unconditionally. Surfaced by the install.sh
+  dry-run harness; not a regression — predates v1.3.
 
 ### 3c. Test-coverage gaps
 
