@@ -82,25 +82,38 @@
 # here means "include the 9A notes board"; we skip Phase 7 + 8 cleanly.)
 # Default is the highest phase shipped at this tag.
 
-set -euo pipefail
+set -Eeuo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHASE="${PHASE:-7}"
 COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
 PACK=""
 
+log() { printf '[signal-install] %s\n' "$*" >&2; }
+die() { log "ERROR: $*"; exit 1; }
+
+# Surface where a non-zero exit actually happened. `die` calls exit
+# directly and bypasses ERR, so its own message is never duplicated here.
+trap 'log "FAILED at line $LINENO (last command: ${BASH_COMMAND})"' ERR
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
-        --pack=*) PACK="${1#--pack=}"; shift ;;
-        --pack)   PACK="${2:-}"; shift 2 ;;
+        --pack=*)  PACK="${1#--pack=}"; shift ;;
+        --pack)    PACK="${2:-}"; shift 2 ;;
         --phase=*) PHASE="${1#--phase=}"; shift ;;
-        --) shift; break ;;
-        *) shift ;;
+        --phase)   PHASE="${2:-}"; shift 2 ;;
+        --)        shift; break ;;
+        *)         die "unknown argument: $1 (try --phase=N, --pack=NAME)" ;;
     esac
 done
 
-log() { printf '[signal-install] %s\n' "$*" >&2; }
-die() { log "ERROR: $*"; exit 1; }
+if [[ -n "$PACK" && ! -d "${REPO_DIR}/packs/${PACK}" ]]; then
+    die "unknown pack: '${PACK}' — no such directory at ${REPO_DIR}/packs/${PACK}"
+fi
+
+if [[ ! "$COUNTRY" =~ ^[A-Z]{2}$ ]]; then
+    die "SIGNAL_COUNTRY_CODE must be ISO 3166-1 alpha-2 (got: '$COUNTRY')"
+fi
 
 require_root() {
     [[ $EUID -eq 0 ]] || die "must run as root (try: sudo $0)"
@@ -118,8 +131,10 @@ require_bookworm() {
 
 apt_install() {
     log "installing packages: $*"
-    DEBIAN_FRONTEND=noninteractive apt-get update -qq
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@"
+    DEBIAN_FRONTEND=noninteractive apt-get update -qq \
+        || die "apt-get update failed — check network and /etc/apt/sources.list"
+    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "$@" \
+        || die "apt-get install failed for: $*"
 }
 
 # Copy if source differs from destination. Returns 0 if a copy happened.
@@ -207,11 +222,16 @@ phase1() {
     apply_iptables
     install_unit
 
-    systemctl restart dhcpcd
-    systemctl start signal-ap.service
+    systemctl restart dhcpcd \
+        || die "dhcpcd restart failed — SIGNAL Phase 1 requires dhcpcd5 (newer images shipping NetworkManager or systemd-networkd are not supported; install dhcpcd5 or remove the conflicting profile for wlan0)"
+    systemctl start signal-ap.service \
+        || die "signal-ap.service failed to start — check 'journalctl -u signal-ap' (common causes: wlan0 already managed, hostapd.conf rejected, country_code mismatch)"
     # If dnsmasq config changed (e.g. Phase 2 wildcard line), reload so the
     # new rules are live without bouncing hostapd.
-    [[ $dnsmasq_changed -eq 1 ]] && systemctl reload dnsmasq 2>/dev/null || true
+    if [[ $dnsmasq_changed -eq 1 ]]; then
+        systemctl reload dnsmasq 2>/dev/null \
+            || log "warning: dnsmasq reload failed; restart it manually if the wildcard DNS rule isn't live"
+    fi
 
     log "Phase 1 complete. Look for SSID 'SIGNAL_INFOHUB'."
     log "Status: systemctl status signal-ap"
@@ -240,6 +260,17 @@ ensure_nginx_site() {
     rm -f /etc/nginx/sites-enabled/default
 }
 
+# Reload nginx if it is already running; otherwise start it. Surfaces the
+# real reload error when reload fails (no `2>/dev/null` swallowing), so
+# a perms/SELinux/operator-override issue is diagnosable from the log.
+nginx_reload_or_start() {
+    if systemctl is-active --quiet nginx.service; then
+        systemctl reload nginx.service
+    else
+        systemctl start nginx.service
+    fi
+}
+
 phase2() {
     log "Phase 2 — Captive portal"
 
@@ -254,7 +285,7 @@ phase2() {
         die "nginx config did not validate; aborting"
     fi
     systemctl enable nginx.service
-    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+    nginx_reload_or_start
 
     log "Phase 2 complete. Connect a client and the captive sheet should open."
 }
@@ -301,7 +332,7 @@ phase4() {
         nginx -t  # re-run loud so the error reaches the log
         die "nginx config did not validate; aborting"
     fi
-    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+    nginx_reload_or_start
 
     if [[ ! -s /var/www/signal-portal/assets/fonts/exo2-700.woff2 ]]; then
         log "note: brand fonts are missing — page falls back to system fonts."
@@ -427,7 +458,7 @@ phase6() {
         nginx -t
         die "nginx config did not validate; aborting"
     fi
-    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+    nginx_reload_or_start
 
     # Install all three units. Each one carries its own Condition guard so
     # they stay inactive until their respective data appears.
@@ -474,7 +505,7 @@ phase7() {
         nginx -t
         die "nginx config did not validate; aborting"
     fi
-    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+    nginx_reload_or_start
 
     # v1.2: split keypair provisioning out into its own oneshot, so the
     # long-running daemon can pick up the bytes via LoadCredential= and
@@ -491,13 +522,20 @@ phase7() {
     systemctl restart signal-mesh.service
 
     # Surface the local fingerprint right after start so the operator
-    # can confirm the keypair landed.
-    sleep 1
-    if fp=$(curl --silent --max-time 1 http://127.0.0.1:8500/identity 2>/dev/null \
-              | python3 -c "import json,sys;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null); then
-        if [[ -n "$fp" ]]; then
-            log "mesh fingerprint: $fp"
-        fi
+    # can confirm the keypair landed. 6×0.5s mirrors phase 5's status
+    # probe — Pi Zero 2 W can take >1s for keygen + mesh bind.
+    local i fp=""
+    for i in 1 2 3 4 5 6; do
+        fp=$(curl --silent --max-time 1 http://127.0.0.1:8500/identity 2>/dev/null \
+              | python3 -c "import json,sys;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)
+        [[ -n "$fp" ]] && break
+        sleep 0.5
+    done
+    if [[ -n "$fp" ]]; then
+        log "mesh fingerprint: $fp"
+    else
+        log "warning: signal-mesh did not surface a fingerprint within 3s"
+        log "         check 'journalctl -u signal-mesh-keygen' and 'journalctl -u signal-mesh'"
     fi
 
     log "Phase 7 complete. http://hub.local/peers.html shows the peer list."
@@ -529,7 +567,7 @@ phase8() {
         nginx -t
         die "nginx config did not validate; aborting"
     fi
-    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+    nginx_reload_or_start
 
     install -m 0644 "${REPO_DIR}/systemd/signal-listen.service" \
         /etc/systemd/system/signal-listen.service
@@ -611,7 +649,8 @@ phase8_adsb() {
     install -m 0644 "${REPO_DIR}/systemd/signal-adsb-shield.timer" \
         /etc/systemd/system/signal-adsb-shield.timer
     systemctl daemon-reload
-    systemctl enable --now signal-adsb-shield.timer 2>/dev/null || true
+    systemctl enable --now signal-adsb-shield.timer 2>/dev/null \
+        || log "warning: signal-adsb-shield.timer enable failed (the timer itself should always enable; the rounding job is the opt-in via /etc/signal/adsb-precision)"
     log "Phase 8.4 polish — adsb-shield timer installed (opt in: echo 1 >/etc/signal/adsb-precision)"
 }
 
@@ -655,7 +694,7 @@ phase9() {
         nginx -t
         die "nginx config did not validate; aborting"
     fi
-    systemctl reload nginx.service 2>/dev/null || systemctl start nginx.service
+    nginx_reload_or_start
 
     # Service unit. The unit creates /run/signal-notes (tmpfs) via
     # RuntimeDirectory= so we don't touch fstab.
