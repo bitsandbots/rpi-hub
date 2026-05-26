@@ -1,8 +1,10 @@
-# Gap Analysis — v1.2.1
+# Gap Analysis — v1.2.1 (+ Unreleased)
 
 What this document is: the **single source of truth for open work** on
-SIGNAL. Every row is verified against the live repo on **2026-05-18**
-(post-v1.2.1). Rows have file:line citations or they don't ship here.
+SIGNAL. Every row is verified against the live repo on **2026-05-26**
+(v1.2.1 shipped; Unreleased polish landed atop it — see
+`CHANGELOG.md [Unreleased]`). Rows have file:line citations or they
+don't ship here.
 
 Three categories only:
 
@@ -189,7 +191,7 @@ they're tracked in `CHANGELOG.md`. The most recent sweep closed:
 | `CLAUDE.md` | Working guidance for Claude |
 | `Blueprint_Overview.html` | Visual blueprint for operators |
 | `signal-wizard.html` | Interactive build checklist UI |
-| `Project_SIGNAL_*.docx` | Frozen pre-implementation specs (historical) |
+| `archive/Project_SIGNAL_*.docx` | Frozen pre-implementation specs (historical) |
 
 Retired in the v1.2.1 docs-consolidation pass (recoverable via the
 release tags `v0.1.0-phase1` … `v1.0.0`):

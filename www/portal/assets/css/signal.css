@@ -123,6 +123,20 @@ a:hover, a:focus-visible { text-decoration: underline; }
 }
 .skip-link:focus { top: var(--s-3); }
 
+/* Screen-reader-only utility — visually hidden but exposed to AT. Used on
+ * <label class="sr-only"> form labels (ask.html, board.html, listen.html)
+ * and <caption class="sr-only"> table captions (adsb.html). Without this
+ * rule the labels would render visibly above their inputs. */
+.sr-only {
+  position: absolute;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 /* -- layout --------------------------------------------------------------- */
 
 .site-header {
@@ -664,6 +678,42 @@ main {
   color: var(--c-ink-muted);
   font-style: italic;
 }
+
+/* -- Phase 8.4: ADS-B aircraft table -------------------------------------- *
+ * Used on adsb.html. The page polls /adsb/aircraft.json (or the shielded
+ * variant when /etc/signal/adsb-precision exists) and rewrites <tbody>
+ * each tick. Card-style surface to match the rest of the portal; tabular
+ * numerics so altitude/speed columns line up.
+ */
+.dataref {
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  border-radius: var(--r-card);
+  box-shadow: var(--elev-card);
+  overflow: hidden;
+  font-size: 0.92rem;
+  font-variant-numeric: tabular-nums;
+}
+.dataref thead th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--c-ink-muted);
+  padding: var(--s-3) var(--s-4);
+  border-bottom: 1px solid var(--c-silver-edge);
+  background: var(--c-silver-soft);
+}
+.dataref tbody td {
+  padding: var(--s-2) var(--s-4);
+  border-bottom: 1px solid var(--c-silver-edge);
+  color: var(--c-ink);
+}
+.dataref tbody tr:last-child td { border-bottom: 0; }
+.dataref tbody tr:hover td { background: var(--c-silver-soft); }
+.dataref tbody td:first-child { font-family: var(--f-mono); color: var(--c-navy); }
 
 /* -- Phase 8: listen ------------------------------------------------------ */
 

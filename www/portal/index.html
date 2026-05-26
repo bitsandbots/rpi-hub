@@ -105,6 +105,13 @@
           <p class="tile__desc">Field cards — water, wounds, fire, knots.</p>
         </a>
 
+        <a class="tile" id="tile-adsb" href="/adsb.html" data-state="probing" hidden>
+          <span class="tile__state">Available</span>
+          <span class="tile__icon" aria-hidden="true">Air</span>
+          <h2 class="tile__title">Aircraft</h2>
+          <p class="tile__desc">ADS-B aircraft within reception range.</p>
+        </a>
+
         <a class="tile" href="/status.html" data-state="ready">
           <span class="tile__state">Live</span>
           <span class="tile__icon" aria-hidden="true">Sys</span>
@@ -122,7 +129,7 @@
   </main>
 
   <footer class="site-footer">
-    SIGNAL <code>v1.1</code> · Full build · Open SSID · No internet egress · MIT licensed
+    SIGNAL <code>v1.2.1</code> · Full build · Open SSID · No internet egress · MIT licensed
   </footer>
 
   <script>
@@ -142,6 +149,7 @@
       probe("tile-peers",  "/api/mesh/identity");
       probe("tile-board",  "/api/notes?limit=1");
       probe("tile-print",  "/print/");
+      probe("tile-adsb",   "/adsb/aircraft.json");
     })();
   </script>
 </body>

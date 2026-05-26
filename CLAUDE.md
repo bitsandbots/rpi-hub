@@ -10,9 +10,12 @@ a retrieval-grounded assistant, an ephemeral notes board, RTL-SDR radio
 reception, and a Reticulum + BATMAN-adv mesh control plane — **without
 any internet uplink**.
 
-**Status: v1.2 shipped.** Every nine-phase item plus every post-v1.0
-follow-up that doesn't require physical hardware on a bench is in the
-box.
+**Status: v1.2.1 shipped (+ Unreleased polish landed on top).** Every
+nine-phase item plus every software-only follow-up — including the
+v1.2.1 dump1090 install gate and the Unreleased opt-in ADS-B shield,
+split owner tokens, installer hardening, and notes→mesh end-to-end
+test harness — is in the box. What remains is gated on specific
+hardware on a bench; see `docs/GAP_ANALYSIS.md` §1.
 
 ## Phase status (all shipped per the approved sequencing 1→2→3→4→5→6→9→8→7)
 
@@ -29,6 +32,8 @@ box.
 | `v1.0.0`        | Mesh | signal-mesh + Ed25519 identity + peer trust UI |
 | `v1.1.0`        | Post-v1.0 polish | LoRa+BATMAN scaffolds, audio fanout, ADS-B UI, mesh-propagated notes, read-only root |
 | `v1.2.0`        | Mesh signing + QR | signed `/notes/publish`, `signal-mesh-keygen.service`, `/api/mesh/identity.svg` |
+| `v1.2.1`        | ADS-B install gate | `scripts/detect_rtlsdr.sh`, dump1090 enabled on dongle detect, status row + live aircraft count |
+| _Unreleased_    | Polish | opt-in ADS-B shield, split notes/mesh owner tokens, installer error-catch sweep, notes→mesh e2e test, captive-HTTPS out-of-scope note |
 
 ## Repository layout
 
@@ -119,22 +124,29 @@ make smoke    # → scripts/healthcheck.sh
 8500/tcp  signal-mesh     127.0.0.1       /api/mesh
 ```
 
-## Known follow-ups (hardware-gated only as of v1.2)
+## Known follow-ups (hardware-gated as of v1.2.1 + Unreleased)
 
 Every software-only follow-up has shipped. What remains is gated on
-specific hardware on a bench:
+specific hardware on a bench (all tracked with file:line citations
+in `docs/GAP_ANALYSIS.md` §1):
 
-- **Phase 7.1–7.3 data planes**: Reticulum daemon (LoRa) + BATMAN-adv
-  (Wi-Fi mesh). Bridges and units ship as scaffolds in v1.1 — need
-  RAK4631 + USB Wi-Fi adapter to validate.
-- **Phase 8.3**: WebSocket audio bridge for the Listen UI. Producer
-  primitive `AudioFanout` lands in v1.1; the route needs a Pi 4 +
-  RTL-SDR dongle to tune buffer sizes against.
-- **Phase 8.4**: dump1090-mutability install integration (UI shipped
-  in v1.1 — apt-install gated on USB dongle detection).
-- **Three-node mesh testbed write-up**: `docs/MESH_TESTBED.md` once
+- **Phase 7.1** — LoRa data plane. Needs RAK4631 USB hat. Bridge +
+  `signal-reticulum.service` scaffold present.
+- **Phase 7.3** — Wi-Fi mesh data plane. Needs second USB Wi-Fi
+  adapter. Bridge + `signal-batman.service` + `scripts/batman_setup.sh`
+  scaffold present. Also needs `AF_NETLINK` added to `signal-mesh`
+  sandbox once BATMAN attaches.
+- **Phase 8.3** — WebSocket audio bridge. Needs Pi 4 + RTL-SDR for
+  buffer-size tuning. `AudioFanout` producer ships.
+- **Phase 8.5** — APRS scanner. Needs RTL-SDR on 144.39 MHz. Schema
+  stub only.
+- **Three-node mesh testbed write-up** — `docs/MESH_TESTBED.md` once
   three Pi 4/5 + LoRa hats are on the bench.
-- **Pack PDFs**: printable field-card design pass.
+
+One known polish-track gap: `install.sh:618` short-circuits the ADS-B
+shield install when `dump1090-mutability` is absent, which it
+shouldn't (the shield is independent of the decoder). Tracked at
+`docs/GAP_ANALYSIS.md` §3b.
 
 ## Source-of-truth documents
 
@@ -151,9 +163,11 @@ specific hardware on a bench:
   and `docs/PHASE_<N>.md` deltas these notes once pointed at were
   retired in the v1.2.1 docs-consolidation pass and live in git
   history at the corresponding release tags).
-- **`Project_SIGNAL_*.docx`** — original engineering specs (frozen
-  pre-implementation, useful for historical context; current state
-  may differ).
+- **`archive/Project_SIGNAL_*.docx`** — original engineering specs
+  (frozen pre-implementation, useful for historical context; current
+  state may differ). Moved to `archive/` in the v1.2.1+ docs-cleanup
+  pass — the prose was authoritative pre-v1.0 and is now superseded
+  by `docs/OVERVIEW.md`.
 
 The per-phase `docs/PHASE_<N>.md` files were retired in the v1.2.1
 docs-consolidation pass. Their content remains in git history at the

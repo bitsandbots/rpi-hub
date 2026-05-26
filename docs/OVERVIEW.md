@@ -195,7 +195,7 @@ On a fresh **Raspberry Pi OS Lite 64-bit (Bookworm)** image:
 ```bash
 git clone https://github.com/coreconduit/signal.git
 cd signal
-sudo ./install.sh                 # equivalent to PHASE=all
+sudo ./install.sh                 # default PHASE=7 — runs every phase in 1→2→3→4→5→6→9→8→7 order
 sudo reboot
 ```
 
@@ -204,7 +204,7 @@ Phase-scoped installs (cumulative, useful for bring-up debugging):
 ```bash
 sudo PHASE=1 ./install.sh    # AP only
 sudo PHASE=5 ./install.sh    # AP + portal + Kiwix + frontend + status API
-sudo PHASE=all ./install.sh  # everything (default; same as PHASE=7)
+sudo PHASE=all ./install.sh  # alias for PHASE=7 — same execution order
 ```
 
 Optional `--pack` flag stages a regional content pack's print tree:
