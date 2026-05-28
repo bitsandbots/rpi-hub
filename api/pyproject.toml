@@ -1,4 +1,4 @@
-# Purpose: Dev tooling config for the signal-status FastAPI app and any
+# Purpose: Dev tooling config for the rpi-pod-status FastAPI app and any
 #          future api/ subpackages (Phase 6+ assistant components live here
 #          too). Runtime deps are installed on-device via apt (python3-fastapi,
 #          python3-uvicorn) — this file is for local linting and tests.
@@ -6,9 +6,9 @@
 # Phase:   5
 
 [project]
-name = "signal-api"
+name = "rpi-pod-api"
 version = "0.5.0"
-description = "SIGNAL on-device APIs (status, retrieve, assist)"
+description = "rpi-POD on-device APIs (status, retrieve, assist)"
 requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.110",
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["signal_status"]
+packages = ["rpi_pod_status"]
 
 [tool.ruff]
 line-length = 100
@@ -47,5 +47,5 @@ warn_unused_ignores = true
 warn_redundant_casts = true
 
 [tool.pytest.ini_options]
-testpaths = ["signal_status/tests"]
+testpaths = ["rpi_pod_status/tests"]
 addopts = "-ra -q"

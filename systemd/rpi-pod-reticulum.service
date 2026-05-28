@@ -1,0 +1,70 @@
+# Purpose: Reticulum daemon (LoRa link layer). Owns the USB LoRa hat
+#          and exposes a local Unix socket the rpi-pod-mesh control
+#          plane reads from. Stays inactive when no LoRa hardware is
+#          detected — operator runs `rnsd` configure once after wiring
+#          the hat.
+# Unit:    rpi-pod-reticulum.service
+# Phase:   7.1
+#
+# Reticulum (RNS) is installed via pip in a virtualenv at
+# /opt/rpi-pod/venv/reticulum because Bookworm's apt does not yet
+# package it. install.sh phase7 sets this up.
+
+[Unit]
+Description=rpi-POD Reticulum LoRa daemon
+After=network.target
+Wants=rpi-pod-mesh.service
+PartOf=rpi-pod-mesh.service
+ConditionPathExists=/opt/rpi-pod/venv/reticulum/bin/rnsd
+# Without the USB LoRa hat the daemon will fail to find an interface
+# and exit. ConditionPathExistsGlob on /dev/ttyUSB* covers the common
+# RAK4631 + USB-serial path; operators with other hats can override.
+ConditionPathExistsGlob=/dev/ttyUSB*
+
+[Service]
+Type=simple
+DynamicUser=yes
+SupplementaryGroups=dialout
+
+# RuntimeDirectory creates /run/reticulum (where the API socket lives)
+# under the dynamic user with mode 0750. rpi-pod-mesh runs as a
+# *different* dynamic user, so we widen via SocketBindAllow= once the
+# Reticulum config wires its bind path here.
+RuntimeDirectory=reticulum
+RuntimeDirectoryMode=0755
+
+Environment=PATH=/opt/rpi-pod/venv/reticulum/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ExecStart=/opt/rpi-pod/venv/reticulum/bin/rnsd --service \
+    --config /etc/rpi-pod/reticulum
+
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=15
+
+MemoryMax=192M
+TasksMax=128
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# Needs the USB-serial node. Do not PrivateDevices=yes.
+PrivateDevices=no
+DeviceAllow=char-tty rw
+DeviceAllow=char-usb_device rw
+ReadOnlyPaths=/opt/rpi-pod /etc/rpi-pod
+ReadWritePaths=/run/reticulum
+
+[Install]
+WantedBy=multi-user.target

@@ -1,13 +1,13 @@
-# SIGNAL — Regional Content Packs
+# rpi-POD — Regional Content Packs
 
 A pack is a manifest + a set of pre-curated artefacts (ZIM list, printable
-PDFs, optional NOAA station presets) that turns a generic SIGNAL image
+PDFs, optional NOAA station presets) that turns a generic rpi-POD image
 into one tuned for a specific region's failure modes.
 
 `install.sh --pack=<name>` reads `packs/<name>/pack.yaml` and:
 
 1. Fetches the named ZIMs into `/var/lib/kiwix` (via `content/fetch.sh`)
-2. Stages printable PDFs under `/var/www/signal-portal/print/`
+2. Stages printable PDFs under `/var/www/rpi-pod-portal/print/`
 3. Optionally sets NOAA preset frequencies (Phase 8 dependency)
 
 | Pack | Use case |

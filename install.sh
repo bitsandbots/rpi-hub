@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SIGNAL installer — Phase 1 (Bare AP).
+# rpi-POD installer — Phase 1 (Bare AP).
 #
 # Idempotent: re-running should be a no-op if everything is already in place.
 # Re-runs upgrade configs from the repo in-place; service is restarted only
@@ -11,18 +11,18 @@
 #   - Pin wlan0 to 192.168.4.1 via dhcpcd
 #   - Apply sysctl (ip_forward=0)
 #   - Apply iptables FORWARD drop on wlan0 cross-interface traffic
-#   - Enable signal-ap.service
+#   - Enable rpi-pod-ap.service
 #
 # Phase 2 scope (additive):
 #   - Install nginx
-#   - Link the signal-portal site config + landing page into /etc and /var/www
+#   - Link the rpi-pod-portal site config + landing page into /etc and /var/www
 #   - Drop the stock nginx default site so it can't shadow us
 #   - Reload nginx (validated with nginx -t first)
 #
 # Phase 3 scope (additive):
 #   - Install kiwix-tools
 #   - Create /var/lib/kiwix as the ZIM payload directory
-#   - Install signal-kiwix.service (stays inactive until ZIMs appear)
+#   - Install rpi-pod-kiwix.service (stays inactive until ZIMs appear)
 #
 # Phase 4 scope (additive):
 #   - Re-sync the portal tree (new assets/ + status.html)
@@ -32,17 +32,17 @@
 #
 # Phase 5 scope (additive):
 #   - Install python3-fastapi + python3-uvicorn (apt; no pip)
-#   - Stage api/signal_status into /opt/signal/api/
-#   - Write /etc/signal/version (consumed by the status probe)
-#   - Install + enable signal-status.service (uvicorn on 127.0.0.1:8000)
-#   - Render config/motd/signal.motd → /etc/motd
+#   - Stage api/rpi_pod_status into /opt/rpi-pod/api/
+#   - Write /etc/rpi-pod/version (consumed by the status probe)
+#   - Install + enable rpi-pod-status.service (uvicorn on 127.0.0.1:8000)
+#   - Render config/motd/rpi-pod.motd → /etc/motd
 #
 # Phase 6 scope (additive, Pi 5 only):
-#   - Stage assistant/ into /opt/signal/assistant/
-#   - Create /var/lib/signal/{index,models}/ as data dirs
-#   - Install + enable signal-retrieve.service (uvicorn on 127.0.0.1:8100)
-#   - Install + enable signal-assist.service   (uvicorn on 127.0.0.1:8200)
-#   - Install signal-llama.service (stays inactive until a model is staged)
+#   - Stage assistant/ into /opt/rpi-pod/assistant/
+#   - Create /var/lib/rpi-pod/{index,models}/ as data dirs
+#   - Install + enable rpi-pod-retrieve.service (uvicorn on 127.0.0.1:8100)
+#   - Install + enable rpi-pod-assist.service   (uvicorn on 127.0.0.1:8200)
+#   - Install rpi-pod-llama.service (stays inactive until a model is staged)
 #   - Refresh nginx config (carries /api/ask + /api/retrieve blocks)
 #   - Refresh portal tree (carries ask.html + assets/js/ask.js)
 #   No model weights or index are pulled here — those come from
@@ -50,9 +50,9 @@
 #
 # Phase 7 scope (additive, Pi 4/5):
 #   - apt: python3-cryptography (Ed25519 signatures)
-#   - Stage mesh/ into /opt/signal/mesh/
-#   - Install + enable signal-mesh.service (uvicorn on 127.0.0.1:8500)
-#   - StateDirectory creates /var/lib/signal/keys (0700) for the keypair;
+#   - Stage mesh/ into /opt/rpi-pod/mesh/
+#   - Install + enable rpi-pod-mesh.service (uvicorn on 127.0.0.1:8500)
+#   - StateDirectory creates /var/lib/rpi-pod/keys (0700) for the keypair;
 #     ExecStartPre generates it on first boot
 #   - Refresh nginx config (carries /api/mesh/ block)
 #   - Refresh portal tree (carries peers.html + peers.js)
@@ -61,18 +61,18 @@
 #
 # Phase 8 scope (additive, Pi 4/5 for full; Zero 2 W: NOAA+FM only):
 #   - apt: rtl-sdr, multimon-ng (+ dump1090-mutability on Pi 4/5)
-#   - Stage listen/ into /opt/signal/listen/
-#   - Stage scripts/same_pipeline.sh into /opt/signal/scripts/
-#   - Install + enable signal-listen.service (uvicorn on 127.0.0.1:8300)
-#   - Install signal-listen-same.service (rtl_fm | multimon-ng | curl;
+#   - Stage listen/ into /opt/rpi-pod/listen/
+#   - Stage scripts/same_pipeline.sh into /opt/rpi-pod/scripts/
+#   - Install + enable rpi-pod-listen.service (uvicorn on 127.0.0.1:8300)
+#   - Install rpi-pod-listen-same.service (rtl_fm | multimon-ng | curl;
 #     stays inactive when rtl_fm is absent or no dongle is plugged in)
 #   - Refresh nginx config (carries /api/listen/ block)
 #   - Refresh portal tree (carries listen.html + listen.js)
 #
 # Phase 9 scope (additive):
-#   - Stage notes/ into /opt/signal/notes/
-#   - Install + enable signal-notes.service (uvicorn on 127.0.0.1:8400)
-#   - Generate /etc/signal/notes-owner-token (one-time, 32 hex chars)
+#   - Stage notes/ into /opt/rpi-pod/notes/
+#   - Install + enable rpi-pod-notes.service (uvicorn on 127.0.0.1:8400)
+#   - Generate /etc/rpi-pod/notes-owner-token (one-time, 32 hex chars)
 #   - Refresh nginx config (carries /api/notes + /print/ blocks)
 #   - Refresh portal tree (carries board.html + board.js)
 #   - --pack=<name> applies a regional content pack (zims + print PDFs)
@@ -86,10 +86,10 @@ set -Eeuo pipefail
 
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHASE="${PHASE:-7}"
-COUNTRY="${SIGNAL_COUNTRY_CODE:-US}"
+COUNTRY="${RPI_POD_COUNTRY_CODE:-US}"
 PACK=""
 
-log() { printf '[signal-install] %s\n' "$*" >&2; }
+log() { printf '[rpi-pod-install] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
 # Surface where a non-zero exit actually happened. `die` calls exit
@@ -112,7 +112,7 @@ if [[ -n "$PACK" && ! -d "${REPO_DIR}/packs/${PACK}" ]]; then
 fi
 
 if [[ ! "$COUNTRY" =~ ^[A-Z]{2}$ ]]; then
-    die "SIGNAL_COUNTRY_CODE must be ISO 3166-1 alpha-2 (got: '$COUNTRY')"
+    die "RPI_POD_COUNTRY_CODE must be ISO 3166-1 alpha-2 (got: '$COUNTRY')"
 fi
 
 require_root() {
@@ -150,8 +150,8 @@ install_config() {
 }
 
 ensure_dhcpcd_block() {
-    local marker_begin="# >>> SIGNAL Phase 1 (wlan0 static) >>>"
-    local marker_end="# <<< SIGNAL Phase 1 (wlan0 static) <<<"
+    local marker_begin="# >>> rpi-POD Phase 1 (wlan0 static) >>>"
+    local marker_end="# <<< rpi-POD Phase 1 (wlan0 static) <<<"
     local conf="/etc/dhcpcd.conf"
     [[ -f "$conf" ]] || die "$conf not found; is this Raspberry Pi OS?"
 
@@ -161,10 +161,10 @@ ensure_dhcpcd_block() {
 
     {
         printf '\n%s\n' "$marker_begin"
-        cat "${REPO_DIR}/config/dhcpcd/signal.conf"
+        cat "${REPO_DIR}/config/dhcpcd/rpi-pod.conf"
         printf '%s\n' "$marker_end"
     } >>"$conf"
-    log "appended SIGNAL block to $conf"
+    log "appended rpi-POD block to $conf"
 }
 
 ensure_hostapd_default() {
@@ -192,14 +192,14 @@ apply_iptables() {
 }
 
 apply_sysctl() {
-    install_config "${REPO_DIR}/config/sysctl/signal.conf" /etc/sysctl.d/30-signal.conf || true
+    install_config "${REPO_DIR}/config/sysctl/rpi-pod.conf" /etc/sysctl.d/30-rpi-pod.conf || true
     sysctl --system >/dev/null
 }
 
 install_unit() {
-    install -m 0644 "${REPO_DIR}/systemd/signal-ap.service" /etc/systemd/system/signal-ap.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-ap.service" /etc/systemd/system/rpi-pod-ap.service
     systemctl daemon-reload
-    systemctl enable signal-ap.service
+    systemctl enable rpi-pod-ap.service
 }
 
 phase1() {
@@ -214,7 +214,7 @@ phase1() {
 
     install_config "${REPO_DIR}/config/hostapd/hostapd.conf"  /etc/hostapd/hostapd.conf  || true
     local dnsmasq_changed=0
-    install_config "${REPO_DIR}/config/dnsmasq/signal.conf"   /etc/dnsmasq.d/signal.conf && dnsmasq_changed=1
+    install_config "${REPO_DIR}/config/dnsmasq/rpi-pod.conf"   /etc/dnsmasq.d/rpi-pod.conf && dnsmasq_changed=1
     apply_country_code
     ensure_hostapd_default
     ensure_dhcpcd_block
@@ -223,9 +223,9 @@ phase1() {
     install_unit
 
     systemctl restart dhcpcd \
-        || die "dhcpcd restart failed — SIGNAL Phase 1 requires dhcpcd5 (newer images shipping NetworkManager or systemd-networkd are not supported; install dhcpcd5 or remove the conflicting profile for wlan0)"
-    systemctl start signal-ap.service \
-        || die "signal-ap.service failed to start — check 'journalctl -u signal-ap' (common causes: wlan0 already managed, hostapd.conf rejected, country_code mismatch)"
+        || die "dhcpcd restart failed — rpi-POD Phase 1 requires dhcpcd5 (newer images shipping NetworkManager or systemd-networkd are not supported; install dhcpcd5 or remove the conflicting profile for wlan0)"
+    systemctl start rpi-pod-ap.service \
+        || die "rpi-pod-ap.service failed to start — check 'journalctl -u rpi-pod-ap' (common causes: wlan0 already managed, hostapd.conf rejected, country_code mismatch)"
     # If dnsmasq config changed (e.g. Phase 2 wildcard line), reload so the
     # new rules are live without bouncing hostapd.
     if [[ $dnsmasq_changed -eq 1 ]]; then
@@ -233,8 +233,8 @@ phase1() {
             || log "warning: dnsmasq reload failed; restart it manually if the wildcard DNS rule isn't live"
     fi
 
-    log "Phase 1 complete. Look for SSID 'SIGNAL_INFOHUB'."
-    log "Status: systemctl status signal-ap"
+    log "Phase 1 complete. Look for SSID 'RPI-POD-INFOHUB'."
+    log "Status: systemctl status rpi-pod-ap"
 }
 
 # Sync a directory tree using rsync semantics (idempotent, mode-aware).
@@ -252,9 +252,9 @@ install_tree() {
 }
 
 ensure_nginx_site() {
-    local available="/etc/nginx/sites-available/signal-portal"
-    local enabled="/etc/nginx/sites-enabled/signal-portal"
-    install -m 0644 "${REPO_DIR}/config/nginx/signal-portal.conf" "$available"
+    local available="/etc/nginx/sites-available/rpi-pod-portal"
+    local enabled="/etc/nginx/sites-enabled/rpi-pod-portal"
+    install -m 0644 "${REPO_DIR}/config/nginx/rpi-pod-portal.conf" "$available"
     [[ -L "$enabled" ]] || ln -s "$available" "$enabled"
     # Stock nginx ships a default_server that would shadow ours.
     rm -f /etc/nginx/sites-enabled/default
@@ -277,7 +277,7 @@ phase2() {
     apt_install nginx
 
     ensure_nginx_site
-    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    install_tree "${REPO_DIR}/www/portal" /var/www/rpi-pod-portal
 
     # Validate before reload so a typo doesn't take the AP offline.
     if ! nginx -t 2>/dev/null; then
@@ -297,17 +297,17 @@ phase3() {
 
     install -d -m 0755 /var/lib/kiwix
 
-    install -m 0644 "${REPO_DIR}/systemd/signal-kiwix.service" /etc/systemd/system/signal-kiwix.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-kiwix.service" /etc/systemd/system/rpi-pod-kiwix.service
     systemctl daemon-reload
-    systemctl enable signal-kiwix.service
+    systemctl enable rpi-pod-kiwix.service
 
     # Start now if any ZIMs are present; otherwise the ConditionPathExistsGlob
     # in the unit keeps it inactive. Either way, surface the state.
     if compgen -G "/var/lib/kiwix/*.zim" >/dev/null; then
-        systemctl restart signal-kiwix.service
-        log "signal-kiwix started; library available at http://hub.local/library/"
+        systemctl restart rpi-pod-kiwix.service
+        log "rpi-pod-kiwix started; library available at http://hub.local/library/"
     else
-        log "/var/lib/kiwix is empty — signal-kiwix stays inactive."
+        log "/var/lib/kiwix is empty — rpi-pod-kiwix stays inactive."
         log "Run content/fetch.sh on a workstation, then rsync into /var/lib/kiwix/."
     fi
 
@@ -326,7 +326,7 @@ phase4() {
     # cleanest way to pick up the new files: install_tree is rsync-based so
     # this is a near-no-op when nothing changed.
     ensure_nginx_site
-    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    install_tree "${REPO_DIR}/www/portal" /var/www/rpi-pod-portal
 
     if ! nginx -t 2>/dev/null; then
         nginx -t  # re-run loud so the error reaches the log
@@ -334,7 +334,7 @@ phase4() {
     fi
     nginx_reload_or_start
 
-    if [[ ! -s /var/www/signal-portal/assets/fonts/exo2-700.woff2 ]]; then
+    if [[ ! -s /var/www/rpi-pod-portal/assets/fonts/exo2-700.woff2 ]]; then
         log "note: brand fonts are missing — page falls back to system fonts."
         log "      run scripts/fetch_fonts.sh on a workstation, re-bake the image."
     fi
@@ -364,22 +364,22 @@ phase5() {
     # 0.92 + pydantic 1.10; that's fine for one read-only endpoint).
     apt_install python3-fastapi python3-uvicorn python3-pydantic
 
-    # Stage the API package under /opt/signal/api so PYTHONPATH in the
+    # Stage the API package under /opt/rpi-pod/api so PYTHONPATH in the
     # systemd unit can find it. We avoid /usr/lib/python3.11/site-packages
     # so apt-managed paths stay clean.
-    install -d -m 0755 /opt/signal/api
-    install_tree "${REPO_DIR}/api" /opt/signal/api
-    # Scripts directory: the MOTD references /opt/signal/scripts/*.sh.
-    install -d -m 0755 /opt/signal/scripts
-    install_tree "${REPO_DIR}/scripts" /opt/signal/scripts
+    install -d -m 0755 /opt/rpi-pod/api
+    install_tree "${REPO_DIR}/api" /opt/rpi-pod/api
+    # Scripts directory: the MOTD references /opt/rpi-pod/scripts/*.sh.
+    install -d -m 0755 /opt/rpi-pod/scripts
+    install_tree "${REPO_DIR}/scripts" /opt/rpi-pod/scripts
 
-    # /etc/signal is the runtime config dir. Currently just holds VERSION;
+    # /etc/rpi-pod is the runtime config dir. Currently just holds VERSION;
     # Phase 7+ will park the mesh keypair here under 0600.
-    install -d -m 0755 /etc/signal
+    install -d -m 0755 /etc/rpi-pod
     local version
     version="$(resolve_version)"
-    printf '%s\n' "${version}" >/etc/signal/version
-    chmod 0644 /etc/signal/version
+    printf '%s\n' "${version}" >/etc/rpi-pod/version
+    chmod 0644 /etc/rpi-pod/version
     log "version pinned to ${version}"
 
     # MOTD: substitute {{VERSION}} + {{MESH_FP}}, drop into /etc/motd.
@@ -389,10 +389,10 @@ phase5() {
     # we're here on a v1.0 install, or the placeholder stays until next run).
     local motd_tmp mesh_fp
     motd_tmp="$(mktemp)"
-    if [[ -s /var/lib/signal/keys/ed25519.pub ]]; then
+    if [[ -s /var/lib/rpi-pod/keys/ed25519.pub ]]; then
         mesh_fp="$(python3 -c "
 import base64, hashlib, sys
-pub = open('/var/lib/signal/keys/ed25519.pub','rb').read()
+pub = open('/var/lib/rpi-pod/keys/ed25519.pub','rb').read()
 h = hashlib.sha256(pub).digest()[:15]
 b = base64.b32encode(h).decode('ascii').rstrip('=')
 print('-'.join(b[i:i+4] for i in range(0, len(b), 4)))
@@ -401,17 +401,17 @@ print('-'.join(b[i:i+4] for i in range(0, len(b), 4)))
     mesh_fp="${mesh_fp:-(not yet generated — run phase 7)}"
     sed -e "s|{{VERSION}}|${version}|g" \
         -e "s|{{MESH_FP}}|${mesh_fp}|g" \
-        "${REPO_DIR}/config/motd/signal.motd" >"${motd_tmp}"
+        "${REPO_DIR}/config/motd/rpi-pod.motd" >"${motd_tmp}"
     install -m 0644 "${motd_tmp}" /etc/motd
     rm -f "${motd_tmp}"
 
     # Service unit. After install + enable, restart unconditionally so a
     # re-run picks up code changes.
-    install -m 0644 "${REPO_DIR}/systemd/signal-status.service" \
-        /etc/systemd/system/signal-status.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-status.service" \
+        /etc/systemd/system/rpi-pod-status.service
     systemctl daemon-reload
-    systemctl enable signal-status.service
-    systemctl restart signal-status.service
+    systemctl enable rpi-pod-status.service
+    systemctl restart rpi-pod-status.service
 
     # Smoke test: give uvicorn ~3s to bind, then probe /api/status. Failure
     # here is non-fatal (install completed; the user can investigate via
@@ -426,10 +426,10 @@ print('-'.join(b[i:i+4] for i in range(0, len(b), 4)))
         sleep 0.5
     done
     if [[ $probe_ok -eq 1 ]]; then
-        log "signal-status responded on 127.0.0.1:8000 ✓"
+        log "rpi-pod-status responded on 127.0.0.1:8000 ✓"
     else
-        log "warning: signal-status did not respond within 3s"
-        log "         check 'journalctl -u signal-status' for details"
+        log "warning: rpi-pod-status did not respond within 3s"
+        log "         check 'journalctl -u rpi-pod-status' for details"
     fi
 
     log "Phase 5 complete. http://hub.local/api/status now lights up status.html."
@@ -443,16 +443,16 @@ phase6() {
     # the user simply never stages weights and the Ask tile stays hidden.
 
     # Stage the assistant package alongside the api/ tree from Phase 5.
-    install -d -m 0755 /opt/signal/assistant
-    install_tree "${REPO_DIR}/assistant" /opt/signal/assistant
+    install -d -m 0755 /opt/rpi-pod/assistant
+    install_tree "${REPO_DIR}/assistant" /opt/rpi-pod/assistant
 
     # Runtime data dirs. These hold prebuilt index + downloaded weights;
     # both are produced on a workstation and rsynced over.
-    install -d -m 0755 /var/lib/signal/index
-    install -d -m 0755 /var/lib/signal/models
+    install -d -m 0755 /var/lib/rpi-pod/index
+    install -d -m 0755 /var/lib/rpi-pod/models
 
     # Refresh portal so ask.html + ask.js land alongside the existing tree.
-    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    install_tree "${REPO_DIR}/www/portal" /var/www/rpi-pod-portal
     ensure_nginx_site
     if ! nginx -t 2>/dev/null; then
         nginx -t
@@ -462,26 +462,26 @@ phase6() {
 
     # Install all three units. Each one carries its own Condition guard so
     # they stay inactive until their respective data appears.
-    for unit in signal-retrieve.service signal-assist.service signal-llama.service; do
+    for unit in rpi-pod-retrieve.service rpi-pod-assist.service rpi-pod-llama.service; do
         install -m 0644 "${REPO_DIR}/systemd/${unit}" "/etc/systemd/system/${unit}"
     done
     systemctl daemon-reload
-    systemctl enable signal-retrieve.service signal-assist.service signal-llama.service
+    systemctl enable rpi-pod-retrieve.service rpi-pod-assist.service rpi-pod-llama.service
 
     # Start whatever is ready. If the index is missing the unit stays
     # inactive; we surface that to the user rather than letting it look
     # like a failure.
-    if [[ -s /var/lib/signal/index/chunks.sqlite ]]; then
-        systemctl restart signal-retrieve.service
-        log "signal-retrieve started (index present)"
+    if [[ -s /var/lib/rpi-pod/index/chunks.sqlite ]]; then
+        systemctl restart rpi-pod-retrieve.service
+        log "rpi-pod-retrieve started (index present)"
     else
-        log "no index at /var/lib/signal/index — run indexer/build_index.py on a workstation."
+        log "no index at /var/lib/rpi-pod/index — run indexer/build_index.py on a workstation."
     fi
-    if [[ -s /var/lib/signal/models/qwen2.5-1.5b-instruct-q4_k_m.gguf ]]; then
-        systemctl restart signal-llama.service signal-assist.service
-        log "signal-assist started (model present)"
+    if [[ -s /var/lib/rpi-pod/models/qwen2.5-1.5b-instruct-q4_k_m.gguf ]]; then
+        systemctl restart rpi-pod-llama.service rpi-pod-assist.service
+        log "rpi-pod-assist started (model present)"
     else
-        log "no model weights at /var/lib/signal/models — run models/fetch_models.sh on a workstation."
+        log "no model weights at /var/lib/rpi-pod/models — run models/fetch_models.sh on a workstation."
     fi
 
     log "Phase 6 complete. http://hub.local/ask.html lights up when both units are running."
@@ -495,11 +495,11 @@ phase7() {
     # signature path; we log loudly in that case.
     apt_install python3-cryptography
 
-    install -d -m 0755 /opt/signal/mesh
-    install_tree "${REPO_DIR}/mesh" /opt/signal/mesh
+    install -d -m 0755 /opt/rpi-pod/mesh
+    install_tree "${REPO_DIR}/mesh" /opt/rpi-pod/mesh
 
     # Refresh portal (peers.html + peers.js) and nginx route.
-    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    install_tree "${REPO_DIR}/www/portal" /var/www/rpi-pod-portal
     ensure_nginx_site
     if ! nginx -t 2>/dev/null; then
         nginx -t
@@ -509,17 +509,17 @@ phase7() {
 
     # v1.2: split keypair provisioning out into its own oneshot, so the
     # long-running daemon can pick up the bytes via LoadCredential= and
-    # drop filesystem access to /var/lib/signal/keys entirely.
-    install -m 0644 "${REPO_DIR}/systemd/signal-mesh-keygen.service" \
-        /etc/systemd/system/signal-mesh-keygen.service
-    install -m 0644 "${REPO_DIR}/systemd/signal-mesh.service" \
-        /etc/systemd/system/signal-mesh.service
+    # drop filesystem access to /var/lib/rpi-pod/keys entirely.
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-mesh-keygen.service" \
+        /etc/systemd/system/rpi-pod-mesh-keygen.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-mesh.service" \
+        /etc/systemd/system/rpi-pod-mesh.service
     systemctl daemon-reload
-    systemctl enable signal-mesh-keygen.service signal-mesh.service
+    systemctl enable rpi-pod-mesh-keygen.service rpi-pod-mesh.service
     # Keygen first, then the daemon; the latter Requires= the former so
     # restart in this order is also what systemd would have done.
-    systemctl restart signal-mesh-keygen.service
-    systemctl restart signal-mesh.service
+    systemctl restart rpi-pod-mesh-keygen.service
+    systemctl restart rpi-pod-mesh.service
 
     # Surface the local fingerprint right after start so the operator
     # can confirm the keypair landed. 6×0.5s mirrors phase 5's status
@@ -534,8 +534,8 @@ phase7() {
     if [[ -n "$fp" ]]; then
         log "mesh fingerprint: $fp"
     else
-        log "warning: signal-mesh did not surface a fingerprint within 3s"
-        log "         check 'journalctl -u signal-mesh-keygen' and 'journalctl -u signal-mesh'"
+        log "warning: rpi-pod-mesh did not surface a fingerprint within 3s"
+        log "         check 'journalctl -u rpi-pod-mesh-keygen' and 'journalctl -u rpi-pod-mesh'"
     fi
 
     log "Phase 7 complete. http://hub.local/peers.html shows the peer list."
@@ -553,15 +553,15 @@ phase8() {
         dump1090-mutability 2>/dev/null \
         || log "dump1090-mutability not available; ADS-B (sub-phase 8.4) will be skipped"
 
-    install -d -m 0755 /opt/signal/listen
-    install_tree "${REPO_DIR}/listen" /opt/signal/listen
-    install -d -m 0755 /opt/signal/scripts
-    install -m 0755 "${REPO_DIR}/scripts/same_pipeline.sh" /opt/signal/scripts/same_pipeline.sh
+    install -d -m 0755 /opt/rpi-pod/listen
+    install_tree "${REPO_DIR}/listen" /opt/rpi-pod/listen
+    install -d -m 0755 /opt/rpi-pod/scripts
+    install -m 0755 "${REPO_DIR}/scripts/same_pipeline.sh" /opt/rpi-pod/scripts/same_pipeline.sh
 
-    install -d -m 0755 /var/lib/signal/listen
+    install -d -m 0755 /var/lib/rpi-pod/listen
 
     # Refresh portal (listen.html + listen.js) and nginx route.
-    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    install_tree "${REPO_DIR}/www/portal" /var/www/rpi-pod-portal
     ensure_nginx_site
     if ! nginx -t 2>/dev/null; then
         nginx -t
@@ -569,20 +569,20 @@ phase8() {
     fi
     nginx_reload_or_start
 
-    install -m 0644 "${REPO_DIR}/systemd/signal-listen.service" \
-        /etc/systemd/system/signal-listen.service
-    install -m 0644 "${REPO_DIR}/systemd/signal-listen-same.service" \
-        /etc/systemd/system/signal-listen-same.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-listen.service" \
+        /etc/systemd/system/rpi-pod-listen.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-listen-same.service" \
+        /etc/systemd/system/rpi-pod-listen-same.service
     systemctl daemon-reload
-    systemctl enable signal-listen.service signal-listen-same.service
-    systemctl restart signal-listen.service
+    systemctl enable rpi-pod-listen.service rpi-pod-listen-same.service
+    systemctl restart rpi-pod-listen.service
 
     # SAME pipeline starts only if the rtl_fm binary is present (a
     # ConditionPathExists= guard inside the unit handles missing
     # dongles cleanly).
     if command -v rtl_fm >/dev/null; then
-        systemctl restart signal-listen-same.service 2>/dev/null \
-            || log "signal-listen-same did not start (no dongle?); check journalctl"
+        systemctl restart rpi-pod-listen-same.service 2>/dev/null \
+            || log "rpi-pod-listen-same did not start (no dongle?); check journalctl"
     fi
 
     phase8_adsb
@@ -593,7 +593,7 @@ phase8() {
 phase8_adsb() {
     # Phase 8.4 — gate dump1090-mutability on a real dongle being present.
     #
-    # Mutually exclusive with signal-listen-same — a single RTL-SDR dongle
+    # Mutually exclusive with rpi-pod-listen-same — a single RTL-SDR dongle
     # is claimed by whichever service starts first. See docs/OVERVIEW.md §7.4.
     #
     # The package install above is unconditional (cheap; ~250 KB), so an
@@ -602,7 +602,7 @@ phase8_adsb() {
     # dropped below will pick up automatically.
     #
     # Why detect at install time rather than relying on the systemd
-    # ConditionPathExists= pattern we use for signal-listen-same: the
+    # ConditionPathExists= pattern we use for rpi-pod-listen-same: the
     # upstream dump1090-mutability.service ships with
     # START_DUMP1090="no" baked into /etc/default, so the unit refuses
     # to do anything until we write our drop-in. That drop-in only
@@ -628,9 +628,9 @@ phase8_adsb() {
             || log "dump1090-mutability failed to start; check journalctl -u dump1090-mutability"
         log "Phase 8.4 — RTL-SDR dongle detected; dump1090-mutability enabled."
         log "    aircraft.json lands at /run/dump1090-mutability/, served at /adsb/"
-        log "    signal-status probes that file's mtime+contents (see api/signal_status/system.py:_probe_adsb)"
+        log "    rpi-pod-status probes that file's mtime+contents (see api/rpi_pod_status/system.py:_probe_adsb)"
     else
-        # Leave the unit disabled so it does not race signal-listen-same
+        # Leave the unit disabled so it does not race rpi-pod-listen-same
         # for the same single-dongle setup. Operator can opt in later.
         systemctl disable dump1090-mutability.service 2>/dev/null || true
         log "Phase 8.4 — no RTL-SDR dongle detected; dump1090-mutability stays disabled."
@@ -638,20 +638,20 @@ phase8_adsb() {
     fi
 
     # Phase 8.4 polish — install the opt-in position-rounder. Both the
-    # service and timer carry ConditionPathExists=/etc/signal/adsb-precision,
+    # service and timer carry ConditionPathExists=/etc/rpi-pod/adsb-precision,
     # so this is dormant until the operator creates that file. We
     # `enable --now` the timer unconditionally; condition-checks make
     # the actual ticking opt-in.
-    install -d -m 0755 /opt/signal/scripts
-    install -m 0755 "${REPO_DIR}/scripts/adsb_shield.py" /opt/signal/scripts/adsb_shield.py
-    install -m 0644 "${REPO_DIR}/systemd/signal-adsb-shield.service" \
-        /etc/systemd/system/signal-adsb-shield.service
-    install -m 0644 "${REPO_DIR}/systemd/signal-adsb-shield.timer" \
-        /etc/systemd/system/signal-adsb-shield.timer
+    install -d -m 0755 /opt/rpi-pod/scripts
+    install -m 0755 "${REPO_DIR}/scripts/adsb_shield.py" /opt/rpi-pod/scripts/adsb_shield.py
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-adsb-shield.service" \
+        /etc/systemd/system/rpi-pod-adsb-shield.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-adsb-shield.timer" \
+        /etc/systemd/system/rpi-pod-adsb-shield.timer
     systemctl daemon-reload
-    systemctl enable --now signal-adsb-shield.timer 2>/dev/null \
-        || log "warning: signal-adsb-shield.timer enable failed (the timer itself should always enable; the rounding job is the opt-in via /etc/signal/adsb-precision)"
-    log "Phase 8.4 polish — adsb-shield timer installed (opt in: echo 1 >/etc/signal/adsb-precision)"
+    systemctl enable --now rpi-pod-adsb-shield.timer 2>/dev/null \
+        || log "warning: rpi-pod-adsb-shield.timer enable failed (the timer itself should always enable; the rounding job is the opt-in via /etc/rpi-pod/adsb-precision)"
+    log "Phase 8.4 polish — adsb-shield timer installed (opt in: echo 1 >/etc/rpi-pod/adsb-precision)"
 }
 
 ensure_owner_tokens() {
@@ -661,12 +661,12 @@ ensure_owner_tokens() {
     # /api/mesh/peers/{fp}/{trust,block}. The owner shells into the
     # device to read each one.
     #
-    # signal-mesh falls back to notes-owner-token when mesh-owner-token
+    # rpi-pod-mesh falls back to notes-owner-token when mesh-owner-token
     # is absent (pre-v1.3 deployments stay single-token until the
     # operator chooses to split).
-    install -d -m 0755 /etc/signal
+    install -d -m 0755 /etc/rpi-pod
     local f
-    for f in /etc/signal/notes-owner-token /etc/signal/mesh-owner-token; do
+    for f in /etc/rpi-pod/notes-owner-token /etc/rpi-pod/mesh-owner-token; do
         if [[ ! -s "$f" ]]; then
             # /dev/urandom + tr is universal; openssl/uuidgen aren't always
             # in Bookworm minimal images.
@@ -681,14 +681,14 @@ phase9() {
     log "Phase 9 — Notes board + regional packs"
 
     # Notes board service code.
-    install -d -m 0755 /opt/signal/notes
-    install_tree "${REPO_DIR}/notes" /opt/signal/notes
+    install -d -m 0755 /opt/rpi-pod/notes
+    install_tree "${REPO_DIR}/notes" /opt/rpi-pod/notes
 
     # Owner-moderation tokens (notes + mesh). One-time generation; never overwritten.
     ensure_owner_tokens
 
     # Refresh portal so board.html + board.js are served.
-    install_tree "${REPO_DIR}/www/portal" /var/www/signal-portal
+    install_tree "${REPO_DIR}/www/portal" /var/www/rpi-pod-portal
     ensure_nginx_site
     if ! nginx -t 2>/dev/null; then
         nginx -t
@@ -696,13 +696,13 @@ phase9() {
     fi
     nginx_reload_or_start
 
-    # Service unit. The unit creates /run/signal-notes (tmpfs) via
+    # Service unit. The unit creates /run/rpi-pod-notes (tmpfs) via
     # RuntimeDirectory= so we don't touch fstab.
-    install -m 0644 "${REPO_DIR}/systemd/signal-notes.service" \
-        /etc/systemd/system/signal-notes.service
+    install -m 0644 "${REPO_DIR}/systemd/rpi-pod-notes.service" \
+        /etc/systemd/system/rpi-pod-notes.service
     systemctl daemon-reload
-    systemctl enable signal-notes.service
-    systemctl restart signal-notes.service
+    systemctl enable rpi-pod-notes.service
+    systemctl restart rpi-pod-notes.service
 
     # Optional pack application. The workstation produces the PDFs +
     # writes the print/ tree; we just install them here. The user passes
@@ -710,7 +710,7 @@ phase9() {
     if [[ -n "$PACK" ]]; then
         local pack_print_src="${REPO_DIR}/packs/${PACK}/print"
         if [[ -d "$pack_print_src" ]]; then
-            install_tree "$pack_print_src" /var/www/signal-portal/print
+            install_tree "$pack_print_src" /var/www/rpi-pod-portal/print
             log "applied pack=$PACK print cards"
         else
             log "pack=$PACK has no print/ directory; skipping print install"
@@ -718,8 +718,8 @@ phase9() {
     fi
 
     log "Phase 9 complete. http://hub.local/board.html serves the board."
-    log "Owner tokens: cat /etc/signal/notes-owner-token (notes moderation)"
-    log "               cat /etc/signal/mesh-owner-token  (mesh peer trust/block)"
+    log "Owner tokens: cat /etc/rpi-pod/notes-owner-token (notes moderation)"
+    log "               cat /etc/rpi-pod/mesh-owner-token  (mesh peer trust/block)"
 }
 
 main() {

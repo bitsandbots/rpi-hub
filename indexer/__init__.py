@@ -1,6 +1,6 @@
 """Workstation-side index builder for the assistant.
 
-The indexer reads ZIM files and produces the artifacts ``signal-retrieve``
+The indexer reads ZIM files and produces the artifacts ``rpi-pod-retrieve``
 serves at runtime::
 
     chunks.sqlite       # FTS5 + plain table
@@ -10,7 +10,7 @@ serves at runtime::
 
 It never runs on the Pi: building Wikipedia-no-images requires a working
 PyTorch / transformers stack and many GB of working RAM. The output
-directory is rsynced to the Pi at ``/var/lib/signal/index/``.
+directory is rsynced to the Pi at ``/var/lib/rpi-pod/index/``.
 
 This module exposes the *pure* helpers (chunking, manifest writing) so
 they can be unit-tested without the heavyweight deps. The CLI entry

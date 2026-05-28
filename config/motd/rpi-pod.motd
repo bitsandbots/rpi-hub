@@ -1,0 +1,36 @@
+# Purpose: Tactical boot screen / SSH MOTD. install.sh templates {{VERSION}}
+#          and {{MESH_FP}} at deploy time and writes the rendered file to
+#          /etc/motd. Clients SSHing into the hub see this immediately on
+#          shell connect.
+# Unit:    n/a (consumed by PAM via /etc/motd)
+# Phase:   5 (extended in Phase 7 to surface mesh fingerprint)
+
+  #####  ####   ###        ####   ###   ####
+  #   #  #   #  #          #   #  #   #  #   #
+  #   #  #   #  #          #   #  #   #  #   #
+  #####  ####   #          ####   #   #  #   #
+  # #    #      #          #      #   #  #   #
+  #  #   #      #          #      #   #  #   #
+  #   #  #      ###        #       ###   ####
+
+   PORTABLE OFFLINE DATANODE — NODE OPERATIONAL
+
+   SSID     : RPI-POD-INFOHUB         (open, no password)
+   Address  : 192.168.4.1
+   Library  : http://hub.local/library/
+   Ask      : http://hub.local/ask.html      (when assist + retrieve are up)
+   Board    : http://hub.local/board.html
+   Listen   : http://hub.local/listen.html   (when a dongle is present)
+   Peers    : http://hub.local/peers.html    (when rpi-pod-mesh is up)
+   Status   : http://hub.local/status.html
+   API      : http://hub.local/api/status    (services block lists per-unit state)
+
+   Mesh fingerprint : {{MESH_FP}}
+   Owner token      : sudo cat /etc/rpi-pod/notes-owner-token
+                      (gates DELETE /api/notes and POST /api/mesh/peers/.../trust)
+
+   Healthcheck    : sudo /opt/rpi-pod/scripts/healthcheck.sh
+   Factory reset  : sudo /opt/rpi-pod/scripts/factory_reset.sh --yes
+
+   No internet egress   ·   MIT licensed   ·   {{VERSION}}
+

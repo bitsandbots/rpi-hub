@@ -1,23 +1,23 @@
 #!/usr/bin/env bash
-# SIGNAL uninstaller — reverses install.sh through Phase 5.
+# rpi-POD uninstaller — reverses install.sh through Phase 5.
 #
 # Idempotent. Leaves package binaries installed (apt removal is the user's
 # call) but disables the service, unlinks configs, removes the dhcpcd block,
 # and drops the iptables rule. Phase 4's static assets live under
-# /var/www/signal-portal and are removed wholesale by remove_nginx_site.
-# Phase 5's deployed code at /opt/signal and runtime state at /etc/signal
+# /var/www/rpi-pod-portal and are removed wholesale by remove_nginx_site.
+# Phase 5's deployed code at /opt/rpi-pod and runtime state at /etc/rpi-pod
 # are removed by remove_status.
 
 set -euo pipefail
 
-log() { printf '[signal-uninstall] %s\n' "$*" >&2; }
+log() { printf '[rpi-pod-uninstall] %s\n' "$*" >&2; }
 
 require_root() { [[ $EUID -eq 0 ]] || { log "must run as root"; exit 1; }; }
 
 remove_dhcpcd_block() {
     local conf="/etc/dhcpcd.conf"
     [[ -f "$conf" ]] || return 0
-    sed -i '/# >>> SIGNAL Phase 1 (wlan0 static) >>>/,/# <<< SIGNAL Phase 1 (wlan0 static) <<</d' "$conf"
+    sed -i '/# >>> rpi-POD Phase 1 (wlan0 static) >>>/,/# <<< rpi-POD Phase 1 (wlan0 static) <<</d' "$conf"
 }
 
 drop_iptables() {
@@ -28,9 +28,9 @@ drop_iptables() {
 }
 
 remove_nginx_site() {
-    rm -f /etc/nginx/sites-enabled/signal-portal
-    rm -f /etc/nginx/sites-available/signal-portal
-    rm -rf /var/www/signal-portal
+    rm -f /etc/nginx/sites-enabled/rpi-pod-portal
+    rm -f /etc/nginx/sites-available/rpi-pod-portal
+    rm -rf /var/www/rpi-pod-portal
     # Restore the stock default site if Debian's copy is still around.
     if [[ -f /etc/nginx/sites-available/default && ! -L /etc/nginx/sites-enabled/default ]]; then
         ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
@@ -41,30 +41,30 @@ remove_nginx_site() {
 }
 
 remove_kiwix() {
-    systemctl disable --now signal-kiwix.service 2>/dev/null || true
-    rm -f /etc/systemd/system/signal-kiwix.service
+    systemctl disable --now rpi-pod-kiwix.service 2>/dev/null || true
+    rm -f /etc/systemd/system/rpi-pod-kiwix.service
     # Intentionally leave /var/lib/kiwix and its ZIMs in place. Re-fetching
     # tens of GB of content is the kind of "destructive" the user has to
     # ask for explicitly — `rm -rf /var/lib/kiwix` is one extra command.
 }
 
 remove_assistant() {
-    # Phase 6 units. Bring them down before /opt/signal goes away.
-    for unit in signal-assist.service signal-llama.service signal-retrieve.service; do
+    # Phase 6 units. Bring them down before /opt/rpi-pod goes away.
+    for unit in rpi-pod-assist.service rpi-pod-llama.service rpi-pod-retrieve.service; do
         systemctl disable --now "$unit" 2>/dev/null || true
         rm -f "/etc/systemd/system/${unit}"
     done
-    # Leave /var/lib/signal/{index,models}/ in place: re-downloading model
-    # weights and rebuilding the index is expensive. `rm -rf /var/lib/signal`
+    # Leave /var/lib/rpi-pod/{index,models}/ in place: re-downloading model
+    # weights and rebuilding the index is expensive. `rm -rf /var/lib/rpi-pod`
     # is the user's call.
 }
 
 remove_mesh() {
     # Phase 7 + v1.1 radio data planes. Stop the units, drop the unit
-    # files. The Ed25519 keypair at /var/lib/signal/keys is intentionally
+    # files. The Ed25519 keypair at /var/lib/rpi-pod/keys is intentionally
     # preserved — a re-install keeps the node's identity stable, which is
     # what trusted peers rely on.
-    for unit in signal-batman.service signal-reticulum.service signal-mesh.service signal-mesh-keygen.service; do
+    for unit in rpi-pod-batman.service rpi-pod-reticulum.service rpi-pod-mesh.service rpi-pod-mesh-keygen.service; do
         systemctl disable --now "$unit" 2>/dev/null || true
         rm -f "/etc/systemd/system/${unit}"
     done
@@ -74,11 +74,11 @@ remove_listen() {
     # Phase 8. Two units, both bound to dongle hardware. We stop the
     # pipeline before the control plane so a final stop request can
     # reach the arbiter.
-    for unit in signal-listen-same.service signal-listen.service; do
+    for unit in rpi-pod-listen-same.service rpi-pod-listen.service; do
         systemctl disable --now "$unit" 2>/dev/null || true
         rm -f "/etc/systemd/system/${unit}"
     done
-    # Leave /var/lib/signal/listen in place: pack-supplied NOAA presets
+    # Leave /var/lib/rpi-pod/listen in place: pack-supplied NOAA presets
     # are useful again immediately on reinstall.
 
     # Phase 8.4 — undo dump1090-mutability enablement. The Debian
@@ -86,31 +86,31 @@ remove_listen() {
     # we only revert our /etc/default override and disable the unit.
     systemctl disable --now dump1090-mutability.service 2>/dev/null || true
     if [[ -f /etc/default/dump1090-mutability ]] \
-       && grep -q "SIGNAL" /etc/default/dump1090-mutability 2>/dev/null; then
+       && grep -q "rpi-POD" /etc/default/dump1090-mutability 2>/dev/null; then
         rm -f /etc/default/dump1090-mutability
     fi
     # Phase 8.4 polish — adsb-shield (opt-in position-rounder).
-    systemctl disable --now signal-adsb-shield.timer 2>/dev/null || true
-    rm -f /etc/systemd/system/signal-adsb-shield.service \
-          /etc/systemd/system/signal-adsb-shield.timer \
-          /etc/signal/adsb-precision \
+    systemctl disable --now rpi-pod-adsb-shield.timer 2>/dev/null || true
+    rm -f /etc/systemd/system/rpi-pod-adsb-shield.service \
+          /etc/systemd/system/rpi-pod-adsb-shield.timer \
+          /etc/rpi-pod/adsb-precision \
           /run/dump1090-mutability/aircraft.shielded.json
 }
 
 remove_notes() {
     # Phase 9A. The board lives on tmpfs so there's no persistent state
     # to clean up beyond the service + token + print tree.
-    systemctl disable --now signal-notes.service 2>/dev/null || true
-    rm -f /etc/systemd/system/signal-notes.service
-    rm -f /etc/signal/notes-owner-token /etc/signal/mesh-owner-token
-    rm -rf /var/www/signal-portal/print
+    systemctl disable --now rpi-pod-notes.service 2>/dev/null || true
+    rm -f /etc/systemd/system/rpi-pod-notes.service
+    rm -f /etc/rpi-pod/notes-owner-token /etc/rpi-pod/mesh-owner-token
+    rm -rf /var/www/rpi-pod-portal/print
 }
 
 remove_status() {
-    systemctl disable --now signal-status.service 2>/dev/null || true
-    rm -f /etc/systemd/system/signal-status.service
-    rm -rf /opt/signal
-    rm -rf /etc/signal
+    systemctl disable --now rpi-pod-status.service 2>/dev/null || true
+    rm -f /etc/systemd/system/rpi-pod-status.service
+    rm -rf /opt/rpi-pod
+    rm -rf /etc/rpi-pod
     # Restore the Debian default MOTD if our copy is still in place.
     # Bookworm's stock /etc/motd is empty; just blanking the file is safe.
     if [[ -f /etc/motd ]] && grep -q "OFFLINE INFOHUB" /etc/motd 2>/dev/null; then
@@ -132,20 +132,20 @@ main() {
     remove_kiwix
     remove_nginx_site
 
-    systemctl disable --now signal-ap.service 2>/dev/null || true
-    rm -f /etc/systemd/system/signal-ap.service
+    systemctl disable --now rpi-pod-ap.service 2>/dev/null || true
+    rm -f /etc/systemd/system/rpi-pod-ap.service
     systemctl daemon-reload
 
     rm -f /etc/hostapd/hostapd.conf
-    rm -f /etc/dnsmasq.d/signal.conf
-    rm -f /etc/sysctl.d/30-signal.conf
+    rm -f /etc/dnsmasq.d/rpi-pod.conf
+    rm -f /etc/sysctl.d/30-rpi-pod.conf
 
     remove_dhcpcd_block
     drop_iptables
     sysctl --system >/dev/null
     systemctl restart dhcpcd 2>/dev/null || true
 
-    log "SIGNAL uninstalled. Packages (hostapd, dnsmasq, nginx, kiwix-tools, iptables-persistent, python3-fastapi, python3-uvicorn) left in place."
+    log "rpi-POD uninstalled. Packages (hostapd, dnsmasq, nginx, kiwix-tools, iptables-persistent, python3-fastapi, python3-uvicorn) left in place."
     log "Library content at /var/lib/kiwix/ preserved — delete manually if you want it gone."
 }
 

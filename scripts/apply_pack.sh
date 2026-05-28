@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Purpose: Apply a regional content pack to a built SIGNAL image.
+# Purpose: Apply a regional content pack to a built rpi-POD image.
 # Unit:    n/a (workstation-side helper; install.sh --pack=<name> wraps it)
 # Phase:   9B
 #
@@ -13,8 +13,8 @@ PACK="${1:-general-purpose}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACK_DIR="$REPO_DIR/packs/$PACK"
 DEST_KIWIX="${DEST_KIWIX:-./payload/var/lib/kiwix}"
-DEST_PRINT="${DEST_PRINT:-./payload/var/www/signal-portal/print}"
-DEST_PRESETS="${DEST_PRESETS:-./payload/var/lib/signal/listen}"
+DEST_PRINT="${DEST_PRINT:-./payload/var/www/rpi-pod-portal/print}"
+DEST_PRESETS="${DEST_PRESETS:-./payload/var/lib/rpi-pod/listen}"
 
 log() { printf '[apply-pack] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -61,7 +61,7 @@ if [[ -d "$PACK_DIR/print" ]]; then
     {
         printf '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         printf '<title>Print: %s</title>' "$(yq -r '.display_name' "$manifest")"
-        printf '<link rel="stylesheet" href="/assets/css/signal.css"></head><body>'
+        printf '<link rel="stylesheet" href="/assets/css/rpi-pod.css"></head><body>'
         printf '<main><h1>Print cards — %s</h1><ul>' "$(yq -r '.display_name' "$manifest")"
         n=$(yq -r '.print | length' "$manifest")
         for i in $(seq 0 $((n - 1))); do

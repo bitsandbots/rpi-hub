@@ -1,4 +1,4 @@
-# Pre-commit hooks for SIGNAL.
+# Pre-commit hooks for rpi-POD.
 # Phase introduced: 1 (scaffold lands with Phase 1)
 # Run: `pre-commit install` once after clone; `pre-commit run --all-files` to lint everything.
 
@@ -60,7 +60,7 @@ repos:
   - repo: local
     hooks:
       - id: check-config-header
-        name: SIGNAL config header required
+        name: rpi-POD config header required
         entry: scripts/check_config_header.py
         language: script
         files: ^config/.*\.(conf|yaml|yml)$

@@ -2,7 +2,7 @@
  *          aircraft.json. dump1090-mutability writes this file every
  *          second to /run/dump1090-mutability/; nginx serves it at
  *          /adsb/aircraft.json so we don't have to proxy through
- *          signal-listen.
+ *          rpi-pod-listen.
  *
  * Unit:    nginx.service (static asset; alias to dump1090 output dir)
  * Phase:   8.4

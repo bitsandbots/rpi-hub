@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# SIGNAL — image bake.
+# rpi-POD — image bake.
 #
-# Produces a flashable signal-vX.Y.Z-arm64.img.xz from a Raspberry Pi OS
+# Produces a flashable rpi-pod-vX.Y.Z-arm64.img.xz from a Raspberry Pi OS
 # Lite Bookworm base, with install.sh already applied so the SD card boots
 # straight into a working hub.
 #
@@ -9,12 +9,12 @@
 #   1. Download the base RPi OS Lite arm64 image (pinned URL + sha256).
 #   2. Decompress to a working .img.
 #   3. losetup loop devices for the boot + root partitions.
-#   4. Mount, copy this repo into /opt/signal, drop a qemu-user-static
+#   4. Mount, copy this repo into /opt/rpi-pod, drop a qemu-user-static
 #      binary in if host arch != aarch64.
 #   5. chroot in, run install.sh.
 #   6. Clean up the chroot (remove qemu binary, clear apt cache, zerofree).
 #   7. Unmount, detach loop, xz-compress the result.
-#   8. Output signal-${VERSION}-${VARIANT}-arm64.img.xz alongside its sha256.
+#   8. Output rpi-pod-${VERSION}-${VARIANT}-arm64.img.xz alongside its sha256.
 #
 # Requirements (Linux only):
 #   - root (loop mounts, chroot)
@@ -57,7 +57,7 @@ DRY_RUN=0
 KEEP_MOUNTS=0
 SKIP_DOWNLOAD=0
 
-log() { printf '[signal-bake] %s\n' "$*" >&2; }
+log() { printf '[rpi-pod-bake] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
 usage() {
@@ -142,7 +142,7 @@ fetch_base() {
 # --- step 2: decompress to working img --------------------------------------
 
 decompress() {
-    SCRATCH_DIR="$(mktemp -d /tmp/signal-bake.XXXXXX)"
+    SCRATCH_DIR="$(mktemp -d /tmp/rpi-pod-bake.XXXXXX)"
     log "scratch dir: $SCRATCH_DIR"
     local img="$SCRATCH_DIR/working.img"
     log "decompressing to $img"
@@ -174,11 +174,11 @@ mount_image() {
 
 stage_repo() {
     local mnt="$SCRATCH_DIR/mnt"
-    log "staging repo to /opt/signal inside chroot"
-    install -d "$mnt/opt/signal"
+    log "staging repo to /opt/rpi-pod inside chroot"
+    install -d "$mnt/opt/rpi-pod"
     rsync -a --delete \
         --exclude='.git' --exclude='.bake-cache' --exclude='__pycache__' \
-        "$REPO_DIR/" "$mnt/opt/signal/"
+        "$REPO_DIR/" "$mnt/opt/rpi-pod/"
 
     if [[ $NEEDS_QEMU -eq 1 ]]; then
         log "installing qemu-aarch64-static into chroot"
@@ -186,8 +186,8 @@ stage_repo() {
     fi
 
     # Pre-seed the version file so the API picks it up on first boot.
-    install -d "$mnt/etc/signal"
-    printf '%s\n' "$VERSION" >"$mnt/etc/signal/version"
+    install -d "$mnt/etc/rpi-pod"
+    printf '%s\n' "$VERSION" >"$mnt/etc/rpi-pod/version"
 }
 
 run_install_in_chroot() {
@@ -195,7 +195,7 @@ run_install_in_chroot() {
     log "running install.sh inside chroot (this is the slow step)"
     chroot "$mnt" /bin/bash -lc '
         set -e
-        cd /opt/signal
+        cd /opt/rpi-pod
         export DEBIAN_FRONTEND=noninteractive
         PHASE=5 ./install.sh
         apt-get clean
@@ -219,7 +219,7 @@ compress_output() {
     local img="$1"
     local out_dir="$REPO_DIR/dist"
     install -d "$out_dir"
-    local out_name="signal-${VERSION}-${VARIANT}-arm64.img.xz"
+    local out_name="rpi-pod-${VERSION}-${VARIANT}-arm64.img.xz"
     local out_path="$out_dir/$out_name"
     log "compressing → $out_path"
     xz --threads=0 --compress --keep --stdout "$img" >"$out_path"
@@ -234,12 +234,12 @@ if [[ $DRY_RUN -eq 1 ]]; then
     log "  1. fetch $BASE_IMAGE_URL → $BASE_IMAGE_FILE"
     log "  2. decompress to scratch dir"
     log "  3. losetup -P + mount p1+p2"
-    log "  4. rsync repo → /opt/signal in chroot"
+    log "  4. rsync repo → /opt/rpi-pod in chroot"
     log "  5. install qemu-aarch64-static into chroot (host=$HOST_ARCH, needs_qemu=$NEEDS_QEMU)"
     log "  6. chroot + PHASE=5 install.sh + apt-get clean"
     log "  7. zero /etc/machine-id, remove qemu binary"
     log "  8. unmount, losetup -d"
-    log "  9. xz-compress → dist/signal-${VERSION}-${VARIANT}-arm64.img.xz"
+    log "  9. xz-compress → dist/rpi-pod-${VERSION}-${VARIANT}-arm64.img.xz"
     exit 0
 fi
 

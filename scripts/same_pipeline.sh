@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 # Purpose: SAME alert decoder pipeline. Tunes the dongle to the first
 #          NOAA WX preset, demodulates with rtl_fm, decodes EAS headers
-#          with multimon-ng, and POSTs each parsed line to signal-listen.
-# Unit:    signal-listen-same.service
+#          with multimon-ng, and POSTs each parsed line to rpi-pod-listen.
+# Unit:    rpi-pod-listen-same.service
 # Phase:   8 (sub-phase 8.2)
 #
-# Why a script and not a child of signal-listen: rtl_fm + multimon-ng are
+# Why a script and not a child of rpi-pod-listen: rtl_fm + multimon-ng are
 # the audio pipeline, and they should be supervised by systemd directly
 # so a SIGTERM cleanly drains both. The Python service is the control
 # plane; this is the data plane.
 
 set -euo pipefail
 
-FREQ_HZ="${SIGNAL_SAME_FREQ_HZ:-162400000}"
-SERVICE_URL="${SIGNAL_LISTEN_URL:-http://127.0.0.1:8300}"
+FREQ_HZ="${RPI_POD_SAME_FREQ_HZ:-162400000}"
+SERVICE_URL="${RPI_POD_LISTEN_URL:-http://127.0.0.1:8300}"
 
 log() { printf '[same-pipeline] %s\n' "$*" >&2; }
 
@@ -42,7 +42,7 @@ rtl_fm -M fm -f "${FREQ_HZ}" -s 22050 -r 22050 -g 40 -l 0 - 2>/dev/null \
             *ZCZC-*)
                 log "alert: $line"
                 # 1s connect, 2s total — never block the pipeline on a
-                # stuck signal-listen.
+                # stuck rpi-pod-listen.
                 curl --silent --max-time 2 --connect-timeout 1 \
                     --header 'Content-Type: application/json' \
                     --data-binary "$(printf '{"line":"%s"}' "${line//\"/\\\"}")" \

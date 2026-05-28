@@ -5,10 +5,10 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="referrer" content="no-referrer">
   <meta name="theme-color" content="#0b1f3f">
-  <meta name="description" content="SIGNAL — mesh peers. Other SIGNAL nodes within radio range.">
-  <title>SIGNAL — Peers</title>
-  <link rel="stylesheet" href="/assets/css/signal.css">
-  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='50%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>S</text><text x='65%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>l</text></svg>">
+  <meta name="description" content="rpi-POD — mesh peers. Other rpi-POD nodes within radio range.">
+  <title>rpi-POD — Peers</title>
+  <link rel="stylesheet" href="/assets/css/rpi-pod.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='40%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>r</text><text x='62%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>P</text></svg>">
   <script src="/assets/js/contrast.js"></script>
   <script src="/assets/js/peers.js" defer></script>
 </head>
@@ -17,8 +17,8 @@
 
   <header class="site-header" role="banner">
     <div class="site-header__inner">
-      <div class="brand" aria-label="SIGNAL">
-        <span class="b-first">Sig</span><span class="b-second">nal</span>
+      <div class="brand" aria-label="rpi-POD">
+        <span class="b-first">rpi-</span><span class="b-second">POD</span>
         <span class="brand-sub">Mesh peers</span>
       </div>
       <div class="header-tools">
@@ -40,7 +40,7 @@
           </p>
         </noscript>
         <p>
-          Other SIGNAL nodes this hub has seen on the mesh. Unverified peers
+          Other rpi-POD nodes this hub has seen on the mesh. Unverified peers
           are visible but their content is flagged — the owner scans a peer's
           QR fingerprint and marks it trusted to lift the banner.
         </p>
@@ -51,7 +51,7 @@
         <h2>This node</h2>
         <p>Fingerprint: <code id="peers-fp">—</code></p>
         <p class="peers-identity__hint">
-          Share this fingerprint with another SIGNAL owner so they can trust
+          Share this fingerprint with another rpi-POD owner so they can trust
           this node from their Peers page.
         </p>
         <figure class="peers-identity__qr">
@@ -80,7 +80,7 @@
   </main>
 
   <footer class="site-footer">
-    SIGNAL · Phase 7 · Reticulum + BATMAN-adv · Mesh TX local-only
+    rpi-POD · Phase 7 · Reticulum + BATMAN-adv · Mesh TX local-only
   </footer>
 </body>
 </html>

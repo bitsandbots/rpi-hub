@@ -1,11 +1,11 @@
-"""End-to-end: ``POST /api/notes`` → ``signal-mesh /notes/publish``.
+"""End-to-end: ``POST /api/notes`` → ``rpi-pod-mesh /notes/publish``.
 
 The existing tests cover each half in isolation:
 
-* ``notes/signal_notes/tests/test_publish_mesh_handoff.py`` — notes app
+* ``notes/rpi_pod_notes/tests/test_publish_mesh_handoff.py`` — notes app
   hands off to ``mesh_client.publish``, and the JSON payload matches
   what ``PublishNoteIn`` expects.
-* ``mesh/signal_mesh/tests/test_mesh.py`` — signing helpers and peer
+* ``mesh/rpi_pod_mesh/tests/test_mesh.py`` — signing helpers and peer
   table primitives.
 
 But neither test drives the **cross-service hop**: the wire bytes that
@@ -33,11 +33,11 @@ from typing import Any
 import pytest
 from fastapi.testclient import TestClient
 
-from mesh.signal_mesh import identity as mesh_identity
-from mesh.signal_mesh import main as mesh_main
-from mesh.signal_mesh import messages
-from notes.signal_notes import main as notes_main
-from notes.signal_notes import mesh_client, storage
+from mesh.rpi_pod_mesh import identity as mesh_identity
+from mesh.rpi_pod_mesh import main as mesh_main
+from mesh.rpi_pod_mesh import messages
+from notes.rpi_pod_notes import main as notes_main
+from notes.rpi_pod_notes import mesh_client, storage
 
 
 @pytest.fixture
@@ -153,7 +153,7 @@ def test_post_note_round_trips_signed_envelope(
     # Wrap publish on the wifi bridge — easiest way to capture what
     # the mesh app actually signs. Falls through to the no-op bridge
     # behavior on no-hardware (publish returns False).
-    from mesh.signal_mesh import wifi_bridge
+    from mesh.rpi_pod_mesh import wifi_bridge
 
     original_attach = wifi_bridge.attach
 

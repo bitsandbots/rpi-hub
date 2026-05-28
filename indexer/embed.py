@@ -14,9 +14,9 @@ from __future__ import annotations
 import os
 from typing import Callable
 
-EMBED_MODEL = os.environ.get("SIGNAL_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
-EMBED_DIM = int(os.environ.get("SIGNAL_EMBED_DIM", "384"))
-EMBED_BATCH = int(os.environ.get("SIGNAL_EMBED_BATCH", "32"))
+EMBED_MODEL = os.environ.get("RPI_POD_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
+EMBED_DIM = int(os.environ.get("RPI_POD_EMBED_DIM", "384"))
+EMBED_BATCH = int(os.environ.get("RPI_POD_EMBED_BATCH", "32"))
 
 
 def load_encoder() -> Callable[[list[str]], list[list[float]]]:

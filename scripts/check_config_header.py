@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Fail if any file under config/ lacks the required SIGNAL header comment.
+"""Fail if any file under config/ lacks the required rpi-POD header comment.
 
 Every config file must declare:
   - Purpose: one line

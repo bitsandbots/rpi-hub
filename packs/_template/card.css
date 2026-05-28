@@ -1,4 +1,4 @@
-/* Purpose: Shared print stylesheet for SIGNAL field cards. Single-page,
+/* Purpose: Shared print stylesheet for rpi-POD field cards. Single-page,
  *          high-contrast, mono-friendly. Designed to render identically
  *          in a browser (Print Preview) and in headless chromium via
  *          scripts/build_pack_pdfs.sh.
@@ -185,7 +185,7 @@ footer.card-foot .sources {
 
 @page {
   @bottom-left {
-    content: "SIGNAL field card — review before field use";
+    content: "rpi-POD field card — review before field use";
     font-family: system-ui, sans-serif;
     font-size: 8pt;
     color: #4a5260;

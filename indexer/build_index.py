@@ -5,9 +5,9 @@ This is a workstation tool. Usage::
 
     python -m indexer.build_index \\
         --zim-dir /var/lib/kiwix \\
-        --out ./payload/var/lib/signal/index
+        --out ./payload/var/lib/rpi-pod/index
 
-It produces the on-disk layout signal-retrieve consumes. The build is
+It produces the on-disk layout rpi-pod-retrieve consumes. The build is
 deterministic given the same ZIM inputs and embedding model, so two
 runs on different machines should produce byte-identical
 ``chunks.sqlite`` (vectors are bit-identical up to the BLAS
@@ -172,7 +172,7 @@ def main() -> int:
     print(f"[indexer] wrote {manifest.chunk_count} chunks ({manifest.token_count} tokens)")
     print(f"[indexer] output: {args.out}")
     print("[indexer] rsync to Pi:")
-    print(f"  rsync -avh --delete {args.out}/ pi@hub.local:/var/lib/signal/index/")
+    print(f"  rsync -avh --delete {args.out}/ pi@hub.local:/var/lib/rpi-pod/index/")
     return 0
 
 

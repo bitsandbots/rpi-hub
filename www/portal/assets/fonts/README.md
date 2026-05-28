@@ -1,4 +1,4 @@
-# SIGNAL portal fonts
+# rpi-POD portal fonts
 
 This directory is **empty by default**. The portal CSS expects four files
 plus an OFL license:

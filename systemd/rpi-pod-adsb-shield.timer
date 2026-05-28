@@ -1,0 +1,25 @@
+# Purpose: Tick rpi-pod-adsb-shield.service once per second so the
+#          rounded aircraft.shielded.json stays within ~1s of the raw
+#          aircraft.json that dump1090-mutability writes at the same
+#          cadence. The .service exits in <50ms on a Pi Zero 2 W so
+#          this is cheaper than a Python while-True loop.
+# Unit:    rpi-pod-adsb-shield.timer (drives rpi-pod-adsb-shield.service)
+# Phase:   8.4 polish (introduced v1.3 — opt-in)
+#
+# ConditionPathExists= guards the timer the same way the service is
+# guarded — if /etc/rpi-pod/adsb-precision is gone, the timer's tick
+# fires a service that is also condition-skipped, so the net cost is
+# the .timer evaluation itself.
+
+[Unit]
+Description=Tick the rpi-POD ADS-B shield every second
+ConditionPathExists=/etc/rpi-pod/adsb-precision
+
+[Timer]
+OnBootSec=10s
+OnUnitActiveSec=1s
+AccuracySec=250ms
+Unit=rpi-pod-adsb-shield.service
+
+[Install]
+WantedBy=timers.target

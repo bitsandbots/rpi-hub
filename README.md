@@ -1,4 +1,4 @@
-# SIGNAL — Offline Survival InfoHub
+# rpi-POD — Offline Survival InfoHub
 
 A self-contained Wi-Fi access point on a Raspberry Pi that serves a curated
 knowledge library, a retrieval-grounded assistant, radio reception, mesh
@@ -16,7 +16,7 @@ off-grid communities.
 > dump1090-mutability install gate with a live ADS-B status row.
 >
 > Unreleased polish landing on top of v1.2.1: opt-in ADS-B
-> position-rounding (`signal-adsb-shield`), split `notes`/`mesh` owner
+> position-rounding (`rpi-pod-adsb-shield`), split `notes`/`mesh` owner
 > tokens, captive-HTTPS out-of-scope note, and test harnesses for
 > `scripts/readonly_root.sh` and the cross-service notes → mesh fan-out.
 > See [`CHANGELOG.md`](./CHANGELOG.md) `[Unreleased]` for the full set.
@@ -25,19 +25,19 @@ off-grid communities.
 > - [`docs/OVERVIEW.md`](./docs/OVERVIEW.md) — system reference (architecture, setup, API)
 > - [`docs/GAP_ANALYSIS.md`](./docs/GAP_ANALYSIS.md) — what's still gated on bench hardware
 > - [`Blueprint_Overview.html`](./Blueprint_Overview.html) — visual blueprint for operators
-> - [`signal-wizard.html`](./signal-wizard.html) — interactive build checklist
+> - [`rpi-pod-wizard.html`](./rpi-pod-wizard.html) — interactive build checklist
 > - [`CHANGELOG.md`](./CHANGELOG.md) — per-release notes
 >
 > Build sequencing followed `1 → 2 → 3 → 4 → 5 → 6 → 9 → 8 → 7` so every tag was end-to-end demoable.
 
 ## What it is
 
-- An open Wi-Fi network (`SIGNAL_INFOHUB`) on a Raspberry Pi
+- An open Wi-Fi network (`RPI-POD-INFOHUB`) on a Raspberry Pi
 - A captive portal that drops every connected client onto a local landing page
 - A Kiwix-served library of Wikipedia, iFixit, survival guides, WikEM clinical reference, maps
 - An optional small-model assistant (Pi 5 only) that summarizes the library with citations
 - Optional RTL-SDR radio (NOAA alerts, FM, ham bands, ADS-B)
-- Optional mesh networking between SIGNAL nodes (Reticulum + BATMAN-adv)
+- Optional mesh networking between rpi-POD nodes (Reticulum + BATMAN-adv)
 - Optional ephemeral notes board, owner-moderated
 
 ## What it isn't
@@ -69,10 +69,10 @@ sudo ./install.sh
 ```
 
 This installs `hostapd`, `dnsmasq`, links the configs, sets up
-`signal-ap.service`, and enables it on boot. The captive portal and library
+`rpi-pod-ap.service`, and enables it on boot. The captive portal and library
 land in subsequent phases.
 
-After reboot, look for `SIGNAL_INFOHUB` on a phone — joining should give you
+After reboot, look for `RPI-POD-INFOHUB` on a phone — joining should give you
 a DHCP lease in `192.168.4.0/24`.
 
 ## License

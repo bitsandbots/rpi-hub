@@ -10,7 +10,7 @@
 # deterministic from the .html sources, and the project's offline-first
 # stance keeps the device itself free of build tooling. Run this once on
 # the workstation that bakes the image; apply_pack.sh then rsyncs the
-# resulting PDFs into /var/www/signal-portal/print/ on the device.
+# resulting PDFs into /var/www/rpi-pod-portal/print/ on the device.
 
 set -euo pipefail
 

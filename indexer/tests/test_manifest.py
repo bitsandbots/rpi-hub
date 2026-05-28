@@ -24,5 +24,5 @@ def test_manifest_round_trip(tmp_path: Path) -> None:
 
 
 def test_layout_version_pinned() -> None:
-    # If you bump this, signal-retrieve must learn to handle the new layout.
+    # If you bump this, rpi-pod-retrieve must learn to handle the new layout.
     assert manifest.INDEX_LAYOUT_VERSION == 1

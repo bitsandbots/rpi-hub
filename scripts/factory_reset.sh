@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
-# SIGNAL — factory reset.
+# rpi-POD — factory reset.
 #
 # Wipes mutable state on the hub:
 #   - DHCP leases (clients re-acquire on reconnect)
 #   - nginx access/error logs
 #   - systemd journal (vacuum to 0)
-#   - /var/lib/signal/* (notes board state, Phase 9)
+#   - /var/lib/rpi-pod/* (notes board state, Phase 9)
 #
 # *Preserves*:
 #   - /var/lib/kiwix (re-downloading tens of GB is not a "reset")
 #   - /etc configs (the build defines them, not local edits)
-#   - /opt/signal (the deployed code)
+#   - /opt/rpi-pod (the deployed code)
 #
 # Requires --yes to actually run. Without it, just lists what would be wiped.
 
@@ -18,7 +18,7 @@ set -euo pipefail
 
 CONFIRM="${1:-}"
 
-log() { printf '[signal-reset] %s\n' "$*" >&2; }
+log() { printf '[rpi-pod-reset] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
 [[ $EUID -eq 0 ]] || die "must run as root (try: sudo $0 --yes)"
@@ -52,18 +52,18 @@ do_step "truncate dnsmasq leases" \
 # 2. nginx logs. Truncate rather than delete so logrotate's open handles
 #    keep working without a restart.
 do_step "truncate nginx logs" \
-    bash -c ': >/var/log/nginx/signal-portal.access.log 2>/dev/null
-             : >/var/log/nginx/signal-portal.error.log 2>/dev/null
+    bash -c ': >/var/log/nginx/rpi-pod-portal.access.log 2>/dev/null
+             : >/var/log/nginx/rpi-pod-portal.error.log 2>/dev/null
              true'
 
 # 3. systemd journal vacuum.
 do_step "vacuum systemd journal" \
     journalctl --rotate --vacuum-time=1s --quiet
 
-# 4. SIGNAL state directory (Phase 9 notes, future scratch).
-do_step "wipe /var/lib/signal/* (preserves dir, removes contents)" \
-    bash -c 'if [[ -d /var/lib/signal ]]; then
-                 find /var/lib/signal -mindepth 1 -delete
+# 4. rpi-POD state directory (Phase 9 notes, future scratch).
+do_step "wipe /var/lib/rpi-pod/* (preserves dir, removes contents)" \
+    bash -c 'if [[ -d /var/lib/rpi-pod ]]; then
+                 find /var/lib/rpi-pod -mindepth 1 -delete
              fi'
 
 if [[ $dry_run -eq 0 ]]; then

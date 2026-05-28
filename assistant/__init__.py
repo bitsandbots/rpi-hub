@@ -1,10 +1,10 @@
-"""SIGNAL assistant — retrieval-grounded answer service (Phase 6).
+"""rpi-POD assistant — retrieval-grounded answer service (Phase 6).
 
 Two FastAPI apps live under this package:
 
-* ``signal_retrieve`` (port 8100) — hybrid BM25 + vector retrieval over the
-  workstation-built index in ``/var/lib/signal/index/``.
-* ``signal_assist`` (port 8200) — wraps retrieval with a safety classifier,
+* ``rpi_pod_retrieve`` (port 8100) — hybrid BM25 + vector retrieval over the
+  workstation-built index in ``/var/lib/rpi-pod/index/``.
+* ``rpi_pod_assist`` (port 8200) — wraps retrieval with a safety classifier,
   prompt scaffold, and llama.cpp HTTP client. Strips uncited claims before
   returning text.
 

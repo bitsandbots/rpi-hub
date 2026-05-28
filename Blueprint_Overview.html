@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>SIGNAL — Blueprint Overview</title>
-<meta name="description" content="SIGNAL — Offline Survival InfoHub. Blueprint overview: services, ports, hardware tiers, phase timeline, capabilities matrix.">
+<title>rpi-POD — Blueprint Overview</title>
+<meta name="description" content="rpi-POD — Offline Survival InfoHub. Blueprint overview: services, ports, hardware tiers, phase timeline, capabilities matrix.">
 <style>
   :root {
     --bg-deep:   #0a0d0a;
@@ -15,7 +15,7 @@
     --ink-faint: #4a4632;
     --amber:     #ffb347;
     --amber-hot: #ff7a18;
-    --signal:    #c8ff5a;
+    --rpi-pod:    #c8ff5a;
     --alert:     #ff4444;
     --blue:      #6ab0ff;
     --rule:      #3a3a28;
@@ -102,7 +102,7 @@
     font-size: 9px; color: var(--ink-faint); letter-spacing: 0.2em;
     border: 1px solid var(--ink-faint); padding: 2px 7px;
   }
-  .section-h .v.ok { color: var(--signal); border-color: var(--signal); }
+  .section-h .v.ok { color: var(--rpi-pod); border-color: var(--rpi-pod); }
   .section-h .v.warn { color: var(--amber); border-color: var(--amber); }
 
   /* Architecture diagram. */
@@ -119,7 +119,7 @@
     border-left: 3px solid var(--ink-faint);
     padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
   }
-  .svc.svc--core   { border-left-color: var(--signal); }
+  .svc.svc--core   { border-left-color: var(--rpi-pod); }
   .svc.svc--opt    { border-left-color: var(--amber); }
   .svc.svc--scaff  { border-left-color: var(--blue); }
   .svc-h {
@@ -134,7 +134,7 @@
   }
   .svc-tag.scaff { color: var(--blue); }
   .svc-tag.opt   { color: var(--amber); }
-  .svc-tag.core  { color: var(--signal); }
+  .svc-tag.core  { color: var(--rpi-pod); }
 
   /* Tables. */
   table.dataref {
@@ -153,7 +153,7 @@
   table.dataref td { color: var(--ink); }
   table.dataref tr:hover td { background: rgba(255, 179, 71, 0.03); }
   table.dataref .mono { font-family: ui-monospace, monospace; color: var(--amber); font-size: 11px; }
-  table.dataref .ok   { color: var(--signal); }
+  table.dataref .ok   { color: var(--rpi-pod); }
   table.dataref .warn { color: var(--amber); }
   table.dataref .dim  { color: var(--ink-dim); }
 
@@ -177,13 +177,13 @@
   .rail-step .tag {
     display: inline-block; margin-top: 6px; padding: 1px 6px;
     font-size: 9px; letter-spacing: 0.2em;
-    border: 1px solid var(--signal); color: var(--signal);
+    border: 1px solid var(--rpi-pod); color: var(--rpi-pod);
   }
-  .rail-step.done { border-color: var(--signal); }
-  .rail-step.done .num { color: var(--signal); }
+  .rail-step.done { border-color: var(--rpi-pod); }
+  .rail-step.done .num { color: var(--rpi-pod); }
   .rail-step.done::after {
     content: '✓'; position: absolute; top: 8px; right: 10px;
-    color: var(--signal); font-size: 12px;
+    color: var(--rpi-pod); font-size: 12px;
   }
   .rail-step.poly { border-color: var(--amber); }
   .rail-step.poly .num { color: var(--amber); }
@@ -192,7 +192,7 @@
   /* Capability matrix. */
   .matrix th { vertical-align: bottom; }
   .matrix td.h { text-align: center; }
-  .y  { color: var(--signal); font-weight: 700; }
+  .y  { color: var(--rpi-pod); font-weight: 700; }
   .n  { color: var(--ink-faint); }
   .o  { color: var(--amber); }
 
@@ -224,7 +224,7 @@
   /* SVG diagram styles. */
   .d-node    { fill: var(--bg-card); stroke: var(--rule); stroke-width: 1.5; }
   .d-public  { fill: rgba(255, 179, 71, 0.10); stroke: var(--amber); stroke-width: 1.5; }
-  .d-core    { fill: rgba(200, 255, 90, 0.06); stroke: var(--signal); stroke-width: 1.5; }
+  .d-core    { fill: rgba(200, 255, 90, 0.06); stroke: var(--rpi-pod); stroke-width: 1.5; }
   .d-opt     { fill: rgba(255, 179, 71, 0.06); stroke: var(--amber); stroke-width: 1.5; }
   .d-scaff   { fill: rgba(106, 176, 255, 0.04); stroke: var(--blue); stroke-width: 1.5; stroke-dasharray: 4 3; }
   .d-label   { fill: var(--ink); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 600; }
@@ -240,12 +240,12 @@
 
   <header class="site">
     <div class="brand">
-      <div class="brand-mark">signal<span class="dot"></span></div>
+      <div class="brand-mark">rpi-POD<span class="dot"></span></div>
       <div class="brand-sub">Offline Survival InfoHub<br/>Blueprint · v1.2.1</div>
     </div>
     <div class="meta">
       <div>Owner<strong>CoreConduit</strong></div>
-      <div>Status<strong style="color: var(--signal);">v1.2.1 SHIPPED</strong></div>
+      <div>Status<strong style="color: var(--rpi-pod);">v1.2.1 SHIPPED</strong></div>
       <div>Polish<strong style="color: var(--amber);">UNRELEASED LANDING</strong></div>
       <div>Targets<strong>Pi Zero 2 W · Pi 4 · Pi 5</strong></div>
     </div>
@@ -253,7 +253,7 @@
 
   <h1 class="page">Blueprint <span class="accent">overview</span></h1>
   <p class="lede">
-    SIGNAL is a self-contained Wi-Fi access point on a Raspberry Pi
+    rpi-POD is a self-contained Wi-Fi access point on a Raspberry Pi
     that serves a curated knowledge library, a retrieval-grounded
     assistant, an ephemeral notes board, RTL-SDR radio reception, and
     a Reticulum + BATMAN-adv mesh control plane &mdash;
@@ -263,15 +263,15 @@
     inventory, and what's still gated on bench hardware. For prose see
     <a class="docs" href="docs/OVERVIEW.md">docs/OVERVIEW.md</a>;
     for the build checklist see
-    <a class="docs" href="signal-wizard.html">signal-wizard.html</a>.
+     <a class="docs" href="rpi-pod-wizard.html">rpi-pod-wizard.html</a>.
   </p>
 
   <div class="callout" style="border-left-color: var(--amber); background: rgba(255, 179, 71, 0.06);">
     <strong style="color: var(--amber);">Unreleased polish landing on top of v1.2.1</strong>
     The pending tree adds opt-in ADS-B position-rounding
-    (<code>signal-adsb-shield</code>, gated on
-    <code>/etc/signal/adsb-precision</code>), a split owner-token model
-    (<code>/etc/signal/{notes,mesh}-owner-token</code> with a non-breaking
+    (<code>rpi-pod-adsb-shield</code>, gated on
+    <code>/etc/rpi-pod/adsb-precision</code>), a split owner-token model
+    (<code>/etc/rpi-pod/{notes,mesh}-owner-token</code> with a non-breaking
     legacy fallback), an explicit captive-portal HTTPS out-of-scope note
     in <a class="docs" href="docs/OVERVIEW.md">OVERVIEW</a> §4.6, and
     test harnesses for <code>readonly_root.sh</code> and the cross-service
@@ -287,7 +287,7 @@
   <section>
     <h2 class="section-h"><span>Architecture · request flow</span><span class="v ok">v1.2.1</span></h2>
     <div class="diagram">
-      <svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="SIGNAL service architecture: client → nginx → loopback services">
+      <svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="rpi-POD service architecture: client → nginx → loopback services">
         <defs>
           <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
             <path d="M0,0 L10,5 L0,10 z" fill="#3a3a28"/>
@@ -303,7 +303,7 @@
         <!-- Client -->
         <rect class="d-public" x="20" y="40" width="200" height="78" rx="4"/>
         <text class="d-pub-l" x="120" y="68" text-anchor="middle">Client phone</text>
-        <text class="d-sub"  x="120" y="86" text-anchor="middle">joins SIGNAL_INFOHUB</text>
+        <text class="d-sub"  x="120" y="86" text-anchor="middle">joins RPI-POD-INFOHUB</text>
         <text class="d-sub"  x="120" y="100" text-anchor="middle">DHCP 192.168.4.10–250</text>
 
         <!-- AP / DNS -->
@@ -327,7 +327,7 @@
         <!-- Core services row -->
         <g>
           <rect class="d-core" x="40"  y="190" width="160" height="78" rx="4"/>
-          <text class="d-label" x="120" y="216" text-anchor="middle">signal-status</text>
+          <text class="d-label" x="120" y="216" text-anchor="middle">rpi-pod-status</text>
           <text class="d-sub"  x="120" y="234" text-anchor="middle">:8000 · /api/status</text>
           <text class="d-sub"  x="120" y="250" text-anchor="middle">file probes · vcgencmd</text>
 
@@ -337,17 +337,17 @@
           <text class="d-sub"  x="300" y="250" text-anchor="middle">read-only ZIM mount</text>
 
           <rect class="d-core" x="400" y="190" width="160" height="78" rx="4"/>
-          <text class="d-label" x="480" y="216" text-anchor="middle">signal-notes</text>
+          <text class="d-label" x="480" y="216" text-anchor="middle">rpi-pod-notes</text>
           <text class="d-sub"  x="480" y="234" text-anchor="middle">:8400 · /api/notes</text>
           <text class="d-sub"  x="480" y="250" text-anchor="middle">SQLite on tmpfs</text>
 
           <rect class="d-core" x="580" y="190" width="160" height="78" rx="4"/>
-          <text class="d-label" x="660" y="216" text-anchor="middle">signal-mesh</text>
+          <text class="d-label" x="660" y="216" text-anchor="middle">rpi-pod-mesh</text>
           <text class="d-sub"  x="660" y="234" text-anchor="middle">:8500 · /api/mesh</text>
           <text class="d-sub"  x="660" y="250" text-anchor="middle">Ed25519 · QR · peers</text>
 
           <rect class="d-opt"  x="760" y="190" width="160" height="78" rx="4"/>
-          <text class="d-label" x="840" y="216" text-anchor="middle">signal-listen</text>
+          <text class="d-label" x="840" y="216" text-anchor="middle">rpi-pod-listen</text>
           <text class="d-sub"  x="840" y="234" text-anchor="middle">:8300 · /api/listen</text>
           <text class="d-sub"  x="840" y="250" text-anchor="middle">RTL-SDR arbiter</text>
 
@@ -360,17 +360,17 @@
         <!-- Assistant stack (Pi 5) -->
         <g>
           <rect class="d-opt" x="40"  y="300" width="200" height="78" rx="4"/>
-          <text class="d-label" x="140" y="326" text-anchor="middle">signal-retrieve</text>
+          <text class="d-label" x="140" y="326" text-anchor="middle">rpi-pod-retrieve</text>
           <text class="d-sub"  x="140" y="344" text-anchor="middle">:8100 · /api/retrieve</text>
           <text class="d-sub"  x="140" y="360" text-anchor="middle">BM25 + HNSW + RRF</text>
 
           <rect class="d-opt" x="260" y="300" width="200" height="78" rx="4"/>
-          <text class="d-label" x="360" y="326" text-anchor="middle">signal-assist</text>
+          <text class="d-label" x="360" y="326" text-anchor="middle">rpi-pod-assist</text>
           <text class="d-sub"  x="360" y="344" text-anchor="middle">:8200 · /api/ask</text>
           <text class="d-sub"  x="360" y="360" text-anchor="middle">safety · prompt · cite</text>
 
           <rect class="d-opt" x="480" y="300" width="220" height="78" rx="4"/>
-          <text class="d-label" x="590" y="326" text-anchor="middle">signal-llama (×2)</text>
+          <text class="d-label" x="590" y="326" text-anchor="middle">rpi-pod-llama (×2)</text>
           <text class="d-sub"  x="590" y="344" text-anchor="middle">:8201 bge-small · :8202 Qwen2.5</text>
           <text class="d-sub"  x="590" y="360" text-anchor="middle">llama.cpp — Pi 5 only</text>
         </g>
@@ -378,12 +378,12 @@
         <!-- Mesh sub-services -->
         <g>
           <rect class="d-core" x="720" y="300" width="200" height="78" rx="4"/>
-          <text class="d-label" x="820" y="326" text-anchor="middle">signal-mesh-keygen</text>
+          <text class="d-label" x="820" y="326" text-anchor="middle">rpi-pod-mesh-keygen</text>
           <text class="d-sub"  x="820" y="344" text-anchor="middle">oneshot · v1.2</text>
-          <text class="d-sub"  x="820" y="360" text-anchor="middle">/var/lib/signal/keys/</text>
+          <text class="d-sub"  x="820" y="360" text-anchor="middle">/var/lib/rpi-pod/keys/</text>
 
           <rect class="d-scaff" x="940" y="300" width="200" height="78" rx="4"/>
-          <text class="d-label" x="1040" y="326" text-anchor="middle">signal-reticulum</text>
+          <text class="d-label" x="1040" y="326" text-anchor="middle">rpi-pod-reticulum</text>
           <text class="d-sub"  x="1040" y="344" text-anchor="middle">LoRa scaffold</text>
           <text class="d-sub"  x="1040" y="360" text-anchor="middle">needs RAK4631</text>
         </g>
@@ -391,12 +391,12 @@
         <!-- Wi-Fi mesh / SAME pipeline -->
         <g>
           <rect class="d-scaff" x="940" y="410" width="200" height="78" rx="4"/>
-          <text class="d-label" x="1040" y="436" text-anchor="middle">signal-batman</text>
+          <text class="d-label" x="1040" y="436" text-anchor="middle">rpi-pod-batman</text>
           <text class="d-sub"  x="1040" y="454" text-anchor="middle">Wi-Fi mesh scaffold</text>
           <text class="d-sub"  x="1040" y="470" text-anchor="middle">needs USB wlan</text>
 
           <rect class="d-opt" x="720" y="410" width="200" height="78" rx="4"/>
-          <text class="d-label" x="820" y="436" text-anchor="middle">signal-listen-same</text>
+          <text class="d-label" x="820" y="436" text-anchor="middle">rpi-pod-listen-same</text>
           <text class="d-sub"  x="820" y="454" text-anchor="middle">rtl_fm | multimon-ng</text>
           <text class="d-sub"  x="820" y="470" text-anchor="middle">→ /alerts/internal</text>
         </g>
@@ -452,57 +452,57 @@
     <h2 class="section-h"><span>Services · ports · responsibilities</span><span class="v ok">14 units · +1 opt-in</span></h2>
     <div class="grid-svc">
       <div class="svc svc--core">
-        <div class="svc-h"><strong>signal-ap</strong><span class="svc-port">target unit</span></div>
-        <div class="svc-purpose">Owns hostapd + dnsmasq + sysctl no-forward + iptables drop. Boots before any other SIGNAL unit.</div>
+        <div class="svc-h"><strong>rpi-pod-ap</strong><span class="svc-port">target unit</span></div>
+        <div class="svc-purpose">Owns hostapd + dnsmasq + sysctl no-forward + iptables drop. Boots before any other rpi-POD unit.</div>
         <div class="svc-tag core">CORE · Phase 1</div>
       </div>
       <div class="svc svc--core">
-        <div class="svc-h"><strong>signal-status</strong><span class="svc-port">:8000</span></div>
+        <div class="svc-h"><strong>rpi-pod-status</strong><span class="svc-port">:8000</span></div>
         <div class="svc-purpose">FastAPI · uptime, load, kiwix disk, vcgencmd, leases, per-service probes, ADS-B file probe.</div>
         <div class="svc-tag core">CORE · Phase 5</div>
       </div>
       <div class="svc svc--core">
-        <div class="svc-h"><strong>signal-kiwix</strong><span class="svc-port">:8080</span></div>
+        <div class="svc-h"><strong>rpi-pod-kiwix</strong><span class="svc-port">:8080</span></div>
         <div class="svc-purpose">kiwix-serve over /var/lib/kiwix. ConditionPathExistsGlob keeps it inactive on empty libraries.</div>
         <div class="svc-tag core">CORE · Phase 3</div>
       </div>
       <div class="svc svc--core">
-        <div class="svc-h"><strong>signal-notes</strong><span class="svc-port">:8400</span></div>
+        <div class="svc-h"><strong>rpi-pod-notes</strong><span class="svc-port">:8400</span></div>
         <div class="svc-purpose">FastAPI · SQLite over tmpfs · 280-char cap · 1/min + 10/h rate limit · owner-token DELETE / wipe.</div>
         <div class="svc-tag core">CORE · Phase 9A</div>
       </div>
       <div class="svc svc--core">
-        <div class="svc-h"><strong>signal-mesh</strong><span class="svc-port">:8500</span></div>
+        <div class="svc-h"><strong>rpi-pod-mesh</strong><span class="svc-port">:8500</span></div>
         <div class="svc-purpose">FastAPI · Ed25519 identity · peer table · signed envelopes · QR fingerprint endpoint.</div>
         <div class="svc-tag core">CORE · Phase 7 (+v1.2)</div>
       </div>
       <div class="svc svc--core">
-        <div class="svc-h"><strong>signal-mesh-keygen</strong><span class="svc-port">oneshot</span></div>
-        <div class="svc-purpose">Generates /var/lib/signal/keys/ed25519.{priv,pub} on first boot. RemainAfterExit; Before signal-mesh.</div>
+        <div class="svc-h"><strong>rpi-pod-mesh-keygen</strong><span class="svc-port">oneshot</span></div>
+        <div class="svc-purpose">Generates /var/lib/rpi-pod/keys/ed25519.{priv,pub} on first boot. RemainAfterExit; Before rpi-pod-mesh.</div>
         <div class="svc-tag core">CORE · v1.2</div>
       </div>
       <div class="svc svc--opt">
-        <div class="svc-h"><strong>signal-listen</strong><span class="svc-port">:8300</span></div>
+        <div class="svc-h"><strong>rpi-pod-listen</strong><span class="svc-port">:8300</span></div>
         <div class="svc-purpose">FastAPI · single-dongle arbiter · SAME pipeline coordinator · pack-aware NOAA presets.</div>
         <div class="svc-tag opt">OPTIONAL · Phase 8</div>
       </div>
       <div class="svc svc--opt">
-        <div class="svc-h"><strong>signal-listen-same</strong><span class="svc-port">pipeline</span></div>
+        <div class="svc-h"><strong>rpi-pod-listen-same</strong><span class="svc-port">pipeline</span></div>
         <div class="svc-purpose">rtl_fm | multimon-ng | curl → POST /alerts/internal. Parks on 162.400 MHz default.</div>
         <div class="svc-tag opt">OPTIONAL · Phase 8</div>
       </div>
       <div class="svc svc--opt">
-        <div class="svc-h"><strong>signal-retrieve</strong><span class="svc-port">:8100</span></div>
+        <div class="svc-h"><strong>rpi-pod-retrieve</strong><span class="svc-port">:8100</span></div>
         <div class="svc-purpose">Hybrid BM25 + HNSW + RRF over the workstation-built index. Pi 5 path.</div>
         <div class="svc-tag opt">OPTIONAL · Phase 6</div>
       </div>
       <div class="svc svc--opt">
-        <div class="svc-h"><strong>signal-assist</strong><span class="svc-port">:8200</span></div>
+        <div class="svc-h"><strong>rpi-pod-assist</strong><span class="svc-port">:8200</span></div>
         <div class="svc-purpose">Safety classifier → prompt scaffold → llama → citation validator (60% coverage floor).</div>
         <div class="svc-tag opt">OPTIONAL · Phase 6</div>
       </div>
       <div class="svc svc--opt">
-        <div class="svc-h"><strong>signal-llama</strong><span class="svc-port">:8201/8202</span></div>
+        <div class="svc-h"><strong>rpi-pod-llama</strong><span class="svc-port">:8201/8202</span></div>
         <div class="svc-purpose">Two llama.cpp instances: bge-small embedder + Qwen2.5-1.5B generator. CPU-only.</div>
         <div class="svc-tag opt">OPTIONAL · Phase 6</div>
       </div>
@@ -512,17 +512,17 @@
         <div class="svc-tag opt">OPTIONAL · v1.2.1</div>
       </div>
       <div class="svc svc--opt">
-        <div class="svc-h"><strong>signal-adsb-shield</strong><span class="svc-port">timer · 1 s</span></div>
-        <div class="svc-purpose">Opt-in PII shield. Rounds per-aircraft lat/lon and writes aircraft.shielded.json; nginx prefers it over raw. ConditionPathExists=/etc/signal/adsb-precision.</div>
+        <div class="svc-h"><strong>rpi-pod-adsb-shield</strong><span class="svc-port">timer · 1 s</span></div>
+        <div class="svc-purpose">Opt-in PII shield. Rounds per-aircraft lat/lon and writes aircraft.shielded.json; nginx prefers it over raw. ConditionPathExists=/etc/rpi-pod/adsb-precision.</div>
         <div class="svc-tag opt">OPTIONAL · Unreleased</div>
       </div>
       <div class="svc svc--scaff">
-        <div class="svc-h"><strong>signal-reticulum</strong><span class="svc-port">LoRa</span></div>
+        <div class="svc-h"><strong>rpi-pod-reticulum</strong><span class="svc-port">LoRa</span></div>
         <div class="svc-purpose">Reticulum daemon scaffold. Bridge code present; needs RAK4631 on the bench.</div>
         <div class="svc-tag scaff">SCAFFOLD · Phase 7.1</div>
       </div>
       <div class="svc svc--scaff">
-        <div class="svc-h"><strong>signal-batman</strong><span class="svc-port">Wi-Fi mesh</span></div>
+        <div class="svc-h"><strong>rpi-pod-batman</strong><span class="svc-port">Wi-Fi mesh</span></div>
         <div class="svc-purpose">BATMAN-adv bring-up scaffold. Bridge code present; needs second USB Wi-Fi adapter.</div>
         <div class="svc-tag scaff">SCAFFOLD · Phase 7.3</div>
       </div>
@@ -579,15 +579,15 @@
         <tr><td class="mono">80/tcp</td>  <td>nginx</td>           <td class="warn">public</td>    <td>landing · /library · /api/* · /adsb · /print</td></tr>
         <tr><td class="mono">53/udp</td>  <td>dnsmasq</td>         <td class="warn">public</td>    <td>wildcard DNS → 192.168.4.1</td></tr>
         <tr><td class="mono">67/udp</td>  <td>dnsmasq</td>         <td class="warn">public</td>    <td>DHCP</td></tr>
-        <tr><td class="mono">8000/tcp</td><td>signal-status</td>   <td class="ok">127.0.0.1</td>   <td>/api/status</td></tr>
+        <tr><td class="mono">8000/tcp</td><td>rpi-pod-status</td>   <td class="ok">127.0.0.1</td>   <td>/api/status</td></tr>
         <tr><td class="mono">8080/tcp</td><td>kiwix-serve</td>     <td class="ok">127.0.0.1</td>   <td>/library proxy</td></tr>
-        <tr><td class="mono">8100/tcp</td><td>signal-retrieve</td> <td class="ok">127.0.0.1</td>   <td>/api/retrieve</td></tr>
-        <tr><td class="mono">8200/tcp</td><td>signal-assist</td>   <td class="ok">127.0.0.1</td>   <td>/api/ask</td></tr>
+        <tr><td class="mono">8100/tcp</td><td>rpi-pod-retrieve</td> <td class="ok">127.0.0.1</td>   <td>/api/retrieve</td></tr>
+        <tr><td class="mono">8200/tcp</td><td>rpi-pod-assist</td>   <td class="ok">127.0.0.1</td>   <td>/api/ask</td></tr>
         <tr><td class="mono">8201/tcp</td><td>llama-server</td>    <td class="ok">127.0.0.1</td>   <td>bge-small embedder</td></tr>
         <tr><td class="mono">8202/tcp</td><td>llama-server</td>    <td class="ok">127.0.0.1</td>   <td>Qwen2.5 generator</td></tr>
-        <tr><td class="mono">8300/tcp</td><td>signal-listen</td>   <td class="ok">127.0.0.1</td>   <td>/api/listen</td></tr>
-        <tr><td class="mono">8400/tcp</td><td>signal-notes</td>    <td class="ok">127.0.0.1</td>   <td>/api/notes</td></tr>
-        <tr><td class="mono">8500/tcp</td><td>signal-mesh</td>     <td class="ok">127.0.0.1</td>   <td>/api/mesh</td></tr>
+        <tr><td class="mono">8300/tcp</td><td>rpi-pod-listen</td>   <td class="ok">127.0.0.1</td>   <td>/api/listen</td></tr>
+        <tr><td class="mono">8400/tcp</td><td>rpi-pod-notes</td>    <td class="ok">127.0.0.1</td>   <td>/api/notes</td></tr>
+        <tr><td class="mono">8500/tcp</td><td>rpi-pod-mesh</td>     <td class="ok">127.0.0.1</td>   <td>/api/mesh</td></tr>
       </tbody>
     </table>
   </section>
@@ -668,7 +668,7 @@
         <tr>
           <td>ADS-B position-rounding (shield)</td>
           <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
-          <td class="dim">opt-in: write 0–4 into <span class="mono">/etc/signal/adsb-precision</span></td>
+          <td class="dim">opt-in: write 0–4 into <span class="mono">/etc/rpi-pod/adsb-precision</span></td>
         </tr>
         <tr>
           <td>RAG assistant</td>
@@ -704,22 +704,22 @@
       <tbody>
         <tr>
           <td>WebSocket audio endpoint (Phase 8.3)</td>
-          <td class="mono">listen/signal_listen/audio_bridge.py</td>
+          <td class="mono">listen/rpi_pod_listen/audio_bridge.py</td>
           <td class="dim">Pi 4 + RTL-SDR dongle (buffer-tuning)</td>
         </tr>
         <tr>
           <td>LoRa link layer (Phase 7.1)</td>
-          <td class="mono">mesh/signal_mesh/lora_bridge.py · signal-reticulum.service</td>
+          <td class="mono">mesh/rpi_pod_mesh/lora_bridge.py · rpi-pod-reticulum.service</td>
           <td class="dim">RAK4631 USB hat</td>
         </tr>
         <tr>
           <td>Wi-Fi mesh data plane (Phase 7.3)</td>
-          <td class="mono">mesh/signal_mesh/wifi_bridge.py · signal-batman.service</td>
+          <td class="mono">mesh/rpi_pod_mesh/wifi_bridge.py · rpi-pod-batman.service</td>
           <td class="dim">Second USB Wi-Fi adapter</td>
         </tr>
         <tr>
           <td>APRS scanner (Phase 8.5)</td>
-          <td class="mono">listen/signal_listen/__init__.py schema-only</td>
+          <td class="mono">listen/rpi_pod_listen/__init__.py schema-only</td>
           <td class="dim">Pi 4/5 + RTL-SDR on 144.39 MHz</td>
         </tr>
         <tr>
@@ -738,13 +738,13 @@
   </section>
 
   <footer class="site">
-    <span>SIGNAL · v1.2.1 (+ Unreleased polish) · MIT</span>
+    <span>rpi-POD · v1.2.1 (+ Unreleased polish) · MIT</span>
     <span>
       <a href="README.md">README</a> ·
       <a href="docs/OVERVIEW.md">Overview</a> ·
       <a href="docs/GAP_ANALYSIS.md">Gaps</a> ·
       <a href="CHANGELOG.md">Changelog</a> ·
-      <a href="signal-wizard.html">Wizard</a>
+      <a href="rpi-pod-wizard.html">Wizard</a>
     </span>
     <span>No uplink · No telemetry · Receive-only</span>
   </footer>

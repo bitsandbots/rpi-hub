@@ -2,7 +2,7 @@
 
 The manifest pins:
 
-* indexer version (so signal-retrieve can refuse mismatched layouts)
+* indexer version (so rpi-pod-retrieve can refuse mismatched layouts)
 * embedding model + dimension
 * HNSW parameters (ef_construction, M)
 * chunk count and total token count
@@ -18,7 +18,7 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-# Layout version. Bump whenever signal-retrieve's expectations of the
+# Layout version. Bump whenever rpi-pod-retrieve's expectations of the
 # index directory change — older runtimes will refuse to serve a newer
 # index rather than mis-interpret it.
 INDEX_LAYOUT_VERSION = 1

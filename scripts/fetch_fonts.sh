@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-# SIGNAL — workstation-side font fetcher.
+# rpi-POD — workstation-side font fetcher.
 #
-# Downloads the woff2 files that web/portal/assets/css/signal.css references:
+# Downloads the woff2 files that web/portal/assets/css/rpi-pod.css references:
 #   exo2-700.woff2, jakarta-400.woff2, jakarta-700.woff2, plexmono-400.woff2
 # into www/portal/assets/fonts/ so the bake step picks them up.
 #
@@ -50,7 +50,7 @@ declare -A FONT_HASHES=(
 
 OFL_URL="https://cdn.jsdelivr.net/npm/@fontsource/exo-2@${FONTSOURCE_VER}/LICENSE"
 
-log() { printf '[signal-fonts] %s\n' "$*" >&2; }
+log() { printf '[rpi-pod-fonts] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
 
 need() { command -v "$1" >/dev/null 2>&1 || die "missing tool: $1"; }

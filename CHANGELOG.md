@@ -22,12 +22,12 @@ commit.
 - `install.sh` — twelve error-catching gaps closed (commit `9a39c48`):
   unknown args now `die` instead of silent shift, `trap ERR` surfaces
   line + command on failure, `--pack=NAME` validated at parse time,
-  `SIGNAL_COUNTRY_CODE` validated as `^[A-Z]{2}$`, `apt-get` failures
-  get actionable diagnostics, `dhcpcd` + `signal-ap` start failures
+  `RPI_POD_COUNTRY_CODE` validated as `^[A-Z]{2}$`, `apt-get` failures
+  get actionable diagnostics, `dhcpcd` + `rpi-pod-ap` start failures
   point at common causes and `journalctl`, new `nginx_reload_or_start`
   helper collapses six swallowed-error sites and surfaces the real
   reload error, phase 7 mesh fingerprint probe is now a 6×0.5 s retry
-  loop matching phase 5, `signal-adsb-shield.timer` enable failure
+  loop matching phase 5, `rpi-pod-adsb-shield.timer` enable failure
   now warns instead of silently swallowing, `dnsmasq` reload rewritten
   as explicit `if` block. Dry-run harness at `/tmp/sigdr/dryrun.sh`
   walks `--phase=all` cleanly with `exit=0` and both new warning
@@ -56,10 +56,10 @@ commit.
   `docs/OVERVIEW.md §7.1` runbook tells operators to look for.
   Closes `docs/GAP_ANALYSIS.md` §3c row "Read-only root".
 - New `tests/test_notes_mesh_e2e.py` — drives `POST /api/notes` end to
-  end into `signal-mesh /notes/publish`, then verifies the resulting
+   end into `rpi-pod-mesh /notes/publish`, then verifies the resulting
   signed envelope against the mesh app's public key. Bridges the two
   FastAPI apps by intercepting `urllib.request.urlopen` (the call
-  `notes/signal_notes/mesh_client.publish` makes) and re-emitting it
+  `notes/rpi_pod_notes/mesh_client.publish` makes) and re-emitting it
   against an in-memory `TestClient` for the mesh app. Catches drift
   in JSON schema, canonical body shape, or sign/verify pairing — none
   of the isolated suites covered all three together. Closes
@@ -80,9 +80,9 @@ commit.
 
 ### Security
 
-- Opt-in ADS-B position-rounding (`signal-adsb-shield`). The operator
+- Opt-in ADS-B position-rounding (`rpi-pod-adsb-shield`). The operator
   writes a precision (0–4 decimal places) into
-  `/etc/signal/adsb-precision`; both `signal-adsb-shield.timer` and its
+  `/etc/rpi-pod/adsb-precision`; both `rpi-pod-adsb-shield.timer` and its
   oneshot service carry `ConditionPathExists=` so nothing runs until
   the file appears. When active, the timer ticks the script once per
   second; the script rounds per-aircraft `lat`/`lon` and atomically
@@ -90,28 +90,28 @@ commit.
   prefers the shielded copy via `location = /adsb/aircraft.json` with
   an `if (-f)` rewrite to a named internal location (safe-`if` pattern
   — static file selection only, no `proxy_pass` involved). New script
-  `scripts/adsb_shield.py`, units `systemd/signal-adsb-shield.{service,timer}`,
+  `scripts/adsb_shield.py`, units `systemd/rpi-pod-adsb-shield.{service,timer}`,
   install/uninstall wiring in `install.sh:phase8_adsb` and
   `uninstall.sh:remove_listen`, docs in `docs/OVERVIEW.md §7.4`, tests
   in `tests/test_adsb_shield.py` (12 cases pinning the rounding +
   precision-file contracts). Closes `docs/GAP_ANALYSIS.md` §3b row
   "Opt-in ADS-B position-rounding flag".
 - Split owner token into per-domain files:
-  `/etc/signal/notes-owner-token` continues to gate `signal-notes`
-  DELETE + wipe; `/etc/signal/mesh-owner-token` is the new file gating
-  `signal-mesh` peer trust/block (`POST /api/mesh/peers/{fp}/{trust,block}`).
+  `/etc/rpi-pod/notes-owner-token` continues to gate `rpi-pod-notes`
+   DELETE + wipe; `/etc/rpi-pod/mesh-owner-token` is the new file gating
+  `rpi-pod-mesh` peer trust/block (`POST /api/mesh/peers/{fp}/{trust,block}`).
   `install.sh:ensure_owner_tokens` provisions both. For pre-v1.3
   deployments that landed when only the notes file existed,
-  `signal-mesh` falls back to `notes-owner-token` so the upgrade is
+  `rpi-pod-mesh` falls back to `notes-owner-token` so the upgrade is
   non-breaking — re-running `install.sh` provisions the dedicated
   mesh token and the fallback stops applying. Touch points:
-  `install.sh`, `uninstall.sh`, `systemd/signal-mesh.service`
-  (`Environment=SIGNAL_MESH_TOKEN_FILE=…`),
-  `mesh/signal_mesh/main.py` (`OWNER_TOKEN_PATH` +
-  `LEGACY_OWNER_TOKEN_PATH`), `notes/signal_notes/main.py` (comment
+   `install.sh`, `uninstall.sh`, `systemd/rpi-pod-mesh.service`
+  (`Environment=RPI_POD_MESH_TOKEN_FILE=…`),
+  `mesh/rpi_pod_mesh/main.py` (`OWNER_TOKEN_PATH` +
+  `LEGACY_OWNER_TOKEN_PATH`), `notes/rpi_pod_notes/main.py` (comment
   only — path unchanged), `scripts/healthcheck.sh` (new mesh-token
   check), `docs/OVERVIEW.md` §5.5–§5.6. New
-  `mesh/signal_mesh/tests/test_owner_token.py` pins the fallback
+  `mesh/rpi_pod_mesh/tests/test_owner_token.py` pins the fallback
   contract. Closes `docs/GAP_ANALYSIS.md` §3b row "Split
   `X-Owner-Token` into per-domain tokens".
 
@@ -143,14 +143,14 @@ commit.
 
 - `config/dump1090/dump1090-mutability.default` header — added inline
   single-dongle mutual-exclusion note (mirrors
-  `systemd/signal-listen-same.service:11-12`) and inline reference to
+  `systemd/rpi-pod-listen-same.service:11-12`) and inline reference to
   the file-based ADS-B status probe semantics
-  (`api/signal_status/system.py::_probe_adsb`).
+  (`api/rpi_pod_status/system.py::_probe_adsb`).
 - Portal CSS — renamed `.ask-noanswer` → `.svc-fallback` and
   `.board-status` (+ `--error`) → `.svc-status` so cross-page reuse
   no longer carries a misleading per-page prefix. Class structure is
   unchanged; `.ask-defer` stays as-is (genuine alert-card on both ask
-  deferrals and NOAA SAME banners). Touch points: `signal.css`,
+    deferrals and NOAA SAME banners). Touch points: `rpi-pod.css`,
   `ask.html`, `listen.html`, `peers.html`, `board.html`, `adsb.html`,
   `board.js` (sole `classList.toggle` call site). Closes
   `docs/GAP_ANALYSIS.md` §3a row "Pick one canonical service-down UX
@@ -180,7 +180,7 @@ item from v1.1's hardware-gated backlog.
 - `install.sh phase8_adsb()` — runs the detector; enables + starts
   `dump1090-mutability.service` on a hit, leaves it disabled with a
   helpful log line on a miss.
-- `_probe_adsb()` in `api/signal_status/system.py` — file-based probe
+- `_probe_adsb()` in `api/rpi_pod_status/system.py` — file-based probe
   that returns `"ready"` + the live aircraft count when
   `aircraft.json` mtime is fresh (≤30s).
 - `adsb` + `adsb_aircraft` fields on `GET /api/status`'s `services`
@@ -191,7 +191,7 @@ item from v1.1's hardware-gated backlog.
 ### Changed
 
 - `uninstall.sh` removes the dump1090 default override (only if it
-  carries our SIGNAL marker) and disables the unit.
+   carries our rpi-POD marker) and disables the unit.
 
 ## [1.2.0] — 2026-05-18
 
@@ -202,16 +202,16 @@ deferred past v1.1.
 
 - **Signed mesh envelopes.** `/notes/publish` now signs the outbound
   envelope with the real Ed25519 private key instead of the zero-byte
-  stub. The keypair is delivered into `signal-mesh.service` via systemd
+   stub. The keypair is delivered into `rpi-pod-mesh.service` via systemd
   `LoadCredential=`, so the running daemon has no filesystem access to
-  `/var/lib/signal/keys`.
-- **`signal-mesh-keygen.service`** (oneshot, `RemainAfterExit=yes`) —
-  owns first-boot keypair generation. `signal-mesh.service` is
+  `/var/lib/rpi-pod/keys`.
+- **`rpi-pod-mesh-keygen.service`** (oneshot, `RemainAfterExit=yes`) —
+   owns first-boot keypair generation. `rpi-pod-mesh.service` is
   `Requires=` + `After=` this unit, so the credential loader always
   sees a populated key directory.
 - **`GET /api/mesh/identity.svg`** — server-rendered QR code of the
   local fingerprint, for the cross-hub trust workflow. Rendered by a
-  hand-rolled pure-Python QR encoder (`mesh/signal_mesh/qrcode.py`):
+  hand-rolled pure-Python QR encoder (`mesh/rpi_pod_mesh/qrcode.py`):
   byte mode, ECC level M, versions 1-3, all 8 mask patterns evaluated.
 - **`peers.html`** surfaces the QR inline beneath the fingerprint with
   a calm "scan with any QR reader" caption. The image element 404s
@@ -219,8 +219,8 @@ deferred past v1.1.
 
 ### Changed
 
-- `signal-mesh.service` drops `ReadWritePaths=/var/lib/signal/keys`,
-  `StateDirectory=signal/keys`, and the in-unit keypair-generation
+- `rpi-pod-mesh.service` drops `ReadWritePaths=/var/lib/rpi-pod/keys`,
+  `StateDirectory=rpi-pod/keys`, and the in-unit keypair-generation
   `ExecStartPre=`. Those responsibilities moved to the new keygen
   oneshot.
 - `identity.load_from_credentials()` replaces the daemon's call to
@@ -237,16 +237,16 @@ Post-v1.0 follow-ups bundled.
 
 ### Added
 
-- **Phase 7.1 scaffold** — `mesh/signal_mesh/lora_bridge.py` +
-  `signal-reticulum.service`. Reticulum daemon wiring; degrades to
+- **Phase 7.1 scaffold** — `mesh/rpi_pod_mesh/lora_bridge.py` +
+  `rpi-pod-reticulum.service`. Reticulum daemon wiring; degrades to
   `unavailable` cleanly when no LoRa hat is present.
-- **Phase 7.3 scaffold** — `mesh/signal_mesh/wifi_bridge.py` +
-  `signal-batman.service` + `scripts/batman_setup.sh`. BATMAN-adv
+- **Phase 7.3 scaffold** — `mesh/rpi_pod_mesh/wifi_bridge.py` +
+  `rpi-pod-batman.service` + `scripts/batman_setup.sh`. BATMAN-adv
   setup script; polls `batctl o -nH` to surface Wi-Fi peers.
-- **Phase 9.2** — `notes/signal_notes/mesh_client.py` calls
-  `signal-mesh` on every local post; mesh service signs the envelope
+- **Phase 9.2** — `notes/rpi_pod_notes/mesh_client.py` calls
+  `rpi-pod-mesh` on every local post; mesh service signs the envelope
   and fans it out to whichever radio bridges are up.
-- **Phase 8.3 primitive** — `listen/signal_listen/audio_bridge.py`
+- **Phase 8.3 primitive** — `listen/rpi_pod_listen/audio_bridge.py`
   with bounded-queue producer-many-consumers fanout.
 - **Phase 8.4 UI** — `www/portal/adsb.html` + `adsb.js` + `/adsb/`
   nginx alias to dump1090-mutability's output directory.
@@ -259,7 +259,7 @@ Post-v1.0 follow-ups bundled.
 
 ### Changed
 
-- `signal-mesh.service` lazily attaches both radio bridges on first
+- `rpi-pod-mesh.service` lazily attaches both radio bridges on first
   /health call so test clients don't spin up threads.
 - Mesh peer table tags Wi-Fi peers with `BAT:` prefix so the UI
   distinguishes them from Ed25519-fingerprint peers.
@@ -272,9 +272,9 @@ ships in a single image. Approved sequencing was
 
 ### Added — Phase 7 — Mesh Networking
 
-- `signal-mesh.service` on `127.0.0.1:8500` — FastAPI control plane with
+- `rpi-pod-mesh.service` on `127.0.0.1:8500` — FastAPI control plane with
   Ed25519 identity, peer table, replay protection, signed wire format.
-- Keypair generation at first boot (`/var/lib/signal/keys/`, 0600).
+- Keypair generation at first boot (`/var/lib/rpi-pod/keys/`, 0600).
 - Fingerprint format: 24-char base32 of SHA-256(pubkey)[:15], grouped 6×4.
 - Owner-token-gated `POST /peers/{fp}/trust` and `.../block`.
 - `peers.html` + `peers.js` for the trust UI.
@@ -282,9 +282,9 @@ ships in a single image. Approved sequencing was
 
 ### Added — Phase 8 — RTL-SDR Listen
 
-- `signal-listen.service` on `127.0.0.1:8300` — control plane with
+- `rpi-pod-listen.service` on `127.0.0.1:8300` — control plane with
   single-listener dongle arbiter.
-- `signal-listen-same.service` — `rtl_fm | multimon-ng | curl` pipeline
+- `rpi-pod-listen-same.service` — `rtl_fm | multimon-ng | curl` pipeline
   parked on a NOAA WX frequency; POSTs decoded SAME headers to
   `/alerts/internal` (loopback-gated).
 - SAME parser with subcounty-aware FIPS filtering, bounded alert ring,
@@ -295,10 +295,10 @@ ships in a single image. Approved sequencing was
 
 ### Added — Phase 9 — Notes Board + Regional Packs
 
-- `signal-notes.service` on `127.0.0.1:8400` — ephemeral SQLite over
+- `rpi-pod-notes.service` on `127.0.0.1:8400` — ephemeral SQLite over
   tmpfs (wipes on reboot), 280-char text + 24-char name limits,
   rate limiting (1/min + 10/hour per IP), owner-token DELETE + wipe.
-- 32-hex owner token at `/etc/signal/notes-owner-token` (0600),
+- 32-hex owner token at `/etc/rpi-pod/notes-owner-token` (0600),
   generated once by `install.sh`.
 - Five regional content packs: general-purpose, pacific-northwest,
   gulf-coast, mountain-west, urban-resilience.
@@ -308,12 +308,12 @@ ships in a single image. Approved sequencing was
 
 ### Added — Phase 6 — RAG Assistant *(Pi 5 only)*
 
-- `signal-retrieve.service` on `127.0.0.1:8100` — hybrid BM25 + HNSW
+- `rpi-pod-retrieve.service` on `127.0.0.1:8100` — hybrid BM25 + HNSW
   retrieval with reciprocal-rank fusion, per-article diversity cap.
-- `signal-assist.service` on `127.0.0.1:8200` — safety classifier (six
+- `rpi-pod-assist.service` on `127.0.0.1:8200` — safety classifier (six
   deferral rules), prompt scaffold for Qwen2.5 chat template,
   citation-validating post-processor (≥60% coverage floor).
-- `signal-llama.service` — two llama.cpp instances (Qwen + bge-small).
+- `rpi-pod-llama.service` — two llama.cpp instances (Qwen + bge-small).
 - Workstation indexer (`indexer/`) and weight fetcher (`models/`).
 - `ask.html` + `ask.js` with three-mode renderer
   (answer | defer | noanswer).
@@ -367,7 +367,7 @@ Captive portal redirect + nginx default-server.
 
 ## [0.1.0-phase1] — 2026-05-18
 
-Bare AP — hostapd + dnsmasq + `signal-ap.service`.
+Bare AP — hostapd + dnsmasq + `rpi-pod-ap.service`.
 
 [Unreleased]: https://github.com/coreconduit/signal/compare/v1.2.1...HEAD
 [1.2.1]: https://github.com/coreconduit/signal/releases/tag/v1.2.1

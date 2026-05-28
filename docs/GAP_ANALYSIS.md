@@ -1,7 +1,7 @@
 # Gap Analysis — v1.2.1 (+ Unreleased)
 
 What this document is: the **single source of truth for open work** on
-SIGNAL. Every row is verified against the live repo on **2026-05-26**
+rpi-POD. Every row is verified against the live repo on **2026-05-26**
 (v1.2.1 shipped; Unreleased polish landed atop it — see
 `CHANGELOG.md [Unreleased]`). Rows have file:line citations or they
 don't ship here.
@@ -32,17 +32,17 @@ arrives.
 
 | Item | Hardware needed | Scaffold in repo | What's left |
 |---|---|---|---|
-| **Phase 7.1 — LoRa data plane** | RAK4631 USB hat | `mesh/signal_mesh/lora_bridge.py`, `systemd/signal-reticulum.service` | Reticulum daemon wiring; bridge ↔ Reticulum I/O exercised against the radio |
-| **Phase 7.3 — Wi-Fi mesh data plane** | Second USB Wi-Fi adapter on a non-overlapping channel | `mesh/signal_mesh/wifi_bridge.py`, `systemd/signal-batman.service`, `scripts/batman_setup.sh` | BATMAN-adv kernel module config + ping validation; add `AF_NETLINK` to `signal-mesh.service` sandbox (currently `AF_INET AF_INET6 AF_UNIX` at `systemd/signal-mesh.service:69`) |
-| **Phase 8.3 — Audio WebSocket route** | Pi 4 + RTL-SDR dongle | `listen/signal_listen/audio_bridge.py` (`AudioFanout` producer/many-consumer) | FastAPI WebSocket route consuming the fanout; buffer-size tuning |
-| **Phase 8.5 — APRS scanner** | Pi 4/5 + RTL-SDR parked on 144.39 MHz | Schema-only mention in `listen/signal_listen/__init__.py` | Decoder + UI page (full new page + tile probe) |
+| **Phase 7.1 — LoRa data plane** | RAK4631 USB hat | `mesh/rpi_pod_mesh/lora_bridge.py`, `systemd/rpi-pod-reticulum.service` | Reticulum daemon wiring; bridge ↔ Reticulum I/O exercised against the radio |
+| **Phase 7.3 — Wi-Fi mesh data plane** | Second USB Wi-Fi adapter on a non-overlapping channel | `mesh/rpi_pod_mesh/wifi_bridge.py`, `systemd/rpi-pod-batman.service`, `scripts/batman_setup.sh` | BATMAN-adv kernel module config + ping validation; add `AF_NETLINK` to `rpi-pod-mesh.service` sandbox (currently `AF_INET AF_INET6 AF_UNIX` at `systemd/rpi-pod-mesh.service:69`) |
+| **Phase 8.3 — Audio WebSocket route** | Pi 4 + RTL-SDR dongle | `listen/rpi_pod_listen/audio_bridge.py` (`AudioFanout` producer/many-consumer) | FastAPI WebSocket route consuming the fanout; buffer-size tuning |
+| **Phase 8.5 — APRS scanner** | Pi 4/5 + RTL-SDR parked on 144.39 MHz | Schema-only mention in `listen/rpi_pod_listen/__init__.py` | Decoder + UI page (full new page + tile probe) |
 | **Three-node mesh testbed write-up** | Three Pi 4/5 + LoRa hats | none | 72-hour run + `docs/MESH_TESTBED.md` |
 
-Single-dongle caveat (carry into bring-up): `signal-listen-same` and
+Single-dongle caveat (carry into bring-up): `rpi-pod-listen-same` and
 `dump1090-mutability` both want exclusive access to one RTL-SDR. With
 one dongle, pick one. With two, pin each to a serial number via
 `DEVICE=` in `config/dump1090/dump1090-mutability.default` and the
-matching env override on `signal-listen-same.service`. See
+matching env override on `rpi-pod-listen-same.service`. See
 `docs/OVERVIEW.md` §7.4.
 
 ADS-B (Phase 8.4) is **shipped** in v1.2.1: install-time detection via
@@ -71,7 +71,7 @@ in `docs/CONTENT_GUIDE.md`.
 ### 2b. Model weights (assistant tier only)
 
 `./models/fetch_models.sh` downloads two GGUFs into
-`payload/var/lib/signal/models/`:
+`payload/var/lib/rpi-pod/models/`:
 
 - `qwen2.5-1.5b-instruct-q4_k_m.gguf` — generation
 - `bge-small-en-v1.5-q8_0.gguf` — embedding
@@ -115,15 +115,15 @@ _All rows closed in v1.2.x — canonical service-down classes
 
 ### 3b. Security / sandbox (track for v1.3)
 
-- Add `AF_NETLINK` to `signal-mesh` sandbox once the BATMAN bridge
+- Add `AF_NETLINK` to `rpi-pod-mesh` sandbox once the BATMAN bridge
   actually attaches (BATMAN uses netlink). Tracked alongside §1 Phase 7.3.
-- Unconditional `signal-adsb-shield` install in `phase8_adsb`.
+ - Unconditional `rpi-pod-adsb-shield` install in `phase8_adsb`.
   `install.sh:618` early-returns when `dpkg -s dump1090-mutability`
   reports the package absent, which means the shield units at
   `install.sh:647-650` are skipped on any Bookworm mirror that lacks
   `dump1090-mutability`. The shield is independent of dump1090 (it
   rounds whatever `aircraft.json` it finds, on whatever cadence the
-  operator opts into via `/etc/signal/adsb-precision`), so the gate
+  operator opts into via `/etc/rpi-pod/adsb-precision`), so the gate
   is wrong: it ties a privacy primitive's installation to the
   decoder's availability. Fix: move the shield install block above
   the `dpkg -s` check, or split it into its own phase8_adsb_shield()
@@ -140,7 +140,7 @@ file here as they appear._
 For anyone reading this and wondering where the older rows went —
 they're tracked in `CHANGELOG.md`. The most recent sweep closed:
 
-- Per-phase test rows (`mesh/signal_mesh/tests/test_identity_endpoint.py`,
+- Per-phase test rows (`mesh/rpi_pod_mesh/tests/test_identity_endpoint.py`,
   `test_keygen_unit_ordering.py`, `test_qrcode_decode.py`).
 - All four tooling rows (`qr-decoder` and `bake-image-lint` jobs in
   `.github/workflows/lint-and-test.yml`, `.github/workflows/lighthouse.yml`,
@@ -156,9 +156,9 @@ they're tracked in `CHANGELOG.md`. The most recent sweep closed:
   `listen.html`'s hardware banner, `status.html` footer version, polling
   cadence README, `role="alert"` vs `aria-live` reconciliation.
 - Inline doc rows: QR `<img onerror>` comment, single-dongle
-  mutual-exclusion in `signal-listen-same.service` and
-  `config/dump1090/dump1090-mutability.default`, `signal-mesh-keygen.service`
-  Why-line, ADS-B file-based probe semantics, shared owner-token note
+  mutual-exclusion in `rpi-pod-listen-same.service` and
+  `config/dump1090/dump1090-mutability.default`, `rpi-pod-mesh-keygen.service`
+  Why-line, shared owner-token note
   in both service `main.py` files.
 - Frontend §3a rows: service-down classes unified as
   `.svc-status` / `.svc-fallback` / `.ask-defer`; canonical
@@ -190,8 +190,8 @@ they're tracked in `CHANGELOG.md`. The most recent sweep closed:
 | `README.md` | Top-of-funnel intro |
 | `CLAUDE.md` | Working guidance for Claude |
 | `Blueprint_Overview.html` | Visual blueprint for operators |
-| `signal-wizard.html` | Interactive build checklist UI |
-| `archive/Project_SIGNAL_*.docx` | Frozen pre-implementation specs (historical) |
+| `rpi-pod-wizard.html` | Interactive build checklist UI |
+| `archive/Project_rpi-POD_*.docx` | Frozen pre-implementation specs (historical) |
 
 Retired in the v1.2.1 docs-consolidation pass (recoverable via the
 release tags `v0.1.0-phase1` … `v1.0.0`):

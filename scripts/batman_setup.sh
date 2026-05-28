@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 # Purpose: BATMAN-adv interface setup / teardown. Driven by
-#          signal-batman.service (ExecStart/ExecStop).
-# Unit:    signal-batman.service
+#          rpi-pod-batman.service (ExecStart/ExecStop).
+# Unit:    rpi-pod-batman.service
 # Phase:   7.3
 #
-# Reads /etc/signal/mesh.conf for:
+# Reads /etc/rpi-pod/mesh.conf for:
 #   MESH_IFACE   — wireless interface to add to bat0 (e.g. wlan1)
 #   MESH_SSID    — IBSS / mesh-point SSID (mesh-only, never broadcast as AP)
 #   MESH_CHANNEL — non-overlapping channel from the client AP
@@ -14,13 +14,13 @@
 
 set -uo pipefail
 
-CONF=/etc/signal/mesh.conf
+CONF=/etc/rpi-pod/mesh.conf
 [[ -r "$CONF" ]] || { echo "[batman] missing $CONF" >&2; exit 1; }
 # shellcheck disable=SC1090
 . "$CONF"
 
 MESH_IFACE="${MESH_IFACE:-wlan1}"
-MESH_SSID="${MESH_SSID:-signal-mesh}"
+MESH_SSID="${MESH_SSID:-rpi-pod-mesh}"
 MESH_CHANNEL="${MESH_CHANNEL:-11}"
 MESH_BAT_IF="${MESH_BAT_IF:-bat0}"
 

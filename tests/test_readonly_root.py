@@ -41,7 +41,7 @@ SCRIPT = REPO_ROOT / "scripts" / "readonly_root.sh"
 
 def test_script_has_required_header() -> None:
     """check_config_header.py only walks config/ but the same convention
-    applies — the SIGNAL repo's `set -euo pipefail` shell scripts all
+    applies — the rpi-POD repo's `set -euo pipefail` shell scripts all
     carry Purpose: / Unit: / Phase: lines."""
 
     text = SCRIPT.read_text()
@@ -80,8 +80,8 @@ def test_fstab_marker_pair_is_symmetric() -> None:
     /etc/fstab forever."""
 
     text = SCRIPT.read_text()
-    begin = "# >>> SIGNAL Phase 1.1 (readonly root) >>>"
-    end = "# <<< SIGNAL Phase 1.1 (readonly root) <<<"
+    begin = "# >>> rpi-POD Phase 1.1 (readonly root) >>>"
+    end = "# <<< rpi-POD Phase 1.1 (readonly root) <<<"
     # Both markers must appear in the writer (set-up) and the sed
     # script that strips the block.
     assert text.count(begin) >= 2, "fstab begin marker not in both write and remove"
@@ -94,7 +94,7 @@ def test_initramfs_hook_generated_and_removed() -> None:
     overlay over the freshly-disabled root."""
 
     text = SCRIPT.read_text()
-    hook_path = "/usr/share/initramfs-tools/scripts/init-bottom/signal-overlay"
+    hook_path = "/usr/share/initramfs-tools/scripts/init-bottom/rpi-pod-overlay"
     assert hook_path in text
     # rm -f on the hook must appear in disable() — guard against a
     # refactor that drops the cleanup.

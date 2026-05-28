@@ -1,0 +1,70 @@
+# Purpose: Run the FastAPI rpi-pod-listen control plane on 127.0.0.1:8300.
+#          nginx (Phase 8) proxies /api/listen to this upstream. The
+#          service holds the dongle arbiter (single-listener) and the
+#          SAME alert ring; the audio data plane lives in
+#          rpi-pod-listen-same.service.
+# Unit:    rpi-pod-listen.service
+# Phase:   8
+#
+# Notes:
+#   - The unit does not ConditionPathExists on rtl_fm: when no dongle is
+#     present we still want /api/listen/state to answer with a clean
+#     "dongle_present: false" so the UI can render "no hardware".
+#   - SupplementaryGroups=plugdev gives the DynamicUser access to the
+#     USB device node when the udev rule fires on the Realtek vendor ID.
+
+[Unit]
+Description=rpi-POD RTL-SDR control plane (FastAPI)
+After=network.target rpi-pod-ap.service
+PartOf=rpi-pod-ap.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+SupplementaryGroups=plugdev
+
+Environment=PYTHONPATH=/opt/rpi-pod
+Environment=PYTHONDONTWRITEBYTECODE=1
+WorkingDirectory=/opt/rpi-pod
+
+ExecStart=/usr/bin/python3 -m uvicorn listen.rpi_pod_listen.main:app \
+    --host 127.0.0.1 \
+    --port 8300 \
+    --log-level warning \
+    --no-access-log
+
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+
+# RAM cap. The control plane is small; the alert ring is bounded to
+# 32 alerts. 96M is generous.
+MemoryMax=96M
+TasksMax=64
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+# rtl_fm spawns under this unit's cgroup via the Tuner arbiter; it
+# needs to read /dev/bus/usb. PrivateDevices=yes would block that.
+PrivateDevices=no
+DeviceAllow=char-usb_device rw
+ReadOnlyPaths=/opt/rpi-pod /var/lib/rpi-pod/listen
+
+[Install]
+WantedBy=multi-user.target

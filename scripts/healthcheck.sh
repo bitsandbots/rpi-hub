@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# SIGNAL — on-device smoke test.
+# rpi-POD — on-device smoke test.
 #
 # Checks every layer the hub depends on. Each check prints OK / WARN / FAIL
 # and the script exits non-zero if any check failed. WARNings (e.g. empty
@@ -62,7 +62,7 @@ check_json() {
 }
 
 section "Phase 1: AP"
-check_unit signal-ap.service
+check_unit rpi-pod-ap.service
 if iptables -C FORWARD -i wlan0 ! -o wlan0 -j DROP 2>/dev/null; then
     ok "iptables egress-block on wlan0 is in place"
 else
@@ -82,31 +82,31 @@ fi
 
 section "Phase 3: Library"
 if compgen -G "/var/lib/kiwix/*.zim" >/dev/null; then
-    check_unit signal-kiwix.service
+    check_unit rpi-pod-kiwix.service
     check_http "http://127.0.0.1/library/" 200
 else
-    warn "/var/lib/kiwix is empty — signal-kiwix intentionally inactive (run content/fetch.sh)"
+    warn "/var/lib/kiwix is empty — rpi-pod-kiwix intentionally inactive (run content/fetch.sh)"
 fi
 
 section "Phase 4: Frontend"
-if [[ -f /var/www/signal-portal/index.html ]]; then
-    ok "/var/www/signal-portal/index.html present"
+if [[ -f /var/www/rpi-pod-portal/index.html ]]; then
+    ok "/var/www/rpi-pod-portal/index.html present"
 else
-    fail "/var/www/signal-portal/index.html missing — portal tree not deployed"
+    fail "/var/www/rpi-pod-portal/index.html missing — portal tree not deployed"
 fi
-if [[ -f /var/www/signal-portal/status.html ]]; then
-    ok "/var/www/signal-portal/status.html present"
+if [[ -f /var/www/rpi-pod-portal/status.html ]]; then
+    ok "/var/www/rpi-pod-portal/status.html present"
 else
-    fail "/var/www/signal-portal/status.html missing"
+    fail "/var/www/rpi-pod-portal/status.html missing"
 fi
-if [[ -s /var/www/signal-portal/assets/fonts/exo2-700.woff2 ]]; then
+if [[ -s /var/www/rpi-pod-portal/assets/fonts/exo2-700.woff2 ]]; then
     ok "brand fonts present"
 else
     warn "brand fonts missing — run scripts/fetch_fonts.sh, page falls back to system fonts"
 fi
 
 section "Phase 5: Status API"
-check_unit signal-status.service
+check_unit rpi-pod-status.service
 check_http "http://127.0.0.1/api/status" 200
 check_json "http://127.0.0.1/api/status"
 
@@ -126,51 +126,51 @@ check_optional_unit() {
 }
 
 section "Phase 6: RAG assistant (optional)"
-check_optional_unit signal-retrieve.service
-check_optional_unit signal-assist.service
-check_optional_unit signal-llama.service
-if systemctl is-active --quiet signal-retrieve.service; then
+check_optional_unit rpi-pod-retrieve.service
+check_optional_unit rpi-pod-assist.service
+check_optional_unit rpi-pod-llama.service
+if systemctl is-active --quiet rpi-pod-retrieve.service; then
     check_http "http://127.0.0.1/api/retrieve?q=test&k=1" 200
 fi
 
 section "Phase 7: Mesh (optional)"
-check_optional_unit signal-mesh.service
-if systemctl is-active --quiet signal-mesh.service; then
+check_optional_unit rpi-pod-mesh.service
+if systemctl is-active --quiet rpi-pod-mesh.service; then
     check_http "http://127.0.0.1/api/mesh/identity" 200
     fp="$(curl -s --max-time 2 http://127.0.0.1/api/mesh/identity \
            | python3 -c "import sys,json;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)"
     [[ -n "$fp" ]] && ok "mesh fingerprint: $fp" || warn "mesh fingerprint missing — keypair generation may have failed"
 fi
-if [[ -s /etc/signal/mesh-owner-token ]]; then
-    ok "mesh owner token present at /etc/signal/mesh-owner-token (0600)"
-elif [[ -s /etc/signal/notes-owner-token ]]; then
+if [[ -s /etc/rpi-pod/mesh-owner-token ]]; then
+    ok "mesh owner token present at /etc/rpi-pod/mesh-owner-token (0600)"
+elif [[ -s /etc/rpi-pod/notes-owner-token ]]; then
     warn "mesh owner token not split out — falling back to legacy notes-owner-token (run install.sh to provision)"
 else
     warn "no mesh owner token — peer trust/block endpoints will refuse with 503"
 fi
 
 section "Phase 8: Listen (optional)"
-check_optional_unit signal-listen.service
-check_optional_unit signal-listen-same.service
-if systemctl is-active --quiet signal-listen.service; then
+check_optional_unit rpi-pod-listen.service
+check_optional_unit rpi-pod-listen-same.service
+if systemctl is-active --quiet rpi-pod-listen.service; then
     check_http "http://127.0.0.1/api/listen/state" 200
 fi
 
 section "Phase 9A: Notes (optional)"
-check_optional_unit signal-notes.service
-if systemctl is-active --quiet signal-notes.service; then
+check_optional_unit rpi-pod-notes.service
+if systemctl is-active --quiet rpi-pod-notes.service; then
     check_http "http://127.0.0.1/api/notes?limit=1" 200
 fi
-if [[ -s /etc/signal/notes-owner-token ]]; then
-    ok "owner token present at /etc/signal/notes-owner-token (0600)"
+if [[ -s /etc/rpi-pod/notes-owner-token ]]; then
+    ok "owner token present at /etc/rpi-pod/notes-owner-token (0600)"
 else
     warn "no owner token — moderation endpoints will refuse with 503"
 fi
 
 section "Phase 9B: Packs (optional)"
-if [[ -d /var/www/signal-portal/print ]] && compgen -G "/var/www/signal-portal/print/*.pdf" >/dev/null; then
-    ok "/print/ has PDFs ($(ls /var/www/signal-portal/print/*.pdf 2>/dev/null | wc -l) files)"
-elif [[ -f /var/www/signal-portal/print/index.html ]]; then
+if [[ -d /var/www/rpi-pod-portal/print ]] && compgen -G "/var/www/rpi-pod-portal/print/*.pdf" >/dev/null; then
+    ok "/print/ has PDFs ($(ls /var/www/rpi-pod-portal/print/*.pdf 2>/dev/null | wc -l) files)"
+elif [[ -f /var/www/rpi-pod-portal/print/index.html ]]; then
     warn "/print/ index present but no PDFs — pack PDFs not staged"
 else
     warn "no pack applied (--pack=<name> at install time)"

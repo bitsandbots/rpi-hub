@@ -14,7 +14,7 @@ print:                           # printable PDFs served under /print/
     title: Water purification — field methods
   - file: cascadia-shake.pdf
     title: Cascadia shake — first 30 minutes
-noaa:                            # optional; consumed by signal-listen (Phase 8)
+noaa:                            # optional; consumed by rpi-pod-listen (Phase 8)
   preset_frequencies_mhz:
     - 162.400
     - 162.475
@@ -25,7 +25,7 @@ Validation:
 * `name` must match the parent directory name.
 * Each entry in `zims:` must exist in `content/manifest.yaml`.
 * Each `print[].file` must exist in `packs/<name>/print/`.
-* `noaa.preset_frequencies_mhz` is read by signal-listen at install time
+* `noaa.preset_frequencies_mhz` is read by rpi-pod-listen at install time
   if Phase 8 is enabled; otherwise ignored cleanly.
 
 ## Field-card sources
@@ -43,7 +43,7 @@ Workflow:
    every `packs/*/print/*.html` and emits a sibling `.pdf` (idempotent;
    skips PDFs newer than their source).
 3. Then `./scripts/apply_pack.sh <name>` stages the resulting PDFs into
-   `./payload/var/www/signal-portal/print/`.
+   `./payload/var/www/rpi-pod-portal/print/`.
 
 PDFs are gitignored (`packs/*/print/*.pdf`). Re-running the build is the
 only way to refresh them, and that is also the contract: source-of-truth

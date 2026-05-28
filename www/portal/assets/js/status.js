@@ -6,7 +6,7 @@
  *          hidden tabs to keep the Pi cool.
  *
  * Unit:    nginx.service (static asset; proxies /api/status to 127.0.0.1:8000)
- * Phase:   4 (UI), with a forward dependency on Phase 5 (signal-status)
+ * Phase:   4 (UI), with a forward dependency on Phase 5 (rpi-pod-status)
  */
 (function () {
   "use strict";

@@ -38,7 +38,7 @@ models/*.gguf
 models/*.bin
 assistant/embeddings_cache/
 /var/lib/kiwix/
-/var/lib/signal/
+/var/lib/rpi-pod/
 
 # Operator-side staging tree populated by content/fetch.sh,
 # models/fetch_models.sh, indexer/build_index, scripts/apply_pack.sh.

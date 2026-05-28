@@ -2,7 +2,7 @@
 
 This matrix is the spec we test Phase 2 against. Each row is one OS family
 and the probe URLs its captive-portal detector hits. The "Pass" column is
-what the device should do when joined to `SIGNAL_INFOHUB`.
+what the device should do when joined to `RPI-POD-INFOHUB`.
 
 ## Probe URLs by platform
 
@@ -67,12 +67,12 @@ For each platform in the table, perform these steps and record the result
 in the test log (`tests/phase2-results.md` — to be created when first run):
 
 1. Disable mobile data / wired Ethernet on the device.
-2. Forget any prior `SIGNAL_INFOHUB` association.
-3. Join `SIGNAL_INFOHUB`.
+2. Forget any prior `RPI-POD-INFOHUB` association.
+3. Join `RPI-POD-INFOHUB`.
 4. Start a stopwatch when the join confirms.
 5. Record:
    - **t_sheet** — seconds until captive sheet / notification appears.
-   - **t_render** — seconds until the SIGNAL landing page is fully rendered.
+   - **t_render** — seconds until the rpi-POD landing page is fully rendered.
    - **dismiss_behaviour** — what happens when the user closes the sheet.
 6. From a terminal on the device (if available):
    ```bash
@@ -98,5 +98,5 @@ A row passes when:
 | No sheet on iOS | iOS cached a "Success" response from a prior network with the same SSID | Forget the network on the device; rejoin |
 | Android shows "no internet" but no sign-in notification | HTTPS-first probe blocked but HTTP probe didn't fire — usually a stale captive portal state | Forget network; toggle Wi-Fi off/on |
 | Windows endless "Identifying network..." | NCSI is firewalled outbound from the client | Lift firewall; not something we can fix from the AP |
-| Sheet opens but page is blank | nginx down or `/var/www/signal-portal/index.html` missing | `systemctl status nginx`, `nginx -t`, redeploy |
+| Sheet opens but page is blank | nginx down or `/var/www/rpi-pod-portal/index.html` missing | `systemctl status nginx`, `nginx -t`, redeploy |
 | Sheet opens but loops forever | The portal page does an HTTPS request that fails | Keep `index.html` HTTP-only — no third-party scripts |

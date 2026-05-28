@@ -1,4 +1,4 @@
-# SIGNAL Content Guide
+# rpi-POD Content Guide
 
 How to choose, fetch, verify, and refresh the offline content payload.
 This file is the living spec for the library — refresh it whenever you
@@ -6,7 +6,7 @@ change the manifest.
 
 ## Mental model
 
-SIGNAL ships with an **empty library** by default. That choice is
+rpi-POD ships with an **empty library** by default. That choice is
 deliberate: bundled ZIMs balloon the distributable image to tens of GB,
 and the right content depends on where the hub will live (urban resilience
 vs. wilderness vs. coastal vs. mountain). `content/manifest.yaml` is the
@@ -66,7 +66,7 @@ This produces `./payload/var/lib/kiwix/` with the ZIMs. Then:
 
 ```bash
 rsync -avh --progress payload/var/lib/kiwix/ pi@hub.local:/var/lib/kiwix/
-ssh pi@hub.local sudo systemctl restart signal-kiwix
+ssh pi@hub.local sudo systemctl restart rpi-pod-kiwix
 ```
 
 ### Pre-imaging an SD card
@@ -97,7 +97,7 @@ Kiwix periodically issues fresh ZIM rebuilds. To refresh:
 
 ```bash
 ssh pi@hub.local
-cd /opt/signal     # or wherever the repo is checked out
+cd /opt/rpi-pod     # or wherever the repo is checked out
 ./content/verify.sh /var/lib/kiwix
 ```
 
@@ -135,7 +135,7 @@ contains its own license metadata that Kiwix-serve displays in the
 library index.
 
 If you build custom ZIMs (with `zimwriterfs` or similar), record their
-source and license in your manifest's `description` field. SIGNAL is MIT
+source and license in your manifest's `description` field. rpi-POD is MIT
 licensed, but each ZIM carries its own license — assume nothing redistributable
 by default.
 
@@ -162,8 +162,8 @@ Add ~1 GB headroom for filesystem overhead and future regional packs.
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| `signal-kiwix` is inactive after install | `/var/lib/kiwix/` is empty | Fetch ZIMs and rsync them in |
-| `502 Bad Gateway` at `/library/` | `signal-kiwix` is down | `systemctl status signal-kiwix`, look at journal |
+| `rpi-pod-kiwix` is inactive after install | `/var/lib/kiwix/` is empty | Fetch ZIMs and rsync them in |
+| `502 Bad Gateway` at `/library/` | `rpi-pod-kiwix` is down | `systemctl status rpi-pod-kiwix`, look at journal |
 | `verify.sh` reports MISMATCH | Corrupted transfer | Re-rsync the affected file; rsync's `--checksum` catches this |
 | `fetch.sh` says yq is missing | yq not installed | `brew install yq` (macOS) / `apt-get install yq` (Debian/Ubuntu) |
 | Kiwix-serve takes 30s+ to start | ZIMs being indexed | Normal on first start with a large library; cached afterward |

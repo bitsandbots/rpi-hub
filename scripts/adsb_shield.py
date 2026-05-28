@@ -6,11 +6,11 @@ dump1090-mutability writes per-aircraft lat/lon to
 the open SSID can poll that file via nginx's ``/adsb/`` alias. For
 deployments where exposing precise tracks is PII-adjacent, the operator
 opts in by writing a number of decimal places into
-``/etc/signal/adsb-precision`` (0–4). When the file exists, the
-``signal-adsb-shield.timer`` wakes this script once per second; the
+``/etc/rpi-pod/adsb-precision`` (0–4). When the file exists, the
+``rpi-pod-adsb-shield.timer`` wakes this script once per second; the
 script rounds every aircraft's ``lat``/``lon`` to that precision and
 writes ``aircraft.shielded.json`` next to the source. nginx prefers the
-shielded copy when present (see ``config/nginx/signal-portal.conf``).
+shielded copy when present (see ``config/nginx/rpi-pod-portal.conf``).
 
 Precision reference (mid-latitudes): 0 ≈ 110 km, 1 ≈ 11 km, 2 ≈ 1.1 km,
 3 ≈ 110 m, 4 ≈ 11 m. Default precision when the file contains a blank
@@ -28,7 +28,7 @@ from typing import Any
 
 SOURCE = Path("/run/dump1090-mutability/aircraft.json")
 SHIELDED = Path("/run/dump1090-mutability/aircraft.shielded.json")
-PRECISION_FILE = Path("/etc/signal/adsb-precision")
+PRECISION_FILE = Path("/etc/rpi-pod/adsb-precision")
 DEFAULT_PRECISION = 1
 MAX_PRECISION = 4
 

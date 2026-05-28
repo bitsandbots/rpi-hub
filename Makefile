@@ -1,4 +1,4 @@
-# SIGNAL — convenience targets. Real work lives in install.sh and the
+# rpi-POD — convenience targets. Real work lives in install.sh and the
 # per-service code; this file is for one-liners during development.
 
 SHELL := /bin/bash
@@ -29,7 +29,7 @@ test:  ## Run pytest across api/, assistant/, indexer/, listen/, notes/
 smoke:  ## End-to-end healthcheck against a live device or QEMU
 	./scripts/healthcheck.sh
 
-bake:  ## Build a flashable signal-*.img.xz (requires sudo, Linux only)
+bake:  ## Build a flashable rpi-pod-*.img.xz (requires sudo, Linux only)
 	sudo ./scripts/bake_image.sh
 
 check-headers:  ## Fail if any config/ file lacks the required header

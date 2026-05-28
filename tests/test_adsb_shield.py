@@ -1,8 +1,8 @@
 """Unit tests for ``scripts/adsb_shield.py``.
 
-The script is a one-shot triggered by ``signal-adsb-shield.timer`` —
+The script is a one-shot triggered by ``rpi-pod-adsb-shield.timer`` —
 read raw ``aircraft.json``, round per-aircraft ``lat``/``lon`` to the
-precision in ``/etc/signal/adsb-precision``, write atomically. The
+precision in ``/etc/rpi-pod/adsb-precision``, write atomically. The
 timer + service carry ``ConditionPathExists=`` so the systemd side of
 the opt-in is shipped at the unit-file layer; here we just pin the
 rounding contract.

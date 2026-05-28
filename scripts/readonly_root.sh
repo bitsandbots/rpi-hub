@@ -15,24 +15,24 @@
 #
 # Design:
 #   * lower = /  (read-only after enabling)
-#   * upper = /var/lib/signal/overlay/upper  (small writable layer)
-#   * work  = /var/lib/signal/overlay/work
-#   * Bind mounts for /var/log, /etc/signal, /var/lib/dnsmasq,
-#     /var/lib/signal, /var/lib/kiwix, /run, /tmp (already tmpfs).
+#   * upper = /var/lib/rpi-pod/overlay/upper  (small writable layer)
+#   * work  = /var/lib/rpi-pod/overlay/work
+#   * Bind mounts for /var/log, /etc/rpi-pod, /var/lib/dnsmasq,
+#     /var/lib/rpi-pod, /var/lib/kiwix, /run, /tmp (already tmpfs).
 #
 # Caveats:
 #   - First run requires a reboot to switch the mount.
 #   - apt updates need `disable` before they run, then `enable` again.
 #     A wrapper script (apt-rw) and a systemd hook would automate this
 #     in a v1.2 polish pass; here we ship the primitive.
-#   - The signal-notes board, the mesh keypair, and the kiwix library
+#   - The rpi-pod-notes board, the mesh keypair, and the kiwix library
 #     are explicitly *not* on the overlay — they live on the writable
 #     bind mounts so they persist boots.
 
 set -uo pipefail
 
-OVERLAY_BASE=/var/lib/signal/overlay
-MARKER=/etc/signal/readonly-root.enabled
+OVERLAY_BASE=/var/lib/rpi-pod/overlay
+MARKER=/etc/rpi-pod/readonly-root.enabled
 
 log() { printf '[ro-root] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -52,19 +52,19 @@ current_mode() {
 ensure_dirs() {
     install -d -m 0755 "${OVERLAY_BASE}/upper"
     install -d -m 0700 "${OVERLAY_BASE}/work"
-    install -d -m 0755 /etc/signal
+    install -d -m 0755 /etc/rpi-pod
 }
 
 write_fstab_block() {
-    local marker_begin="# >>> SIGNAL Phase 1.1 (readonly root) >>>"
-    local marker_end="# <<< SIGNAL Phase 1.1 (readonly root) <<<"
+    local marker_begin="# >>> rpi-POD Phase 1.1 (readonly root) >>>"
+    local marker_end="# <<< rpi-POD Phase 1.1 (readonly root) <<<"
     if grep -qF "$marker_begin" /etc/fstab; then
         return 0
     fi
     {
         printf '\n%s\n' "$marker_begin"
         cat <<'EOF'
-# overlayfs root: lower=/  upper=/var/lib/signal/overlay/upper
+# overlayfs root: lower=/  upper=/var/lib/rpi-pod/overlay/upper
 # These bind mounts keep state writable across boots without giving up
 # read-only protection on the rest of /.
 tmpfs   /var/log           tmpfs   defaults,nosuid,nodev,size=64m   0 0
@@ -75,7 +75,7 @@ EOF
 }
 
 remove_fstab_block() {
-    sed -i '/# >>> SIGNAL Phase 1.1 (readonly root) >>>/,/# <<< SIGNAL Phase 1.1 (readonly root) <<</d' /etc/fstab
+    sed -i '/# >>> rpi-POD Phase 1.1 (readonly root) >>>/,/# <<< rpi-POD Phase 1.1 (readonly root) <<</d' /etc/fstab
 }
 
 enable() {
@@ -85,9 +85,9 @@ enable() {
     # The actual overlay mount happens early in boot via an initramfs
     # script — generated here so it survives kernel upgrades.
     install -d -m 0755 /usr/share/initramfs-tools/scripts/init-bottom
-    cat >/usr/share/initramfs-tools/scripts/init-bottom/signal-overlay <<'EOF'
+    cat >/usr/share/initramfs-tools/scripts/init-bottom/rpi-pod-overlay <<'EOF'
 #!/bin/sh
-# SIGNAL overlay-root init-bottom hook.
+# rpi-POD overlay-root init-bottom hook.
 # Mounts an overlay over the just-mounted rootfs so subsequent writes
 # go to a tmpfs upper layer; bind mounts for /var/log, /tmp, /var/lib
 # are applied by /etc/fstab.
@@ -104,7 +104,7 @@ mount -t overlay overlay \
     -o lowerdir=/overlay/lower,upperdir=/overlay/upper,workdir=/overlay/work \
     ${rootmnt}
 EOF
-    chmod 0755 /usr/share/initramfs-tools/scripts/init-bottom/signal-overlay
+    chmod 0755 /usr/share/initramfs-tools/scripts/init-bottom/rpi-pod-overlay
     # Regenerate initramfs so the hook is picked up.
     update-initramfs -u 2>/dev/null || die "update-initramfs failed"
     touch "$MARKER"
@@ -113,7 +113,7 @@ EOF
 
 disable() {
     require_root
-    rm -f /usr/share/initramfs-tools/scripts/init-bottom/signal-overlay
+    rm -f /usr/share/initramfs-tools/scripts/init-bottom/rpi-pod-overlay
     remove_fstab_block
     update-initramfs -u 2>/dev/null || die "update-initramfs failed"
     rm -f "$MARKER"

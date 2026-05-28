@@ -66,8 +66,8 @@ jobs:
         # in GAP §5 — "QR encoder round-trip through a real decoder").
         continue-on-error: true
         run: |
-          if [ -f mesh/signal_mesh/tests/test_qrcode_decode.py ]; then
-            pytest -q mesh/signal_mesh/tests/test_qrcode_decode.py
+          if [ -f mesh/rpi_pod_mesh/tests/test_qrcode_decode.py ]; then
+            pytest -q mesh/rpi_pod_mesh/tests/test_qrcode_decode.py
           else
             echo "test_qrcode_decode.py not present yet — job is a placeholder."
             exit 1

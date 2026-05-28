@@ -14,7 +14,7 @@
  */
 (function () {
   "use strict";
-  var KEY = "signal-contrast";
+  var KEY = "rpi-pod-contrast";
   var html = document.documentElement;
   html.classList.add("js");
 

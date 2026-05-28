@@ -1,21 +1,21 @@
 #!/usr/bin/env bash
-# Purpose: Download the model weights signal-assist needs onto a workstation.
+# Purpose: Download the model weights rpi-pod-assist needs onto a workstation.
 # Unit:    n/a (workstation-only; never runs on the Pi)
 # Phase:   6
 #
 # We never bundle weights in the repo (size + license clarity). This script
-# downloads two files into ./payload/var/lib/signal/models/ with sha256
+# downloads two files into ./payload/var/lib/rpi-pod/models/ with sha256
 # verification, then prints the rsync command to push them to the Pi.
 #
 # Usage:
 #   ./models/fetch_models.sh                # defaults: Qwen2.5-1.5B + bge-small
-#   DEST=/mnt/sd/var/lib/signal/models ./models/fetch_models.sh
+#   DEST=/mnt/sd/var/lib/rpi-pod/models ./models/fetch_models.sh
 #
 # To refresh: bump the URL + sha256 below, re-run.
 
 set -euo pipefail
 
-DEST="${DEST:-./payload/var/lib/signal/models}"
+DEST="${DEST:-./payload/var/lib/rpi-pod/models}"
 
 log() { printf '[fetch-models] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -79,4 +79,4 @@ done
 
 log ""
 log "done. Transfer to the Pi:"
-log "  rsync -avh --progress $DEST/ pi@hub.local:/var/lib/signal/models/"
+log "  rsync -avh --progress $DEST/ pi@hub.local:/var/lib/rpi-pod/models/"
