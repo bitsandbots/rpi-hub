@@ -23,11 +23,17 @@ import base64
 import hashlib
 import json
 import logging
+import os
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
 
 _log = logging.getLogger(__name__)
+
+
+def _insecure_crypto_allowed() -> bool:
+    """True only when the caller has explicitly opted into the dev stub."""
+    return os.environ.get("RPI_POD_ALLOW_INSECURE_CRYPTO") == "1"
 
 try:
     from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey as _Chk  # noqa: F401  # type: ignore[import-not-found]
@@ -72,13 +78,17 @@ def sign(priv_key: bytes, payload: bytes) -> str:
     """
 
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore[import-not-found]
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore[import-not-found]  # noqa: PLC0415
             Ed25519PrivateKey,
         )
 
         key = Ed25519PrivateKey.from_private_bytes(priv_key)
         sig = key.sign(payload)
     except ImportError:
+        if not _insecure_crypto_allowed():
+            raise RuntimeError(
+                "cryptography unavailable; set RPI_POD_ALLOW_INSECURE_CRYPTO=1 for dev use"
+            )
         # Deterministic stub for dev. Not a real signature.
         sig = hashlib.blake2b(priv_key + payload, digest_size=64).digest()
     return base64.b64encode(sig).decode("ascii")
@@ -90,10 +100,10 @@ def verify(pub_key: bytes, payload: bytes, sig_b64: str) -> bool:
     except (ValueError, TypeError):
         return False
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore[import-not-found]
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore[import-not-found]  # noqa: PLC0415
             Ed25519PublicKey,
         )
-        from cryptography.exceptions import InvalidSignature  # type: ignore[import-not-found]
+        from cryptography.exceptions import InvalidSignature  # type: ignore[import-not-found]  # noqa: PLC0415
 
         pub = Ed25519PublicKey.from_public_bytes(pub_key)
         try:
@@ -102,10 +112,14 @@ def verify(pub_key: bytes, payload: bytes, sig_b64: str) -> bool:
             return False
         return True
     except ImportError:
-        # Stub verification mirrors the stub sign().
+        if not _insecure_crypto_allowed():
+            # Fail closed: without real Ed25519 the trust model is broken.
+            # Set RPI_POD_ALLOW_INSECURE_CRYPTO=1 to use the dev stub instead.
+            # See P2 in docs/GAP_ANALYSIS.md §4 for the decision rationale.
+            return False
+        # Dev stub: accepts any signature of the expected length — cannot
+        # truly verify without the private key. Opt-in only via env var above.
         expected = hashlib.blake2b(pub_key + payload, digest_size=64).digest()
-        # In dev we don't have the private key here, so this can't
-        # truly verify; we accept any signature of the expected length.
         return len(sig) == len(expected)
 
 

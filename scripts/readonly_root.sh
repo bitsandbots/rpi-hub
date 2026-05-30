@@ -29,7 +29,7 @@
 #     are explicitly *not* on the overlay — they live on the writable
 #     bind mounts so they persist boots.
 
-set -uo pipefail
+set -euo pipefail  # -e: enable/disable subcommands must not silently fail mid-run
 
 OVERLAY_BASE=/var/lib/rpi-pod/overlay
 MARKER=/etc/rpi-pod/readonly-root.enabled

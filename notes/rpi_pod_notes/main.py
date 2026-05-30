@@ -72,6 +72,8 @@ def _require_owner(token_header: str | None) -> None:
 
 
 class PostNoteIn(BaseModel):
+    # 400 > TEXT_MAX (280) intentionally: sanitise() strips control chars and
+    # whitespace before the 280-char cap, so the model accepts raw input slack.
     text: Annotated[str, Field(min_length=1, max_length=400)]
     name: str = ""
 
@@ -106,7 +108,7 @@ def _get_conn() -> object:
 @app.get("/health", response_model=HealthOut)
 def health() -> HealthOut:
     conn = _get_conn()
-    import sqlite3 as _sql
+    import sqlite3 as _sql  # noqa: PLC0415
 
     assert isinstance(conn, _sql.Connection)
     row = conn.execute("SELECT COUNT(*) AS n FROM notes").fetchone()
@@ -117,7 +119,7 @@ def health() -> HealthOut:
 def list_notes(limit: int = 100) -> NoteListOut:
     limit = max(1, min(limit, 200))
     conn = _get_conn()
-    import sqlite3 as _sql
+    import sqlite3 as _sql  # noqa: PLC0415
 
     assert isinstance(conn, _sql.Connection)
     notes = storage.list_recent(conn, limit)
@@ -132,7 +134,7 @@ def post_note(req: Request, body: PostNoteIn) -> NoteOut:
     name = validation.clean_name(body.name)
 
     conn = _get_conn()
-    import sqlite3 as _sql
+    import sqlite3 as _sql  # noqa: PLC0415
 
     assert isinstance(conn, _sql.Connection)
 
@@ -163,7 +165,7 @@ def delete_note(
 ) -> Response:
     _require_owner(x_owner_token)
     conn = _get_conn()
-    import sqlite3 as _sql
+    import sqlite3 as _sql  # noqa: PLC0415
 
     assert isinstance(conn, _sql.Connection)
     if not storage.delete_one(conn, note_id):
@@ -177,7 +179,7 @@ def wipe_notes(
 ) -> dict[str, int]:
     _require_owner(x_owner_token)
     conn = _get_conn()
-    import sqlite3 as _sql
+    import sqlite3 as _sql  # noqa: PLC0415
 
     assert isinstance(conn, _sql.Connection)
     return {"wiped": storage.wipe(conn)}

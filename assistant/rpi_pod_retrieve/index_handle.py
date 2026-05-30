@@ -39,7 +39,7 @@ def _load_hnsw(path: Path, ids: list[int]) -> object | None:
     if not path.exists() or not ids:
         return None
     try:
-        import hnswlib  # type: ignore[import-untyped]
+        import hnswlib  # type: ignore[import-untyped]  # noqa: PLC0415
     except ImportError:
         return None
     index = hnswlib.Index(space="cosine", dim=EMBED_DIM)

@@ -72,7 +72,7 @@ def _on_lora_frame(frame: bytes) -> None:
     """
 
     try:
-        import json as _json
+        import json as _json  # noqa: PLC0415
 
         env = _json.loads(frame.decode("utf-8", errors="ignore"))
     except (ValueError, UnicodeDecodeError):
@@ -244,7 +244,7 @@ def publish_note(body: PublishNoteIn) -> PublishOut:
         text=body.text,
         ttl_s=body.ttl_s,
     )
-    import json as _json
+    import json as _json  # noqa: PLC0415
 
     wire = _json.dumps(envelope.__dict__, sort_keys=True).encode("utf-8") + b"\n"
 

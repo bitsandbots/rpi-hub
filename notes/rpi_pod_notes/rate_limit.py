@@ -38,7 +38,7 @@ def check(conn: object, ip: str) -> Verdict:
     real sqlite handle. The actual call site passes the live Connection.
     """
 
-    import sqlite3 as _sql
+    import sqlite3 as _sql  # noqa: PLC0415
 
     assert isinstance(conn, _sql.Connection)
     now = time.time()

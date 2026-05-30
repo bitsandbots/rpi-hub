@@ -12,7 +12,7 @@
 #
 # Idempotent: re-running `up` over an already-up mesh is a no-op.
 
-set -uo pipefail
+set -euo pipefail
 
 CONF=/etc/rpi-pod/mesh.conf
 [[ -r "$CONF" ]] || { echo "[batman] missing $CONF" >&2; exit 1; }

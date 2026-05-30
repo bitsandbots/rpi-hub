@@ -9,6 +9,29 @@ commit.
 
 ## [Unreleased]
 
+### Changed
+
+- `mesh/rpi_pod_mesh/messages.py` — `verify()` now fails **closed** when
+  `cryptography` is unavailable: returns `False` instead of accepting any
+  correctly-sized signature. `sign()` raises `RuntimeError` in the same
+  condition. Both paths gate on `RPI_POD_ALLOW_INSECURE_CRYPTO=1` to
+  re-enable the dev stub explicitly. Closes `docs/GAP_ANALYSIS.md` §4
+  item "P2 — fail-open vs fail-closed for missing crypto".
+- `scripts/batman_setup.sh`, `scripts/readonly_root.sh` — added `-e` to
+  `set -uo pipefail` so a failed `ip`/`iw`/`batctl`/`update-initramfs`
+  call aborts the script rather than silently continuing. `readonly_root.sh`
+  comment documents the intent. Closes `docs/GAP_ANALYSIS.md` §4 item
+  "P4 — shell strict-mode invariant".
+- New root-level `pyproject.toml` — ruff/black/mypy/pytest config for the
+  full repo. Pins `ruff>=0.9,<1.0`, `black>=25.1,<26`, `mypy>=1.15,<2`;
+  `per-file-ignores` suppresses `PLR2004` in tests. Intentional deferred
+  imports annotated with `# noqa: PLC0415` at all 11 sites. `api/pyproject.toml`
+  version constraints brought in line. New `requirements-dev.txt` for
+  pip-install. Closes `docs/GAP_ANALYSIS.md` §4 item "P3 — lint-clean".
+- `notes/rpi_pod_notes/main.py` — one-line comment on `PostNoteIn.text`
+  `max_length=400` explaining the intentional slack over `TEXT_MAX=280`.
+  Closes `docs/GAP_ANALYSIS.md` §4 item "P5 — documentation niceties".
+
 ### Fixed
 
 - `models/fetch_models.sh` — added `-C -` for resume + `--retry-all-errors`

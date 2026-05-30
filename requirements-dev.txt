@@ -1,0 +1,8 @@
+# Workstation-only dev dependencies.
+# Install: pip install -r requirements-dev.txt
+# These are NOT installed on the Pi — runtime deps come from apt.
+ruff>=0.9,<1.0
+black>=25.1,<26
+mypy>=1.15,<2
+pytest>=8.0
+httpx>=0.27  # required by fastapi.testclient

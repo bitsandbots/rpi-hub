@@ -229,7 +229,7 @@ def _probe_adsb() -> tuple[str, int | None]:
 def _now() -> float:
     """Wallclock seconds, factored for test monkeypatching."""
 
-    import time
+    import time  # noqa: PLC0415
 
     return time.time()
 

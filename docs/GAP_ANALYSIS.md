@@ -117,6 +117,7 @@ _All rows closed in v1.2.x — canonical service-down classes
 
 - Add `AF_NETLINK` to `rpi-pod-mesh` sandbox once the BATMAN bridge
   actually attaches (BATMAN uses netlink). Tracked alongside §1 Phase 7.3.
+
 ### 3c. Test-coverage gaps
 
 _All rows closed in v1.3 (see `CHANGELOG.md [Unreleased]`). New rows
@@ -137,6 +138,16 @@ they're tracked in `CHANGELOG.md`. The most recent sweep closed:
 - Security — silent crypto downgrade in `mesh/rpi_pod_mesh/messages.py`:
   module-level `CRYPTO_AVAILABLE` flag now logs a loud warning when
   `cryptography` is unavailable.
+- P2 — fail-open vs fail-closed for missing crypto: `verify()` now returns
+  `False` and `sign()` raises when `cryptography` is absent; stub re-enabled
+  by `RPI_POD_ALLOW_INSECURE_CRYPTO=1`. See `CHANGELOG.md [Unreleased] Changed`.
+- P3 — lint-clean reproducible: `pyproject.toml` created with pinned ruff/
+  black/mypy constraints, `PLR2004` suppressed in tests, `PLC0415` annotated
+  at all 11 intentional deferred-import sites. `requirements-dev.txt` added.
+- P4 — shell strict-mode: `batman_setup.sh` and `readonly_root.sh` now use
+  `set -euo pipefail`; comments explain the intent.
+- P5 — documentation niceties: `PostNoteIn.text max_length=400` comment
+  added; `messages.py` dev-stub comment updated.
 
 - Per-phase test rows (`mesh/rpi_pod_mesh/tests/test_identity_endpoint.py`,
   `test_keygen_unit_ordering.py`, `test_qrcode_decode.py`).

@@ -69,7 +69,7 @@ def _hybrid_search(
 
     # Cast back to sqlite3.Connection at the call boundary; we accept
     # ``object`` here so the function is trivial to monkeypatch in tests.
-    import sqlite3 as _sql  # local to keep top-level imports tidy
+    import sqlite3 as _sql  # local to keep top-level imports tidy  # noqa: PLC0415
 
     assert isinstance(conn, _sql.Connection)
 

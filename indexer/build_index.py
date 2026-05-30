@@ -134,7 +134,7 @@ def build(zim_dir: Path, out_dir: Path) -> manifest_mod.IndexManifest:
 
     # Write HNSW + id map.
     try:
-        import hnswlib  # type: ignore[import-untyped]
+        import hnswlib  # type: ignore[import-untyped]  # noqa: PLC0415
 
         if embeddings:
             index = hnswlib.Index(space="cosine", dim=embedder.EMBED_DIM)

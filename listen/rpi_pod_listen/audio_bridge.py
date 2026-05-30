@@ -110,7 +110,7 @@ class AudioFanout:
             self._thread.join(timeout=2.0)
 
     def _run(self, source_fd: int) -> None:
-        import os
+        import os  # noqa: PLC0415
 
         while not self._stop.is_set():
             try:
