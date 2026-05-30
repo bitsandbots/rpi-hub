@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import base64
 import os
+import secrets
 from pathlib import Path
 from typing import Annotated
 
@@ -146,7 +147,7 @@ def _require_owner(token_header: str | None) -> None:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="owner moderation not configured",
         )
-    if not token_header or token_header != expected:
+    if not token_header or not secrets.compare_digest(token_header, expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
 
 

@@ -117,19 +117,6 @@ _All rows closed in v1.2.x — canonical service-down classes
 
 - Add `AF_NETLINK` to `rpi-pod-mesh` sandbox once the BATMAN bridge
   actually attaches (BATMAN uses netlink). Tracked alongside §1 Phase 7.3.
- - Unconditional `rpi-pod-adsb-shield` install in `phase8_adsb`.
-  `install.sh:618` early-returns when `dpkg -s dump1090-mutability`
-  reports the package absent, which means the shield units at
-  `install.sh:647-650` are skipped on any Bookworm mirror that lacks
-  `dump1090-mutability`. The shield is independent of dump1090 (it
-  rounds whatever `aircraft.json` it finds, on whatever cadence the
-  operator opts into via `/etc/rpi-pod/adsb-precision`), so the gate
-  is wrong: it ties a privacy primitive's installation to the
-  decoder's availability. Fix: move the shield install block above
-  the `dpkg -s` check, or split it into its own phase8_adsb_shield()
-  helper that runs unconditionally. Surfaced by the install.sh
-  dry-run harness; not a regression — predates v1.3.
-
 ### 3c. Test-coverage gaps
 
 _All rows closed in v1.3 (see `CHANGELOG.md [Unreleased]`). New rows
@@ -139,6 +126,17 @@ file here as they appear._
 
 For anyone reading this and wondering where the older rows went —
 they're tracked in `CHANGELOG.md`. The most recent sweep closed:
+
+- §3b "Unconditional `rpi-pod-adsb-shield` install in `phase8_adsb`" —
+  shield extracted into `phase8_adsb_shield()`, called unconditionally
+  from `phase8()`. Static regression tests added to
+  `tests/test_install_phase8.py`. See `CHANGELOG.md [Unreleased] Security`.
+- Security — owner-token timing side-channel (`notes/rpi_pod_notes/main.py`,
+  `mesh/rpi_pod_mesh/main.py`): plain `!=` → `secrets.compare_digest()`.
+  Pinned by `tests/test_owner_token_timing.py`.
+- Security — silent crypto downgrade in `mesh/rpi_pod_mesh/messages.py`:
+  module-level `CRYPTO_AVAILABLE` flag now logs a loud warning when
+  `cryptography` is unavailable.
 
 - Per-phase test rows (`mesh/rpi_pod_mesh/tests/test_identity_endpoint.py`,
   `test_keygen_unit_ordering.py`, `test_qrcode_decode.py`).

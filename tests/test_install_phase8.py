@@ -62,6 +62,37 @@ def test_install_sh_gates_on_detect_script() -> None:
     assert "scripts/detect_rtlsdr.sh" in text
 
 
+def test_shield_extracted_into_own_function() -> None:
+    """adsb_shield install must live in phase8_adsb_shield(), not phase8_adsb().
+
+    phase8_adsb() early-returns when dump1090-mutability is absent; the
+    shield is decoder-independent and must not be gated on that package.
+    """
+    text = INSTALL_SH.read_text()
+    assert "phase8_adsb_shield()" in text, "phase8_adsb_shield function missing from install.sh"
+    # adsb_shield.py install must appear inside the shield function, not inside
+    # phase8_adsb. We verify by checking the text between the two function headers.
+    adsb_fn_start = text.index("phase8_adsb()")
+    shield_fn_start = text.index("phase8_adsb_shield()")
+    adsb_fn_body = text[adsb_fn_start:shield_fn_start]
+    assert "adsb_shield.py" not in adsb_fn_body, (
+        "adsb_shield.py install must be in phase8_adsb_shield(), not phase8_adsb()"
+    )
+
+
+def test_phase8_calls_shield_unconditionally() -> None:
+    """phase8() must call phase8_adsb_shield unconditionally (not nested inside phase8_adsb)."""
+    text = INSTALL_SH.read_text()
+    # Locate the phase8() function body (between its opening line and the next top-level function).
+    phase8_start = text.index("\nphase8() {")
+    # Find the next top-level function after phase8_adsb_shield
+    after = text.find("\nphase8_adsb()", phase8_start)
+    phase8_body = text[phase8_start:after]
+    assert "phase8_adsb_shield" in phase8_body, (
+        "phase8() must call phase8_adsb_shield unconditionally"
+    )
+
+
 def test_detect_rtlsdr_lists_known_dongles() -> None:
     """A regression that drops the canonical Realtek IDs would silently
     leave every device looking ADS-B-capable as if it had no dongle."""

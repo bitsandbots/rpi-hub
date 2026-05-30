@@ -22,9 +22,23 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import logging
 from dataclasses import dataclass
 from enum import Enum
 from typing import Any
+
+_log = logging.getLogger(__name__)
+
+try:
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey as _Chk  # noqa: F401  # type: ignore[import-not-found]
+
+    CRYPTO_AVAILABLE = True
+except ImportError:
+    CRYPTO_AVAILABLE = False
+    _log.warning(
+        "cryptography library unavailable — mesh signatures use an insecure stub. "
+        "Signatures cannot be verified. Install python3-cryptography before deploying."
+    )
 
 
 class MessageKind(str, Enum):

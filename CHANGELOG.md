@@ -45,6 +45,15 @@ commit.
 
 ### Tests
 
+- `tests/test_install_phase8.py` — two new static guards:
+  `test_shield_extracted_into_own_function` asserts `adsb_shield.py`
+  does not appear in the `phase8_adsb()` body; `test_phase8_calls_shield_unconditionally`
+  asserts `phase8()` calls `phase8_adsb_shield`. Both fail if the shield
+  block ever drifts back inside the decoder gate.
+- New `tests/test_owner_token_timing.py` — parametrised over notes and
+  mesh `main.py`: asserts `secrets.compare_digest` is used and that
+  plain `==`/`!=` does not appear in `_require_owner`. Prevents silent
+  regression to timing-leaking comparisons.
 - New `tests/test_readonly_root.py` — 9-case harness for
   `scripts/readonly_root.sh`. Static layer pins: the three subcommands
   exist, `enable`/`disable` call `require_root` early, the fstab
@@ -79,6 +88,27 @@ commit.
   exercise of `scripts/detect_rtlsdr.sh`); the row was never deleted.
 
 ### Security
+
+- `install.sh` — ADS-B privacy shield extracted into a dedicated
+  `phase8_adsb_shield()` function that `phase8()` calls unconditionally,
+  after `phase8_adsb()`. Previously the shield install block lived
+  *inside* `phase8_adsb()`, after that function's early `return 0` when
+  `dump1090-mutability` is absent — so on any Bookworm mirror that does
+  not carry the decoder, the position-rounding timer silently never
+  installed. The shield is decoder-independent (rounds whatever
+  `aircraft.json` it finds). Closes `docs/GAP_ANALYSIS.md` §3b row
+  "Unconditional `rpi-pod-adsb-shield` install in `phase8_adsb`".
+- `notes/rpi_pod_notes/main.py`, `mesh/rpi_pod_mesh/main.py` — owner-
+  token comparison changed from plain `!=` to `secrets.compare_digest()`
+  to eliminate timing side-channels. The `not token_header` short-circuit
+  is kept so a missing header still returns 401 without calling
+  `compare_digest`. Behaviour is identical for callers.
+- `mesh/rpi_pod_mesh/messages.py` — module-level `CRYPTO_AVAILABLE` flag
+  added. When `cryptography` cannot be imported, a loud warning is
+  logged at import time naming the insecure stub and instructing
+  installation of `python3-cryptography` before deployment. Previously
+  the downgrade was silent; a missing dependency would have made the
+  whole mesh trust model fail open with no signal.
 
 - Opt-in ADS-B position-rounding (`rpi-pod-adsb-shield`). The operator
   writes a precision (0–4 decimal places) into

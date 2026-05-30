@@ -586,6 +586,7 @@ phase8() {
     fi
 
     phase8_adsb
+    phase8_adsb_shield
 
     log "Phase 8 complete. http://hub.local/listen.html lights up when the service is reachable."
 }
@@ -636,12 +637,18 @@ phase8_adsb() {
         log "Phase 8.4 — no RTL-SDR dongle detected; dump1090-mutability stays disabled."
         log "    Plug a dongle in and run: sudo systemctl enable --now dump1090-mutability"
     fi
+}
 
-    # Phase 8.4 polish — install the opt-in position-rounder. Both the
-    # service and timer carry ConditionPathExists=/etc/rpi-pod/adsb-precision,
-    # so this is dormant until the operator creates that file. We
-    # `enable --now` the timer unconditionally; condition-checks make
-    # the actual ticking opt-in.
+phase8_adsb_shield() {
+    # Opt-in position-rounder — independent of whether dump1090-mutability
+    # is installed. Both the service and timer carry
+    # ConditionPathExists=/etc/rpi-pod/adsb-precision, so this is dormant
+    # until the operator creates that file. We `enable --now` the timer
+    # unconditionally; the condition-check makes the actual ticking opt-in.
+    #
+    # This must NOT live inside phase8_adsb(): that function has an early
+    # return when dump1090-mutability is absent, which would silently skip
+    # a privacy primitive that is decoder-independent.
     install -d -m 0755 /opt/rpi-pod/scripts
     install -m 0755 "${REPO_DIR}/scripts/adsb_shield.py" /opt/rpi-pod/scripts/adsb_shield.py
     install -m 0644 "${REPO_DIR}/systemd/rpi-pod-adsb-shield.service" \
