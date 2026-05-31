@@ -33,7 +33,7 @@ hardware on a bench; see `docs/GAP_ANALYSIS.md` §1.
 | `v1.1.0`        | Post-v1.0 polish | LoRa+BATMAN scaffolds, audio fanout, ADS-B UI, mesh-propagated notes, read-only root |
 | `v1.2.0`        | Mesh signing + QR | signed `/notes/publish`, `rpi-pod-mesh-keygen.service`, `/api/mesh/identity.svg` |
 | `v1.2.1`        | ADS-B install gate | `scripts/detect_rtlsdr.sh`, dump1090 enabled on dongle detect, status row + live aircraft count |
-| _Unreleased_    | Polish | opt-in ADS-B shield, split notes/mesh owner tokens, installer error-catch sweep, notes→mesh e2e test, captive-HTTPS out-of-scope note |
+| _Unreleased_    | Polish | opt-in ADS-B shield, split owner tokens, installer hardening, notes→mesh e2e test, captive-HTTPS note; + security sweep (timing-safe tokens, fail-closed crypto, shell strict-mode, lint pinning) |
 
 ## Repository layout
 
@@ -142,11 +142,6 @@ in `docs/GAP_ANALYSIS.md` §1):
   stub only.
 - **Three-node mesh testbed write-up** — `docs/MESH_TESTBED.md` once
   three Pi 4/5 + LoRa hats are on the bench.
-
-One known polish-track gap: `install.sh:618` short-circuits the ADS-B
-shield install when `dump1090-mutability` is absent, which it
-shouldn't (the shield is independent of the decoder). Tracked at
-`docs/GAP_ANALYSIS.md` §3b.
 
 ## Source-of-truth documents
 
