@@ -3,7 +3,7 @@
 We exercise:
 - Identity generation + idempotence
 - Peer table CRUD + replay-protection
-- Message canonicalisation + signature round-trip (stub mode)
+- Message canonicalisation + signature round-trip
 """
 
 from __future__ import annotations
@@ -69,26 +69,24 @@ def test_message_canonical_round_trip() -> None:
 
 
 def test_sign_verify_round_trip() -> None:
-    # Real Ed25519 round trip when cryptography is installed; the stub
-    # path verifies any same-length signature against the public key.
-    try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from cryptography.hazmat.primitives import serialization
+    # Real Ed25519 round trip — skipped if cryptography is unavailable.
+    # Without real crypto sign() raises RuntimeError (fail-closed design);
+    # the stub path is only reachable via RPI_POD_ALLOW_INSECURE_CRYPTO=1.
+    if not messages.CRYPTO_AVAILABLE:
+        pytest.skip("cryptography unavailable; install python3-cryptography to run")
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+    from cryptography.hazmat.primitives import serialization
 
-        priv = Ed25519PrivateKey.generate()
-        priv_bytes = priv.private_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PrivateFormat.Raw,
-            encryption_algorithm=serialization.NoEncryption(),
-        )
-        pub_bytes = priv.public_key().public_bytes(
-            encoding=serialization.Encoding.Raw,
-            format=serialization.PublicFormat.Raw,
-        )
-    except ImportError:
-        priv_bytes = b"\x00" * 32
-        pub_bytes = b"\x01" * 32
-
+    priv = Ed25519PrivateKey.generate()
+    priv_bytes = priv.private_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PrivateFormat.Raw,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    pub_bytes = priv.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
     payload = messages.canonical_bytes(
         {"kind": "presence", "sender": "x", "seq": 1, "body": {}}
     )
