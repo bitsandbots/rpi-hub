@@ -177,8 +177,8 @@ always nginx on `:80`.
 | Crypto | python3-cryptography | Bookworm system pkg (43.0) | Ed25519 sign/verify |
 | LLM runtime | llama.cpp (built from source) | pinned to commit in `models/fetch_models.sh` | CPU-only inference on Pi 5 |
 | Indexer | sentence-transformers + hnswlib + libzim | Workstation only | Build artefact rsynced to device |
-| Linting | ruff, black, mypy `--strict` | pre-commit | Enforced in CI |
-| Tests | pytest | per-package `pyproject.toml` | Unit + endpoint coverage |
+| Linting | ruff, black, mypy `--strict` | root + per-package `pyproject.toml` | Versions pinned: ruff ≥0.9, black ≥25.1, mypy ≥1.15 |
+| Tests | pytest | root `pyproject.toml` + per-package `pyproject.toml` | Unit + endpoint coverage |
 | QR encoder | Vendored pure-Python | `mesh/rpi_pod_mesh/qrcode.py` | Avoids extra apt/pip dep on the offline image |
 
 Outbound network usage is **isolated to two workstation-only
@@ -634,6 +634,9 @@ will treat this node as a new, untrusted peer. To force regenerate:
   `MemoryMax=` ceilings.
 
 ### `scripts/` — operator tooling
+
+All scripts use `set -euo pipefail`. Exception: `healthcheck.sh` intentionally
+omits `-e` so it continues past individual check failures (documented inline).
 
 - `healthcheck.sh` — drives `make smoke`; calibrated WARN/FAIL.
 - `factory_reset.sh` — dry-run by default; preserves
