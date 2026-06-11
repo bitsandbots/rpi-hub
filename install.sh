@@ -8,7 +8,7 @@
 # Phase 1 scope:
 #   - Install hostapd, dnsmasq, iptables-persistent
 #   - Link repo configs into /etc
-#   - Pin wlan0 to 192.168.4.1 via dhcpcd
+#   - Pin wlan0 to 192.168.4.1 (dhcpcd on Bookworm; NM unmanaged on Trixie+)
 #   - Apply sysctl (ip_forward=0)
 #   - Apply iptables FORWARD drop on wlan0 cross-interface traffic
 #   - Enable rpi-pod-ap.service
@@ -167,6 +167,45 @@ ensure_dhcpcd_block() {
     log "appended rpi-POD block to $conf"
 }
 
+# On systems running NetworkManager (e.g. Debian Trixie) mark wlan0 as
+# unmanaged so hostapd can take over the interface.  The static IP is
+# assigned by rpi-pod-ap.service via 'ip addr add' after hostapd starts.
+ensure_nm_unmanaged() {
+    local conf="/etc/NetworkManager/conf.d/rpi-pod.conf"
+    if [[ -f "$conf" ]] && grep -q "unmanaged-devices=interface-name:wlan0" "$conf"; then
+        return 0
+    fi
+    install -d /etc/NetworkManager/conf.d
+    cat >"$conf" <<'EOF'
+# Purpose: Release wlan0 to hostapd for AP mode.
+# Unit:    rpi-pod-ap.service (hostapd manages wlan0 directly)
+# Phase:   1
+[keyfile]
+unmanaged-devices=interface-name:wlan0
+EOF
+    log "wrote $conf (wlan0 unmanaged by NetworkManager)"
+    nmcli general reload conf 2>/dev/null \
+        || systemctl reload NetworkManager 2>/dev/null \
+        || true
+    # Disconnect wlan0 from any existing NM connection so hostapd can claim it.
+    nmcli device disconnect wlan0 2>/dev/null || true
+    # NM's disconnect can leave a soft rfkill block; clear it now so hostapd
+    # can initialise the radio immediately after install.
+    rfkill unblock wifi 2>/dev/null || true
+}
+
+# Dispatch to whichever network manager is present.
+configure_wlan0_static() {
+    if systemctl is-active --quiet dhcpcd 2>/dev/null \
+        || systemctl is-enabled --quiet dhcpcd 2>/dev/null; then
+        ensure_dhcpcd_block
+    elif systemctl is-active --quiet NetworkManager 2>/dev/null; then
+        ensure_nm_unmanaged
+    else
+        log "warning: no supported network manager detected; wlan0 static IP must be configured manually"
+    fi
+}
+
 ensure_hostapd_default() {
     local default="/etc/default/hostapd"
     install -d "$(dirname "$default")"
@@ -206,7 +245,10 @@ phase1() {
     log "Phase 1 — Bare AP"
     require_bookworm
 
-    # Stop conflicting services before reconfiguring.
+    # Stop cleanly before reconfiguring. Stop rpi-pod-ap first so its
+    # ExecStop tears down hostapd and dnsmasq; the individual stops below
+    # are belt-and-braces for the case where rpi-pod-ap never started.
+    systemctl stop rpi-pod-ap.service 2>/dev/null || true
     systemctl stop hostapd dnsmasq 2>/dev/null || true
     systemctl unmask hostapd 2>/dev/null || true
 
@@ -217,14 +259,21 @@ phase1() {
     install_config "${REPO_DIR}/config/dnsmasq/rpi-pod.conf"   /etc/dnsmasq.d/rpi-pod.conf && dnsmasq_changed=1
     apply_country_code
     ensure_hostapd_default
-    ensure_dhcpcd_block
+    configure_wlan0_static
     apply_sysctl
     apply_iptables
     install_unit
 
-    systemctl restart dhcpcd \
-        || die "dhcpcd restart failed — rpi-POD Phase 1 requires dhcpcd5 (newer images shipping NetworkManager or systemd-networkd are not supported; install dhcpcd5 or remove the conflicting profile for wlan0)"
-    systemctl start rpi-pod-ap.service \
+    # Restart dhcpcd only when it is the active network manager; NM-based
+    # systems (Debian Trixie+) use ensure_nm_unmanaged instead.
+    if systemctl is-active --quiet dhcpcd 2>/dev/null \
+        || systemctl is-enabled --quiet dhcpcd 2>/dev/null; then
+        systemctl restart dhcpcd \
+            || die "dhcpcd restart failed — check 'journalctl -u dhcpcd'"
+    fi
+    # Use restart (not start) so re-runs re-fire ExecStartPre even if the
+    # service is still "active" from RemainAfterExit.
+    systemctl restart rpi-pod-ap.service \
         || die "rpi-pod-ap.service failed to start — check 'journalctl -u rpi-pod-ap' (common causes: wlan0 already managed, hostapd.conf rejected, country_code mismatch)"
     # If dnsmasq config changed (e.g. Phase 2 wildcard line), reload so the
     # new rules are live without bouncing hostapd.
@@ -677,7 +726,9 @@ ensure_owner_tokens() {
         if [[ ! -s "$f" ]]; then
             # /dev/urandom + tr is universal; openssl/uuidgen aren't always
             # in Bookworm minimal images.
-            tr -dc 'a-f0-9' </dev/urandom | head -c 32 >"$f"
+            # Subshell absorbs tr's SIGPIPE when head closes the pipe early
+            # (would otherwise trigger set -o pipefail and abort).
+            (tr -dc 'a-f0-9' </dev/urandom || true) | head -c 32 >"$f"
             chmod 0600 "$f"
             log "generated owner token at $f (cat it as root)"
         fi
