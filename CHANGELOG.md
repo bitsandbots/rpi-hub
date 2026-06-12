@@ -9,6 +9,8 @@ commit.
 
 ## [Unreleased]
 
+## [1.2.2] — 2026-06-12
+
 ### Fixed
 
 - `install.sh` + `systemd/rpi-pod-ap.service` — five bugs uncovered on
@@ -449,16 +451,17 @@ Captive portal redirect + nginx default-server.
 
 Bare AP — hostapd + dnsmasq + `rpi-pod-ap.service`.
 
-[Unreleased]: https://github.com/coreconduit/signal/compare/v1.2.1...HEAD
-[1.2.1]: https://github.com/coreconduit/signal/releases/tag/v1.2.1
-[1.2.0]: https://github.com/coreconduit/signal/releases/tag/v1.2.0
-[1.1.0]: https://github.com/coreconduit/signal/releases/tag/v1.1.0
-[1.0.0]: https://github.com/coreconduit/signal/releases/tag/v1.0.0
-[0.8.0-phase8]: https://github.com/coreconduit/signal/releases/tag/v0.8.0-phase8
-[0.9.0-phase9]: https://github.com/coreconduit/signal/releases/tag/v0.9.0-phase9
-[0.6.0-phase6]: https://github.com/coreconduit/signal/releases/tag/v0.6.0-phase6
-[0.5.0-phase5]: https://github.com/coreconduit/signal/releases/tag/v0.5.0-phase5
-[0.4.0-phase4]: https://github.com/coreconduit/signal/releases/tag/v0.4.0-phase4
-[0.3.0-phase3]: https://github.com/coreconduit/signal/releases/tag/v0.3.0-phase3
-[0.2.0-phase2]: https://github.com/coreconduit/signal/releases/tag/v0.2.0-phase2
-[0.1.0-phase1]: https://github.com/coreconduit/signal/releases/tag/v0.1.0-phase1
+[Unreleased]: https://github.com/bitsandbots/rpi-hub/compare/v1.2.2...HEAD
+[1.2.2]: https://github.com/bitsandbots/rpi-hub/releases/tag/v1.2.2
+[1.2.1]: https://github.com/bitsandbots/rpi-hub/releases/tag/v1.2.1
+[1.2.0]: https://github.com/bitsandbots/rpi-hub/releases/tag/v1.2.0
+[1.1.0]: https://github.com/bitsandbots/rpi-hub/releases/tag/v1.1.0
+[1.0.0]: https://github.com/bitsandbots/rpi-hub/releases/tag/v1.0.0
+[0.8.0-phase8]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.8.0-phase8
+[0.9.0-phase9]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.9.0-phase9
+[0.6.0-phase6]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.6.0-phase6
+[0.5.0-phase5]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.5.0-phase5
+[0.4.0-phase4]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.4.0-phase4
+[0.3.0-phase3]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.3.0-phase3
+[0.2.0-phase2]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.2.0-phase2
+[0.1.0-phase1]: https://github.com/bitsandbots/rpi-hub/releases/tag/v0.1.0-phase1
