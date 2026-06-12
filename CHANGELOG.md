@@ -9,6 +9,33 @@ commit.
 
 ## [Unreleased]
 
+### Fixed
+
+- `install.sh` + `systemd/rpi-pod-ap.service` — five bugs uncovered on
+  Debian Trixie (aarch64, NetworkManager) (`d79e4d0`):
+  - **Trixie/NM support**: new `ensure_nm_unmanaged()` writes
+    `/etc/NetworkManager/conf.d/rpi-pod.conf` to release `wlan0` to
+    hostapd; `configure_wlan0_static()` dispatches to either
+    `ensure_dhcpcd_block` (Bookworm) or `ensure_nm_unmanaged` (Trixie+)
+    depending on which network manager is active. The static AP IP is now
+    assigned by an `ExecStartPre` `ip addr add` in the service unit
+    rather than by dhcpcd.
+  - **rfkill soft block**: `nmcli device disconnect wlan0` leaves a soft
+    rfkill block; added `rfkill unblock wifi` in `ensure_nm_unmanaged()`
+    and as the first `ExecStartPre` in `rpi-pod-ap.service` so every
+    start clears any block regardless of install path.
+  - **`tr | head` SIGPIPE**: `set -o pipefail` treated `head`'s early
+    exit as a failure, aborting owner-token generation in phase 9. Fixed
+    by wrapping `tr` in a subshell: `(tr -dc 'a-f0-9' </dev/urandom || true) | head -c 32`.
+  - **`RemainAfterExit` re-run gap**: phase 1's idempotent re-run stopped
+    hostapd/dnsmasq at the top but then called `systemctl start
+    rpi-pod-ap.service`, which is a no-op when the unit is still "active"
+    (oneshot + `RemainAfterExit=yes`), leaving the AP dead. Fixed by
+    stopping `rpi-pod-ap.service` first and changing `start` → `restart`.
+  - **`ExecStartPost` shell `||`**: the iptables idempotency check used
+    `||` directly in a systemd exec line, which passes `||` as a literal
+    argument to `iptables`. Wrapped in `/bin/sh -c '...'`.
+
 ### Changed
 
 - `mesh/rpi_pod_mesh/messages.py` — `verify()` now fails **closed** when
