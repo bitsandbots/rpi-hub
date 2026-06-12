@@ -33,7 +33,7 @@ hardware on a bench; see `docs/GAP_ANALYSIS.md` §1.
 | `v1.1.0`        | Post-v1.0 polish | LoRa+BATMAN scaffolds, audio fanout, ADS-B UI, mesh-propagated notes, read-only root |
 | `v1.2.0`        | Mesh signing + QR | signed `/notes/publish`, `rpi-pod-mesh-keygen.service`, `/api/mesh/identity.svg` |
 | `v1.2.1`        | ADS-B install gate | `scripts/detect_rtlsdr.sh`, dump1090 enabled on dongle detect, status row + live aircraft count |
-| _Unreleased_    | Polish | opt-in ADS-B shield, split owner tokens, installer hardening, notes→mesh e2e test, captive-HTTPS note; + security sweep (timing-safe tokens, fail-closed crypto, shell strict-mode, lint pinning) |
+| _Unreleased_    | Polish | opt-in ADS-B shield, split owner tokens, installer hardening, notes→mesh e2e test, captive-HTTPS note; + security sweep (timing-safe tokens, fail-closed crypto, shell strict-mode, lint pinning); + Trixie/NM installer support (`d79e4d0`) |
 
 ## Repository layout
 
@@ -70,7 +70,11 @@ docs/                OVERVIEW.md (canonical), GAP_ANALYSIS.md, CONTENT_GUIDE.md,
 
 ## Architecture conventions (audit before changing)
 
-- **Bookworm Pi OS Lite 64-bit, Python 3.11, legacy iptables**.
+- **Bookworm Pi OS Lite 64-bit, Python 3.11, legacy iptables** (primary
+  target). **Debian Trixie** (aarch64, NetworkManager) is also supported
+  as of `d79e4d0`: `install.sh` detects NM and calls `ensure_nm_unmanaged`
+  instead of `ensure_dhcpcd_block`; `rpi-pod-ap.service` assigns the
+  static IP via `ip addr add` and clears rfkill before starting hostapd.
 - **Every config file has a header comment**: purpose, owning systemd
   unit, phase introduced. Enforced by
   `scripts/check_config_header.py`.
