@@ -1,0 +1,28 @@
+# Purpose: General-purpose content pack — the default bake. Pulls a broad
+#          knowledge base appropriate for any deployment with no regional
+#          specialisation. Acts as the schema reference for new packs.
+# Unit:    n/a (consumed by install.sh --pack=general-purpose)
+# Phase:   9B
+name: general-purpose
+display_name: General Purpose
+description: >
+  Wikipedia (no images), iFixit repair guides, WikEM clinical reference,
+  survival how-tos, Wiktionary. Suitable for any deployment with no
+  regional specialisation.
+version: 1
+tier: core
+zims:
+  - wikipedia_en_simple_all_nopic.zim
+  - zimgit-post-disaster_en.zim
+  - ifixit_en_all.zim
+  - wiktionary_en_all_nopic.zim
+  - wikem_en_all_maxi.zim
+print:
+  - file: water-purification.pdf
+    title: Water purification — field methods
+  - file: wound-care.pdf
+    title: Wound care — irrigate, debride, dress
+  - file: fire-starting.pdf
+    title: Fire starting — ferro rod, friction, lens
+  - file: knots.pdf
+    title: Eight knots that do everything useful

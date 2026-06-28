@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="rpi-hub — GPS sky survey. Which GPS satellites are overhead right now. Receive-only diagnostic; no position fix, no tracking.">
+  <title>rpi-hub — Sky Survey</title>
+  <link rel="stylesheet" href="/assets/css/rpi-hub.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='40%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>r</text><text x='62%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>P</text></svg>">
+  <script src="/assets/js/contrast.js"></script>
+  <script src="/assets/js/sky.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="rpi-hub">
+        <span class="b-first">rpi-</span><span class="b-second">hub</span>
+        <span class="brand-sub">Sky Survey</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">High contrast: off</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 id="intro-h">GPS Sky Survey</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
+        <p>
+          A diagnostic sweep of all 32 GPS satellites at 1575.42&nbsp;MHz: which
+          birds are visible, their Doppler offset, and relative signal strength.
+          Requires the RTL-SDR with an <strong>active GPS patch antenna</strong>
+          (bias tee on) and clear sky view.
+        </p>
+        <p style="max-width:36rem;">
+          <strong>What this is not:</strong> a position or time fix. The sweep
+          stops at acquisition — it proves the antenna chain works and shows
+          sky state. Receive-only, like everything else on this hub.
+        </p>
+        <p id="sky-hwbanner" class="svc-fallback" aria-live="polite" aria-hidden="true" hidden>
+          No RTL-SDR dongle detected. Plug one in and refresh; nothing else on the hub depends on the radio.
+        </p>
+        <p id="sky-busybanner" class="svc-fallback" aria-live="polite" hidden>
+          The radio is currently tuned to audio. Stop it on the
+          <a href="/listen.html">Listen page</a> before running a sweep.
+        </p>
+      </section>
+
+      <section class="listen-modes" aria-label="Survey controls">
+        <button type="button" class="listen-mode-btn" id="sky-run">Run sky survey</button>
+      </section>
+
+      <section class="listen-state" aria-live="polite">
+        <p>
+          Status: <strong id="sky-status">idle</strong>
+          · Last sweep: <span id="sky-when">—</span>
+          · Acquired: <strong id="sky-count">—</strong>
+          · Bias tee: <span id="sky-bias">—</span>
+        </p>
+        <p id="sky-error" class="svc-fallback" hidden></p>
+      </section>
+
+      <section aria-label="Results">
+        <div id="sky-results" class="peers-rows"></div>
+      </section>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/">← Back to hub</a>
+        <a href="/listen.html">Listen (radio)</a>
+        <a href="/status.html">System status</a>
+      </nav>
+    </div>
+  </main>
+</body>
+</html>

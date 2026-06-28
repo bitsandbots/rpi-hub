@@ -1,0 +1,9 @@
+# Core signal processing
+numpy>=1.24
+
+# RTL-SDR Python bindings
+# Also requires librtlsdr system library (see README)
+pyrtlsdr>=0.2.93
+
+# Optional: Rich terminal UI (graceful fallback to plain text if absent)
+rich>=13.0

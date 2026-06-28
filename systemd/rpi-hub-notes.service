@@ -1,0 +1,67 @@
+# Purpose: Run the FastAPI rpi-hub-notes app on 127.0.0.1:8400. nginx
+#          (Phase 9) proxies /api/notes to this upstream. Data lives on
+#          tmpfs (/run/rpi-hub-notes) — a reboot wipes the board, by spec.
+# Unit:    rpi-hub-notes.service
+# Phase:   9 (9A — local board; mesh propagation lands in 9.2)
+#
+# The tmpfs mount is created by systemd via RuntimeDirectory= so we
+# don't need a separate fstab line. The dir lives only as long as the
+# unit is active; that gives us "reboot wipes" semantics for free.
+
+[Unit]
+Description=rpi-hub ephemeral notes board (FastAPI)
+After=network.target rpi-hub-ap.service
+PartOf=rpi-hub-ap.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+
+# RuntimeDirectory creates /run/rpi-hub-notes owned by the dynamic user
+# and removes it when the unit stops. StateDirectory would persist; we
+# do not want that here — ephemeral is the spec.
+RuntimeDirectory=rpi-hub-notes
+RuntimeDirectoryMode=0750
+
+Environment=PYTHONPATH=/opt/rpi-hub
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=rpi_hub_NOTES_DB=/run/rpi-hub-notes/notes.sqlite
+Environment=rpi_hub_NOTES_TOKEN_FILE=/etc/rpi-hub/notes-owner-token
+WorkingDirectory=/opt/rpi-hub
+
+ExecStart=/usr/bin/python3 -m uvicorn notes.rpi_hub_notes.main:app \
+    --host 127.0.0.1 \
+    --port 8400 \
+    --log-level warning \
+    --no-access-log
+
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+
+MemoryMax=96M
+TasksMax=64
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadOnlyPaths=/opt/rpi-hub /etc/rpi-hub
+
+[Install]
+WantedBy=multi-user.target

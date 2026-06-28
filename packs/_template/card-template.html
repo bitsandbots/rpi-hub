@@ -1,0 +1,94 @@
+<!doctype html>
+<!--
+  Purpose: Reference template for a rpi-hub field card. Copy this file into
+           packs/<name>/print/<slug>.html and replace the marked sections.
+           Cards are single-page Letter (8.5x11). The CSS is hosted next to
+           the source so the file renders identically when opened locally
+           in a browser, when printed from a browser, and when compiled to
+           PDF by scripts/build_pack_pdfs.sh (headless chromium).
+
+   Unit:    n/a (compiled artifact ships to /var/www/rpi-hub-portal/print/)
+  Phase:   9B
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Card title — pack name</title>
+  <link rel="stylesheet" href="../../_template/card.css">
+</head>
+<body>
+<main>
+  <header class="card-head">
+    <h1>Card title here</h1>
+    <p class="card-sub">One-line summary of when and why to use this card.</p>
+    <div class="card-meta">
+      <span class="pack">PACK NAME</span>
+      <span>rpi-hub v1.2 · field card</span>
+    </div>
+  </header>
+
+  <aside class="card-disclaimer">
+    <strong>Review before field use.</strong> Field cards are condensed
+    references, not certified curricula. Verify against your local
+    protocols and have a qualified responder review before relying on
+    them in an emergency.
+  </aside>
+
+  <section>
+    <h2>Decision in 30 seconds</h2>
+    <ol>
+      <li><strong>Step 1.</strong> The fastest correct action you can take right now.</li>
+      <li><strong>Step 2.</strong> What you do next, and why.</li>
+      <li><strong>Step 3.</strong> What you stop and check before continuing.</li>
+    </ol>
+  </section>
+
+  <section>
+    <h2>Detail</h2>
+    <div class="two-col">
+      <div>
+        <h3>If A</h3>
+        <p>Conditions and counter-conditions for branch A.</p>
+        <ul>
+          <li>Item</li>
+          <li>Item</li>
+        </ul>
+      </div>
+      <div>
+        <h3>If B</h3>
+        <p>Conditions and counter-conditions for branch B.</p>
+        <ul>
+          <li>Item</li>
+          <li>Item</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <h2>Do not</h2>
+    <div class="callout bad">
+      The single most common mistake that turns this from a recoverable
+      situation into an unrecoverable one. Be specific.
+    </div>
+  </section>
+
+  <section>
+    <h2>Signal that you are out of scope</h2>
+    <div class="callout">
+      The condition under which the field card no longer applies and a
+      higher-trained responder is required.
+    </div>
+  </section>
+
+  <footer class="card-foot">
+    <div class="sources">
+      <strong>Sources:</strong> Cite the public-domain or open-license
+      references the card draws from. Prefer Wikipedia, WHO, NWCG, FEMA,
+      USGS, NOAA, and similar primary references.
+    </div>
+    <div>Rev. 2026-05-18</div>
+  </footer>
+</main>
+</body>
+</html>

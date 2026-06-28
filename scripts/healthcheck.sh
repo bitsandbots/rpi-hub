@@ -1,0 +1,185 @@
+#!/usr/bin/env bash
+# rpi-hub — on-device smoke test.
+#
+# Checks every layer the hub depends on. Each check prints OK / WARN / FAIL
+# and the script exits non-zero if any check failed. WARNings (e.g. empty
+# library) still produce exit 0 — they're intentional states, not breakage.
+#
+# Drives `make smoke`. Safe to run on a live hub at any time; touches no
+# state.
+
+set -uo pipefail  # not -e: we want to keep going past individual failures
+
+PASS=0
+FAIL=0
+WARN=0
+
+green=$'\033[32m'; yellow=$'\033[33m'; red=$'\033[31m'; reset=$'\033[0m'
+# Plain output if stdout isn't a TTY (e.g. CI, journald).
+[[ -t 1 ]] || { green=""; yellow=""; red=""; reset=""; }
+
+ok()   { printf '  %sOK%s    %s\n'   "$green"  "$reset" "$*"; PASS=$((PASS+1)); }
+warn() { printf '  %sWARN%s  %s\n'   "$yellow" "$reset" "$*"; WARN=$((WARN+1)); }
+fail() { printf '  %sFAIL%s  %s\n'   "$red"    "$reset" "$*"; FAIL=$((FAIL+1)); }
+
+section() { printf '\n== %s ==\n' "$*"; }
+
+check_unit() {
+    local unit="$1"
+    if systemctl is-active --quiet "$unit"; then
+        ok "$unit is active"
+    elif systemctl is-enabled --quiet "$unit" 2>/dev/null; then
+        fail "$unit is enabled but not active"
+    else
+        warn "$unit is not enabled (expected for optional services)"
+    fi
+}
+
+check_http() {
+    local url="$1" expect="${2:-200}"
+    local code
+    code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 4 "$url" || echo 000)"
+    if [[ "$code" == "$expect" ]]; then
+        ok "GET $url → $code"
+    else
+        fail "GET $url → $code (expected $expect)"
+    fi
+}
+
+check_json() {
+    local url="$1"
+    local body
+    body="$(curl -s --max-time 4 "$url" || true)"
+    if [[ -z "$body" ]]; then
+        fail "GET $url returned empty body"
+        return
+    fi
+    if ! python3 -c "import json,sys; json.loads(sys.stdin.read())" <<<"$body" 2>/dev/null; then
+        fail "GET $url did not return valid JSON"
+        return
+    fi
+    ok "GET $url returned valid JSON ($(wc -c <<<"$body" | tr -d ' ') bytes)"
+}
+
+section "Phase 1: AP"
+check_unit rpi-hub-ap.service
+if iptables -C FORWARD -i wlan0 ! -o wlan0 -j DROP 2>/dev/null; then
+    ok "iptables egress-block on wlan0 is in place"
+else
+    fail "iptables egress-block missing — clients could route off-network"
+fi
+
+section "Phase 2: Captive portal"
+check_unit nginx.service
+check_http "http://127.0.0.1/" 200
+# Default_server should 302 anything that isn't hub.local.
+code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 4 -H 'Host: captive.apple.com' http://127.0.0.1/ || echo 000)"
+if [[ "$code" == "302" ]]; then
+    ok "captive probe Host: captive.apple.com → 302"
+else
+    fail "captive probe Host: captive.apple.com → $code (expected 302)"
+fi
+
+section "Phase 3: Library"
+if compgen -G "/var/lib/kiwix/*.zim" >/dev/null; then
+    check_unit rpi-hub-kiwix.service
+    check_http "http://127.0.0.1/library/" 200
+else
+    warn "/var/lib/kiwix is empty — rpi-hub-kiwix intentionally inactive (run content/fetch.sh)"
+fi
+
+section "Phase 4: Frontend"
+if [[ -f /var/www/rpi-hub-portal/index.html ]]; then
+    ok "/var/www/rpi-hub-portal/index.html present"
+else
+    fail "/var/www/rpi-hub-portal/index.html missing — portal tree not deployed"
+fi
+if [[ -f /var/www/rpi-hub-portal/status.html ]]; then
+    ok "/var/www/rpi-hub-portal/status.html present"
+else
+    fail "/var/www/rpi-hub-portal/status.html missing"
+fi
+if [[ -s /var/www/rpi-hub-portal/assets/fonts/exo2-700.woff2 ]]; then
+    ok "brand fonts present"
+else
+    warn "brand fonts missing — run scripts/fetch_fonts.sh, page falls back to system fonts"
+fi
+
+section "Phase 5: Status API"
+check_unit rpi-hub-status.service
+check_http "http://127.0.0.1/api/status" 200
+check_json "http://127.0.0.1/api/status"
+
+# Phases 6–9: every optional service ships with ConditionPathExists=
+# guards, so a missing index / model / dongle means the unit is
+# "inactive" not "failed". Treat that as a warning, not a failure.
+check_optional_unit() {
+    local unit="$1"
+    if systemctl is-active --quiet "$unit"; then
+        ok "$unit is active"
+    elif systemctl list-unit-files --no-legend --no-pager 2>/dev/null \
+            | awk '{print $1}' | grep -qx "$unit"; then
+        warn "$unit installed but not active (probably missing data — expected)"
+    else
+        warn "$unit not installed (expected if its phase wasn't run)"
+    fi
+}
+
+section "Phase 6: RAG assistant (optional)"
+check_optional_unit rpi-hub-retrieve.service
+check_optional_unit rpi-hub-assist.service
+check_optional_unit rpi-hub-llama.service
+if systemctl is-active --quiet rpi-hub-retrieve.service; then
+    check_http "http://127.0.0.1/api/retrieve?q=test&k=1" 200
+fi
+
+section "Phase 7: Mesh (optional)"
+check_optional_unit rpi-hub-mesh.service
+if systemctl is-active --quiet rpi-hub-mesh.service; then
+    check_http "http://127.0.0.1/api/mesh/identity" 200
+    fp="$(curl -s --max-time 2 http://127.0.0.1/api/mesh/identity \
+           | python3 -c "import sys,json;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)"
+    [[ -n "$fp" ]] && ok "mesh fingerprint: $fp" || warn "mesh fingerprint missing — keypair generation may have failed"
+fi
+if [[ -s /etc/rpi-hub/mesh-owner-token ]]; then
+    ok "mesh owner token present at /etc/rpi-hub/mesh-owner-token (0600)"
+elif [[ -s /etc/rpi-hub/notes-owner-token ]]; then
+    warn "mesh owner token not split out — falling back to legacy notes-owner-token (run install.sh to provision)"
+else
+    warn "no mesh owner token — peer trust/block endpoints will refuse with 503"
+fi
+
+section "Phase 8: Listen (optional)"
+check_optional_unit rpi-hub-listen.service
+check_optional_unit rpi-hub-listen-same.service
+if systemctl is-active --quiet rpi-hub-listen.service; then
+    check_http "http://127.0.0.1/api/listen/state" 200
+fi
+
+section "Phase 9A: Notes (optional)"
+check_optional_unit rpi-hub-notes.service
+if systemctl is-active --quiet rpi-hub-notes.service; then
+    check_http "http://127.0.0.1/api/notes?limit=1" 200
+fi
+if [[ -s /etc/rpi-hub/notes-owner-token ]]; then
+    ok "owner token present at /etc/rpi-hub/notes-owner-token (0600)"
+else
+    warn "no owner token — moderation endpoints will refuse with 503"
+fi
+
+section "Phase 9B: Packs (optional)"
+if [[ -d /var/www/rpi-hub-portal/print ]] && compgen -G "/var/www/rpi-hub-portal/print/*.pdf" >/dev/null; then
+    ok "/print/ has PDFs ($(ls /var/www/rpi-hub-portal/print/*.pdf 2>/dev/null | wc -l) files)"
+elif [[ -f /var/www/rpi-hub-portal/print/index.html ]]; then
+    warn "/print/ index present but no PDFs — pack PDFs not staged"
+else
+    warn "no pack applied (--pack=<name> at install time)"
+fi
+
+section "Summary"
+printf '  pass=%d  warn=%d  fail=%d\n' "$PASS" "$WARN" "$FAIL"
+
+if [[ $FAIL -gt 0 ]]; then
+    exit 1
+fi
+exit 0

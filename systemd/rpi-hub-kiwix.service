@@ -1,0 +1,50 @@
+# Purpose: Serve the offline library at 127.0.0.1:8080. nginx (Phase 2)
+#          proxies /library/ here. Stays inactive when /var/lib/kiwix has
+#          no .zim files — the unit cleanly does nothing rather than
+#          crash-loop on an empty library.
+# Unit:    rpi-hub-kiwix.service
+# Phase:   3
+
+[Unit]
+Description=rpi-hub Kiwix offline library server
+Documentation=https://kiwix.org/
+After=network.target rpi-hub-ap.service
+PartOf=rpi-hub-ap.service
+# Without this guard, kiwix-serve exits non-zero on an empty arg list and
+# systemd retries forever.
+ConditionPathExistsGlob=/var/lib/kiwix/*.zim
+
+[Service]
+Type=simple
+DynamicUser=yes
+
+# kiwix-serve needs the ZIM glob expanded — systemd ExecStart doesn't
+# evaluate shell globs, so we wrap in bash -c. `exec` keeps PID 1 of the
+# cgroup as kiwix-serve, which makes systemd's process tracking happy.
+ExecStart=/bin/bash -c 'exec /usr/bin/kiwix-serve \
+    --port=8080 \
+    --address=127.0.0.1 \
+    --urlRootLocation=/library \
+    /var/lib/kiwix/*.zim'
+
+Restart=on-failure
+RestartSec=5
+
+# Hardening. kiwix-serve is C++ network-facing code; lock it down.
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+ReadOnlyPaths=/var/lib/kiwix
+
+[Install]
+WantedBy=multi-user.target

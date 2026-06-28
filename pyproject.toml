@@ -1,0 +1,53 @@
+# Purpose: Root-level dev-tooling config (ruff, black, mypy, pytest) for the
+#          full rpi-hub repo. Packages under api/ carry their own pyproject.toml
+#          for pip-install metadata; this file governs lint + test at the repo root.
+# Unit:    n/a (workstation tooling)
+# Phase:   v1.2.1+
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "PL"]
+ignore = [
+    "PLR0913",  # too-many-arguments — common in FastAPI endpoint signatures
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "PLR2004",  # magic-value comparison — test assertions use literal expected values
+]
+"**/tests/**" = [
+    "PLR2004",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py311"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests",
+    "api/rpi_hub_status/tests",
+    "assistant/rpi_hub_assist/tests",
+    "assistant/rpi_hub_retrieve/tests",
+    "indexer/tests",
+    "listen/rpi_hub_listen/tests",
+    "mesh/rpi_hub_mesh/tests",
+    "notes/rpi_hub_notes/tests",
+]
+addopts = "-ra -q"
+
+# Dev tool version constraints (install with: pip install -r requirements-dev.txt)
+# Pinned here so "lint-clean" means the same thing on every workstation.
+# ruff  >=0.9,<1.0
+# black >=25.1,<26
+# mypy  >=1.15,<2
+# pytest>=8.0

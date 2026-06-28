@@ -1,0 +1,27 @@
+# Purpose: Mountain West regional pack. Wildfire, altitude medicine,
+#          winter survival, Rockies-specific topics.
+# Unit:    n/a (consumed by install.sh --pack=mountain-west)
+# Phase:   9B
+name: mountain-west
+display_name: Mountain West
+description: >
+  Wildfire response, altitude sickness, winter survival, Rockies map +
+  flora/fauna emphasis. Layered on top of the general-purpose corpus.
+version: 1
+tier: core
+zims:
+  - wikipedia_en_simple_all_nopic.zim
+  - zimgit-post-disaster_en.zim
+  - wikem_en_all_maxi.zim
+  - ifixit_en_all.zim
+print:
+  - file: wildfire-defensible-space.pdf
+    title: Wildfire — defensible space + go-bag
+  - file: altitude-medicine.pdf
+    title: Altitude sickness — recognise + descend
+  - file: winter-survival.pdf
+    title: Winter survival — shelter, signal, stay warm
+noaa:
+  preset_frequencies_mhz:
+    - 162.400  # WXJ-89 (Denver, CO)
+    - 162.500  # KZZ-71 (Salt Lake City, UT)

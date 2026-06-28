@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="rpi-hub InfoHub system status — uptime, storage, voltage, connected clients.">
+  <title>rpi-hub — System status</title>
+  <link rel="stylesheet" href="/assets/css/rpi-hub.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='40%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>r</text><text x='62%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>P</text></svg>">
+  <script src="/assets/js/contrast.js"></script>
+  <script src="/assets/js/status.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="rpi-hub">
+        <span class="b-first">rpi-</span><span class="b-second">POD</span>
+        <span class="brand-sub">System status</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">High contrast: off</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 id="intro-h">System status</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
+        <p id="m-stamp" aria-live="polite">Loading status…</p>
+      </section>
+
+      <section class="status-grid" aria-label="Metrics" aria-live="polite">
+        <article class="metric" id="m-uptime" aria-labelledby="m-uptime-l">
+          <p class="metric__label" id="m-uptime-l">Uptime</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+        <article class="metric" id="m-storage" aria-labelledby="m-storage-l">
+          <p class="metric__label" id="m-storage-l">Library free space</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+        <article class="metric" id="m-voltage" aria-labelledby="m-voltage-l">
+          <p class="metric__label" id="m-voltage-l">Power</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+        <article class="metric" id="m-clients" aria-labelledby="m-clients-l">
+          <p class="metric__label" id="m-clients-l">Connected clients</p>
+          <p class="metric__value">—</p>
+          <p class="metric__hint"></p>
+        </article>
+      </section>
+
+      <section class="services-block" aria-label="Optional services">
+        <h2>Optional services</h2>
+        <p class="services-block__hint">
+          Each tile is independent — a missing model or dongle leaves the
+          corresponding service inactive, never crash-looping.
+        </p>
+        <ul class="services-list" id="services-list">
+          <li data-svc="retrieve"><span class="services-list__dot"></span><strong>Retrieve</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="assist"><span class="services-list__dot"></span><strong>Ask</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="listen"><span class="services-list__dot"></span><strong>Listen</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="notes"><span class="services-list__dot"></span><strong>Board</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="mesh"><span class="services-list__dot"></span><strong>Mesh</strong> <span class="services-list__state">—</span></li>
+          <li data-svc="adsb"><span class="services-list__dot"></span><strong>ADS-B</strong> <span class="services-list__state">—</span></li>
+        </ul>
+        <p id="services-fp" class="services-block__fp" hidden>
+          Mesh fingerprint: <code></code>
+          <small>Share this with another rpi-hub owner so they can mark this node trusted.</small>
+        </p>
+      </section>
+
+      <!--
+        Page-wide banner exception: status.html is the canonical
+        device-health view, so an outage of /api/status warrants a
+        page-wide notice rather than an inline status region (the
+        canonical pattern used on ask/listen/board/adsb/peers). The
+        role stays role="status" — polite, not assertive — because the
+        banner appears on a known stale state, not a fresh failure.
+      -->
+      <div id="api-banner" class="api-banner" role="status">
+        <strong>Heads up.</strong>
+        <span class="api-banner__msg">The status service isn't running yet — Phase 5 adds it.</span>
+        Until then this page is a placeholder. On the Pi: <code>systemctl status rpi-hub-status</code>.
+      </div>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/">← Back to hub</a>
+        <a href="/library/">Open library</a>
+      </nav>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    rpi-hub <code>v1.2.1</code> · rpi-hub-status · Status view — JS required only on this page
+  </footer>
+</body>
+</html>

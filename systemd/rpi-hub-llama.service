@@ -1,0 +1,65 @@
+# Purpose: Run the llama.cpp HTTP server with Qwen2.5-1.5B-Instruct on
+#          127.0.0.1:8202 (completion) and bge-small on :8201 (embedding,
+#          via a second llama-server instance — see below). rpi-hub-assist
+#          POSTs prompts here; rpi-hub-retrieve POSTs queries to the
+#          embedding port.
+# Unit:    rpi-hub-llama.service
+# Phase:   6
+#
+# The llama.cpp binary is provided by /opt/rpi-hub/bin/llama-server (built
+# from source by bake_image.sh on Pi 5 + bundled in the image). Two
+# instances run because the embedding model is a different file from the
+# generation model; loading both into one process is not supported.
+
+[Unit]
+Description=rpi-hub llama.cpp HTTP server (Qwen2.5-1.5B + bge-small)
+After=network.target
+PartOf=rpi-hub-ap.service
+ConditionPathExists=/var/lib/rpi-hub/models/qwen2.5-1.5b-instruct-q4_k_m.gguf
+ConditionPathExists=/opt/rpi-hub/bin/llama-server
+
+[Service]
+Type=simple
+DynamicUser=yes
+
+# ExecStart uses bash -c to fork the embedding server as a child of the
+# same cgroup. Both children die together when systemd sends SIGTERM.
+ExecStart=/bin/bash -c '\
+  /opt/rpi-hub/bin/llama-server \
+    --model /var/lib/rpi-hub/models/bge-small-en-v1.5-q8_0.gguf \
+    --embedding \
+    --host 127.0.0.1 --port 8201 \
+    --ctx-size 512 --threads 2 --log-disable & \
+  exec /opt/rpi-hub/bin/llama-server \
+    --model /var/lib/rpi-hub/models/qwen2.5-1.5b-instruct-q4_k_m.gguf \
+    --host 127.0.0.1 --port 8202 \
+    --ctx-size 4096 --threads 3 --log-disable --no-warmup'
+
+Restart=on-failure
+RestartSec=10
+TimeoutStopSec=20
+
+# Two model contexts on a Pi 5: ~1.5 GB resident for Qwen Q4_K_M plus
+# ~50 MB for bge. Cap at 2 GB so a leak surfaces fast.
+MemoryMax=2G
+TasksMax=128
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+SystemCallArchitectures=native
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadOnlyPaths=/var/lib/rpi-hub /opt/rpi-hub
+
+[Install]
+WantedBy=multi-user.target

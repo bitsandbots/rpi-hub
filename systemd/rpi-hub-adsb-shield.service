@@ -1,0 +1,49 @@
+# Purpose: One-shot ADS-B position-rounder. Reads
+#          /run/dump1090-mutability/aircraft.json, rounds per-aircraft
+#          lat/lon to the precision in /etc/rpi-hub/adsb-precision, and
+#          atomically writes aircraft.shielded.json next to the source.
+#          nginx prefers the shielded copy when present (see
+#          config/nginx/rpi-hub-portal.conf location ^~ /adsb/).
+# Unit:    rpi-hub-adsb-shield.service (triggered by rpi-hub-adsb-shield.timer)
+# Phase:   8.4 polish (introduced v1.3 — opt-in)
+#
+# Opt-in: nothing runs until the operator creates
+# /etc/rpi-hub/adsb-precision (a single integer 0–4). The .timer carries
+# the same ConditionPathExists= so disable/enable is implicit in
+# whether the file exists.
+
+[Unit]
+Description=rpi-hub ADS-B aircraft.json position-rounder (one-shot)
+After=dump1090-mutability.service
+ConditionPathExists=/etc/rpi-hub/adsb-precision
+
+[Service]
+Type=oneshot
+DynamicUser=yes
+
+Environment=PYTHONDONTWRITEBYTECODE=1
+ExecStart=/usr/bin/python3 /opt/rpi-hub/scripts/adsb_shield.py
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_UNIX
+ReadOnlyPaths=/opt/rpi-hub /etc/rpi-hub
+ReadWritePaths=/run/dump1090-mutability
+MemoryMax=32M
+TasksMax=8

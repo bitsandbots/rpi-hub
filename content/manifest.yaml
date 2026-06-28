@@ -1,0 +1,105 @@
+# Purpose: ZIM payload manifest. Lists the offline-library content set the
+#          hub should serve. content/fetch.sh reads this on a workstation
+#          to download files; content/verify.sh re-hashes against it.
+# Unit:    n/a (data file consumed by fetch.sh and verify.sh)
+# Phase:   3
+#
+# Tiers (controls which subset fetch.sh pulls):
+#   minimal — fits on a 16 GB SD card; suitable for Pi Zero 2 W gift builds
+#   core    — fits on 64 GB; sane default for Pi 4
+#   full    — fits on 256 GB+ SSD; assistant-enabled build (Phase 6)
+#
+# The URLs below point at Kiwix's CDN. Kiwix rebuilds ZIMs on a rolling
+# schedule, so the dated filenames here drift over time. To refresh: visit
+# https://library.kiwix.org/, find the current file for each entry, and
+# update both the `url` and the `sha256` (which can be left blank for a
+# first fetch — fetch.sh will print the hash so you can lock it in).
+#
+# Note: WikiHow was pulled from Kiwix entirely (licensing). The minimal
+# tier's how-to coverage now lives in the zimgit-* survival bundle plus
+# ifixit (repair). Medical coverage in core uses WikEM (clinical) and
+# zimgit-medicine (consumer-level) since the legacy medical_en_all_maxi
+# build is no longer published.
+
+version: 1
+
+zims:
+  # ---------- minimal tier (Pi Zero 2 W) -------------------------------
+  - name: wikipedia_en_simple_all_nopic.zim
+    url: https://download.kiwix.org/zim/wikipedia/wikipedia_en_simple_all_nopic_2026-05.zim
+    size_mb: 937
+    sha256: "503b74027d101ec13b272f1ebbd23473e1d260be71a35a71141dfc985fd20d0a"
+    description: Simple English Wikipedia, no images. Every article, easy reading level.
+    tier: minimal
+
+  - name: zimgit-post-disaster_en.zim
+    url: https://download.kiwix.org/zim/other/zimgit-post-disaster_en_2024-05.zim
+    size_mb: 615
+    sha256: "0ba9bb358b768b94eb0d7920752fe356bf097de514ee61843f3a4da6cce174f8"
+    description: Post-disaster survival guide — shelter, sanitation, communication, recovery.
+    tier: minimal
+
+  - name: zimgit-water_en.zim
+    url: https://download.kiwix.org/zim/other/zimgit-water_en_2024-08.zim
+    size_mb: 20
+    sha256: "392c7bc970a44fddd61dd17f6eabf1f4e21936f2d5c27c83093e1dc475cb56b6"
+    description: Water sourcing, purification, storage. Field-ready reference.
+    tier: minimal
+
+  - name: zimgit-food-preparation_en.zim
+    url: https://download.kiwix.org/zim/other/zimgit-food-preparation_en_2025-04.zim
+    size_mb: 93
+    sha256: "db92c6c9dac14ff30f1cbc15aa834a7c012c6e87d4ff0519f33a0902ab6e732b"
+    description: Food preparation, preservation, and cooking without modern infrastructure.
+    tier: minimal
+
+  - name: zimgit-knots_en.zim
+    url: https://download.kiwix.org/zim/other/zimgit-knots_en_2024-08.zim
+    size_mb: 27
+    sha256: "7c3120b19fc2dc190b5ebfee01af54150136643d7b9d29d7fa9a6ba29787a57b"
+    description: Illustrated knot tying reference — utility, climbing, rescue.
+    tier: minimal
+
+  - name: ifixit_en_all.zim
+    url: https://download.kiwix.org/zim/ifixit/ifixit_en_all_2025-12.zim
+    size_mb: 3405
+    sha256: "9bb5f3408707fd0300c6ef47a425c3217187f144cd9154a928183816aa72eead"
+    description: iFixit repair guides — electronics, appliances, vehicles, tools.
+    tier: minimal
+
+  # ---------- core tier ------------------------------------------------
+  - name: wiktionary_en_all_nopic.zim
+    url: https://download.kiwix.org/zim/wiktionary/wiktionary_en_all_nopic_2026-05.zim
+    size_mb: 8701
+    sha256: "0f08b3faf89542dd336f4efb47d290460b54b711bd8b103f0de5c0902743e2b3"
+    description: English Wiktionary, no images. Dictionary, thesaurus, etymology.
+    tier: core
+
+  - name: wikem_en_all_maxi.zim
+    url: https://download.kiwix.org/zim/other/wikem_en_all_maxi_2026-04.zim
+    size_mb: 46
+    sha256: "d28e41a2c2a7d8946564c009dca38bb213f0b112118b362b26755c50dc58d770"
+    description: WikEM — Wiki of Emergency Medicine. Physician-curated clinical reference.
+    tier: core
+
+  - name: zimgit-medicine_en.zim
+    url: https://download.kiwix.org/zim/other/zimgit-medicine_en_2024-08.zim
+    size_mb: 67
+    sha256: "a86c31b93e9800aae2cd812ef18cbf9c087a7537784c62fbc259db7f9f9d18c0"
+    description: Consumer-level medical reference — symptoms, first aid, common conditions.
+    tier: core
+
+  # ---------- full tier (assistant-enabled) ----------------------------
+  - name: wikipedia_en_all_nopic.zim
+    url: https://download.kiwix.org/zim/wikipedia/wikipedia_en_all_nopic_2024-09.zim
+    size_mb: 51200
+    sha256: ""
+    description: English Wikipedia, no images. Every article (~50 GB on disk).
+    tier: full
+
+  - name: gutenberg_en_all.zim
+    url: https://download.kiwix.org/zim/gutenberg/gutenberg_en_all_2023-08.zim
+    size_mb: 65000
+    sha256: ""
+    description: Project Gutenberg English library — every public-domain book they host.
+    tier: full

@@ -1,0 +1,42 @@
+# Purpose: BATMAN-adv mesh on a second Wi-Fi adapter. Sets up the
+#          wlan-mesh interface (ibss / mesh point), attaches batman-adv,
+#          starts alfred for small-message distribution. rpi-hub-mesh
+#          polls batctl + writes to alfred via mesh.rpi_hub_mesh.wifi_bridge.
+# Unit:    rpi-hub-batman.service
+# Phase:   7.3
+#
+# Hardware: a USB Wi-Fi adapter on a channel that does not overlap the
+# client AP. install.sh phase7 detects the adapter from
+# /etc/rpi-hub/mesh.conf (operator sets the iface name explicitly to
+# avoid grabbing the AP radio).
+
+[Unit]
+Description=rpi-hub BATMAN-adv mesh + alfred
+After=network.target
+Wants=rpi-hub-mesh.service
+PartOf=rpi-hub-mesh.service
+ConditionPathExists=/etc/rpi-hub/mesh.conf
+ConditionPathExists=/usr/sbin/batctl
+ConditionPathExists=/usr/sbin/alfred
+
+[Service]
+Type=forking
+RemainAfterExit=yes
+
+# Run setup as root because we touch netlink + wireless registry.
+ExecStart=/opt/rpi-hub/scripts/batman_setup.sh up
+ExecStop=/opt/rpi-hub/scripts/batman_setup.sh down
+
+Restart=on-failure
+RestartSec=15
+TimeoutStopSec=20
+
+# alfred runs as a child — track via the cgroup, not pidfile.
+TasksMax=128
+
+# This unit has to stay privileged: configuring the wireless interface
+# and loading batman-adv kernel module require CAP_NET_ADMIN. We do
+# not DynamicUser= here because root is required.
+
+[Install]
+WantedBy=multi-user.target

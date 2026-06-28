@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>rpi-hub — Blueprint Overview</title>
+<meta name="description" content="rpi-hub — Offline Survival InfoHub. Blueprint overview: services, ports, hardware tiers, phase timeline, capabilities matrix.">
+<style>
+  :root {
+    --bg-deep:   #0a0d0a;
+    --bg-paper:  #14180f;
+    --bg-card:   #1a1f15;
+    --ink:       #d4c896;
+    --ink-dim:   #8a8260;
+    --ink-faint: #4a4632;
+    --amber:     #ffb347;
+    --amber-hot: #ff7a18;
+    --rpi-hub:    #c8ff5a;
+    --alert:     #ff4444;
+    --blue:      #6ab0ff;
+    --rule:      #3a3a28;
+    --grid:      rgba(212, 200, 150, 0.04);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    background: var(--bg-deep); color: var(--ink);
+    font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 14px; line-height: 1.5;
+    min-height: 100vh; overflow-x: hidden;
+  }
+  body::before {
+    content: ''; position: fixed; inset: 0;
+    background-image:
+      linear-gradient(var(--grid) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+      radial-gradient(ellipse at top, rgba(255, 179, 71, 0.06), transparent 60%);
+    background-size: 32px 32px, 32px 32px, 100% 100%;
+    pointer-events: none; z-index: 0;
+  }
+  body::after {
+    content: ''; position: fixed; inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.8 0 0 0 0 0.7 0 0 0 0 0.4 0 0 0 0 0.08 0'/%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    pointer-events: none; z-index: 1; mix-blend-mode: overlay; opacity: 0.5;
+  }
+  .container { position: relative; z-index: 2; max-width: 1280px; margin: 0 auto; padding: 28px 32px 80px; }
+
+  header.site {
+    border-bottom: 1px solid var(--rule);
+    padding-bottom: 18px; margin-bottom: 32px;
+    display: flex; justify-content: space-between; align-items: flex-end;
+    flex-wrap: wrap; gap: 20px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 16px; }
+  .brand-mark {
+    font-family: ui-monospace, monospace; font-weight: 800;
+    font-size: 32px; color: var(--amber); letter-spacing: 0.04em;
+    line-height: 1; text-shadow: 0 0 24px rgba(255, 179, 71, 0.35);
+  }
+  .brand-mark .dot {
+    display: inline-block; width: 10px; height: 10px;
+    background: var(--amber-hot); border-radius: 50%;
+    margin-left: 4px; transform: translateY(-4px);
+    animation: pulse 1.6s ease-in-out infinite;
+    box-shadow: 0 0 12px var(--amber-hot);
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: translateY(-4px) scale(1); }
+    50%      { opacity: 0.35; transform: translateY(-4px) scale(0.85); }
+  }
+  .brand-sub {
+    font-size: 10px; color: var(--ink-dim); letter-spacing: 0.3em;
+    text-transform: uppercase; border-left: 1px solid var(--rule);
+    padding-left: 16px;
+  }
+  .meta { display: flex; gap: 28px; font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-dim); }
+  .meta strong { display: block; color: var(--ink); font-weight: 500;
+    margin-top: 4px; letter-spacing: 0.08em; }
+
+  h1.page {
+    font-family: ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800; font-size: 38px; line-height: 1.05;
+    letter-spacing: -0.02em; color: var(--ink); margin-bottom: 8px;
+  }
+  h1.page .accent { color: var(--amber); }
+  p.lede {
+    font-size: 14px; color: var(--ink-dim);
+    max-width: 78ch; margin-bottom: 32px; line-height: 1.65;
+  }
+  p.lede strong { color: var(--ink); font-weight: 500; }
+  p.lede code { color: var(--amber); background: rgba(255, 179, 71, 0.08);
+    padding: 1px 6px; font-size: 12px; }
+
+  section { margin-bottom: 44px; }
+  .section-h {
+    font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+    color: var(--ink-dim); margin-bottom: 14px; padding-top: 22px;
+    border-top: 1px dashed var(--rule); font-weight: 500;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+  }
+  .section-h .v {
+    font-size: 9px; color: var(--ink-faint); letter-spacing: 0.2em;
+    border: 1px solid var(--ink-faint); padding: 2px 7px;
+  }
+  .section-h .v.ok { color: var(--rpi-hub); border-color: var(--rpi-hub); }
+  .section-h .v.warn { color: var(--amber); border-color: var(--amber); }
+
+  /* Architecture diagram. */
+  .diagram {
+    background: var(--bg-paper); border: 1px solid var(--rule);
+    padding: 18px; position: relative; overflow-x: auto;
+  }
+  .diagram svg { display: block; width: 100%; min-width: 720px; height: auto; }
+
+  /* Service grid. */
+  .grid-svc { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+  .svc {
+    background: var(--bg-card); border: 1px solid var(--rule);
+    border-left: 3px solid var(--ink-faint);
+    padding: 14px 16px; display: flex; flex-direction: column; gap: 6px;
+  }
+  .svc.svc--core   { border-left-color: var(--rpi-hub); }
+  .svc.svc--opt    { border-left-color: var(--amber); }
+  .svc.svc--scaff  { border-left-color: var(--blue); }
+  .svc-h {
+    display: flex; justify-content: space-between; align-items: baseline; gap: 8px;
+  }
+  .svc-h strong { color: var(--ink); font-weight: 600; font-size: 14px; letter-spacing: 0.02em; }
+  .svc-port { font-size: 11px; color: var(--amber); }
+  .svc-purpose { font-size: 12px; color: var(--ink-dim); line-height: 1.55; }
+  .svc-tag {
+    font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+    color: var(--ink-faint); margin-top: 4px;
+  }
+  .svc-tag.scaff { color: var(--blue); }
+  .svc-tag.opt   { color: var(--amber); }
+  .svc-tag.core  { color: var(--rpi-hub); }
+
+  /* Tables. */
+  table.dataref {
+    width: 100%; border-collapse: collapse;
+    margin: 12px 0; font-size: 12px;
+  }
+  table.dataref th, table.dataref td {
+    text-align: left; padding: 9px 12px;
+    border-bottom: 1px dashed var(--rule); vertical-align: top;
+  }
+  table.dataref th {
+    color: var(--ink-dim); font-weight: 500; font-size: 10px;
+    letter-spacing: 0.15em; text-transform: uppercase;
+    border-bottom: 1px solid var(--rule);
+  }
+  table.dataref td { color: var(--ink); }
+  table.dataref tr:hover td { background: rgba(255, 179, 71, 0.03); }
+  table.dataref .mono { font-family: ui-monospace, monospace; color: var(--amber); font-size: 11px; }
+  table.dataref .ok   { color: var(--rpi-hub); }
+  table.dataref .warn { color: var(--amber); }
+  table.dataref .dim  { color: var(--ink-dim); }
+
+  /* Phase rail. */
+  .rail { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 6px; }
+  .rail-step {
+    flex: 1 1 130px; min-width: 130px;
+    border: 1px solid var(--rule); padding: 12px 14px;
+    color: var(--ink-dim); position: relative;
+  }
+  .rail-step .num {
+    display: block;
+    font-family: ui-monospace, monospace; font-weight: 800;
+    font-size: 18px; letter-spacing: 0.02em;
+    color: var(--ink-faint); margin-bottom: 6px;
+  }
+  .rail-step .name {
+    color: var(--ink); font-size: 12px;
+    font-weight: 500; letter-spacing: 0.04em; line-height: 1.4;
+  }
+  .rail-step .tag {
+    display: inline-block; margin-top: 6px; padding: 1px 6px;
+    font-size: 9px; letter-spacing: 0.2em;
+    border: 1px solid var(--rpi-hub); color: var(--rpi-hub);
+  }
+  .rail-step.done { border-color: var(--rpi-hub); }
+  .rail-step.done .num { color: var(--rpi-hub); }
+  .rail-step.done::after {
+    content: '✓'; position: absolute; top: 8px; right: 10px;
+    color: var(--rpi-hub); font-size: 12px;
+  }
+  .rail-step.poly { border-color: var(--amber); }
+  .rail-step.poly .num { color: var(--amber); }
+  .rail-step.poly .tag { color: var(--amber); border-color: var(--amber); }
+
+  /* Capability matrix. */
+  .matrix th { vertical-align: bottom; }
+  .matrix td.h { text-align: center; }
+  .y  { color: var(--rpi-hub); font-weight: 700; }
+  .n  { color: var(--ink-faint); }
+  .o  { color: var(--amber); }
+
+  .callout {
+    background: rgba(255, 122, 24, 0.06);
+    border-left: 2px solid var(--amber-hot);
+    padding: 14px 18px; margin: 18px 0;
+    font-size: 13px; color: var(--ink); line-height: 1.65;
+  }
+  .callout strong {
+    color: var(--amber-hot); text-transform: uppercase;
+    letter-spacing: 0.15em; font-size: 10px;
+    display: block; margin-bottom: 6px; font-weight: 600;
+  }
+
+  footer.site {
+    margin-top: 40px; padding-top: 20px;
+    border-top: 1px solid var(--rule);
+    display: flex; justify-content: space-between;
+    font-size: 9px; letter-spacing: 0.25em;
+    text-transform: uppercase; color: var(--ink-faint);
+    flex-wrap: wrap; gap: 8px;
+  }
+  footer.site a { color: var(--ink-dim); text-decoration: none; }
+  footer.site a:hover { color: var(--amber); }
+  a.docs { color: var(--amber); text-decoration: none; border-bottom: 1px dashed var(--amber); }
+  a.docs:hover { color: var(--amber-hot); border-bottom-color: var(--amber-hot); }
+
+  /* SVG diagram styles. */
+  .d-node    { fill: var(--bg-card); stroke: var(--rule); stroke-width: 1.5; }
+  .d-public  { fill: rgba(255, 179, 71, 0.10); stroke: var(--amber); stroke-width: 1.5; }
+  .d-core    { fill: rgba(200, 255, 90, 0.06); stroke: var(--rpi-hub); stroke-width: 1.5; }
+  .d-opt     { fill: rgba(255, 179, 71, 0.06); stroke: var(--amber); stroke-width: 1.5; }
+  .d-scaff   { fill: rgba(106, 176, 255, 0.04); stroke: var(--blue); stroke-width: 1.5; stroke-dasharray: 4 3; }
+  .d-label   { fill: var(--ink); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 12px; font-weight: 600; }
+  .d-sub     { fill: var(--ink-dim); font-family: ui-monospace, monospace; font-size: 10px; }
+  .d-pub-l   { fill: var(--amber); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 13px; font-weight: 700; letter-spacing: 0.04em; }
+  .d-edge    { stroke: var(--rule); stroke-width: 1.5; fill: none; marker-end: url(#arrow); }
+  .d-edge-h  { stroke: var(--amber); stroke-width: 1.5; fill: none; marker-end: url(#arrow-h); }
+  .d-edge-d  { stroke: var(--blue); stroke-width: 1; fill: none; marker-end: url(#arrow-b); stroke-dasharray: 3 2; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <header class="site">
+    <div class="brand">
+      <div class="brand-mark">rpi-hub<span class="dot"></span></div>
+      <div class="brand-sub">Offline Survival InfoHub<br/>Blueprint · v1.3.0-phase13</div>
+    </div>
+    <div class="meta">
+      <div>Owner<strong>CoreConduit</strong></div>
+      <div>Status<strong style="color: var(--rpi-hub);">v1.3.0-phase13 SHIPPED</strong></div>
+      <div>Phase<strong style="color: var(--rpi-hub);">13 GPS SURVEY</strong></div>
+      <div>Targets<strong>Pi Zero 2 W · Pi 4 · Pi 5</strong></div>
+    </div>
+  </header>
+
+  <h1 class="page">Blueprint <span class="accent">overview</span></h1>
+  <p class="lede">
+    rpi-hub is a self-contained Wi-Fi access point on a Raspberry Pi
+    that serves a curated knowledge library, a retrieval-grounded
+    assistant, an ephemeral notes board, RTL-SDR radio reception, and
+    a Reticulum + BATMAN-adv mesh control plane &mdash;
+    <strong>without any internet uplink, telemetry, or transmit
+    capability</strong>. This page is the operator's blueprint:
+    architecture at a glance, service map, hardware tiers, port
+    inventory, and what's still gated on bench hardware. For prose see
+    <a class="docs" href="docs/OVERVIEW.md">docs/OVERVIEW.md</a>;
+    for the build checklist see
+     <a class="docs" href="rpi-hub-wizard.html">rpi-hub-wizard.html</a>.
+  </p>
+
+  <div class="callout" style="border-left-color: var(--rpi-hub); background: rgba(200, 255, 90, 0.04);">
+    <strong style="color: var(--rpi-hub);">Phase 13 — GPS Sky Survey (v1.3.0-phase13)</strong>
+    Vendored <code>gps_sdr/</code> acquisition engine (GPS L1 C/A PCPS, numpy-vectorised).
+    New endpoints <code>GET / POST /api/listen/gps(/sweep)</code> under the existing single-dongle
+    arbiter. Portal page <code>sky.html</code> + <code>sky.js</code>. No new systemd unit —
+    sweep is a finite child of <code>rpi-hub-listen</code> (MemoryMax raised 96M → 320M).
+    New <code>scripts/release.sh</code> formalises the CHANGELOG stamp + VERSION + tag flow.
+    <strong style="color: var(--amber);">Acquisition only — no position or time fix.</strong>
+    Hardware sweep pending bench time with RTL-SDR Blog v4 + active GPS patch antenna.
+  </div>
+
+  <!-- =====================  ARCHITECTURE DIAGRAM  ===================== -->
+  <section>
+    <h2 class="section-h"><span>Architecture · request flow</span><span class="v ok">v1.3.0-phase13</span></h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1200 640" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="rpi-hub service architecture: client → nginx → loopback services">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#3a3a28"/>
+          </marker>
+          <marker id="arrow-h" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#ffb347"/>
+          </marker>
+          <marker id="arrow-b" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+            <path d="M0,0 L10,5 L0,10 z" fill="#6ab0ff"/>
+          </marker>
+        </defs>
+
+        <!-- Client -->
+        <rect class="d-public" x="20" y="40" width="200" height="78" rx="4"/>
+        <text class="d-pub-l" x="120" y="68" text-anchor="middle">Client phone</text>
+        <text class="d-sub"  x="120" y="86" text-anchor="middle">joins RPI-HUB-INFOHUB</text>
+        <text class="d-sub"  x="120" y="100" text-anchor="middle">DHCP 192.168.4.10–250</text>
+
+        <!-- AP / DNS -->
+        <rect class="d-public" x="260" y="40" width="220" height="78" rx="4"/>
+        <text class="d-label" x="370" y="64" text-anchor="middle">hostapd + dnsmasq</text>
+        <text class="d-sub"  x="370" y="82" text-anchor="middle">open SSID · wildcard DNS</text>
+        <text class="d-sub"  x="370" y="100" text-anchor="middle">* → 192.168.4.1</text>
+
+        <!-- nginx -->
+        <rect class="d-public" x="520" y="40" width="640" height="78" rx="4"/>
+        <text class="d-pub-l" x="840" y="68" text-anchor="middle">nginx :80 — only public listener</text>
+        <text class="d-sub"  x="840" y="88" text-anchor="middle">/ landing · /library/ · /api/* · /adsb/ · /print/ · host-mismatch → 302 /</text>
+
+        <line class="d-edge-h" x1="220" y1="79" x2="260" y2="79"/>
+        <line class="d-edge-h" x1="480" y1="79" x2="520" y2="79"/>
+
+        <!-- Loopback rail label -->
+        <text class="d-sub" x="20" y="160" font-size="9">127.0.0.1 · loopback only</text>
+        <line x1="20" y1="170" x2="1160" y2="170" stroke="#3a3a28" stroke-dasharray="2 4"/>
+
+        <!-- Core services row -->
+        <g>
+          <rect class="d-core" x="40"  y="190" width="160" height="78" rx="4"/>
+          <text class="d-label" x="120" y="216" text-anchor="middle">rpi-hub-status</text>
+          <text class="d-sub"  x="120" y="234" text-anchor="middle">:8000 · /api/status</text>
+          <text class="d-sub"  x="120" y="250" text-anchor="middle">file probes · vcgencmd</text>
+
+          <rect class="d-core" x="220" y="190" width="160" height="78" rx="4"/>
+          <text class="d-label" x="300" y="216" text-anchor="middle">kiwix-serve</text>
+          <text class="d-sub"  x="300" y="234" text-anchor="middle">:8080 · /library/</text>
+          <text class="d-sub"  x="300" y="250" text-anchor="middle">read-only ZIM mount</text>
+
+          <rect class="d-core" x="400" y="190" width="160" height="78" rx="4"/>
+          <text class="d-label" x="480" y="216" text-anchor="middle">rpi-hub-notes</text>
+          <text class="d-sub"  x="480" y="234" text-anchor="middle">:8400 · /api/notes</text>
+          <text class="d-sub"  x="480" y="250" text-anchor="middle">SQLite on tmpfs</text>
+
+          <rect class="d-core" x="580" y="190" width="160" height="78" rx="4"/>
+          <text class="d-label" x="660" y="216" text-anchor="middle">rpi-hub-mesh</text>
+          <text class="d-sub"  x="660" y="234" text-anchor="middle">:8500 · /api/mesh</text>
+          <text class="d-sub"  x="660" y="250" text-anchor="middle">Ed25519 · QR · peers</text>
+
+          <rect class="d-opt"  x="760" y="190" width="160" height="78" rx="4"/>
+          <text class="d-label" x="840" y="216" text-anchor="middle">rpi-hub-listen</text>
+          <text class="d-sub"  x="840" y="234" text-anchor="middle">:8300 · /api/listen</text>
+          <text class="d-sub"  x="840" y="250" text-anchor="middle">RTL-SDR arbiter</text>
+
+          <rect class="d-opt"  x="940" y="190" width="200" height="78" rx="4"/>
+          <text class="d-label" x="1040" y="216" text-anchor="middle">dump1090-mutability</text>
+          <text class="d-sub"  x="1040" y="234" text-anchor="middle">writes aircraft.json</text>
+          <text class="d-sub"  x="1040" y="250" text-anchor="middle">→ /run/dump1090-…/</text>
+        </g>
+
+        <!-- Assistant stack (Pi 5) -->
+        <g>
+          <rect class="d-opt" x="40"  y="300" width="200" height="78" rx="4"/>
+          <text class="d-label" x="140" y="326" text-anchor="middle">rpi-hub-retrieve</text>
+          <text class="d-sub"  x="140" y="344" text-anchor="middle">:8100 · /api/retrieve</text>
+          <text class="d-sub"  x="140" y="360" text-anchor="middle">BM25 + HNSW + RRF</text>
+
+          <rect class="d-opt" x="260" y="300" width="200" height="78" rx="4"/>
+          <text class="d-label" x="360" y="326" text-anchor="middle">rpi-hub-assist</text>
+          <text class="d-sub"  x="360" y="344" text-anchor="middle">:8200 · /api/ask</text>
+          <text class="d-sub"  x="360" y="360" text-anchor="middle">safety · prompt · cite</text>
+
+          <rect class="d-opt" x="480" y="300" width="220" height="78" rx="4"/>
+          <text class="d-label" x="590" y="326" text-anchor="middle">rpi-hub-llama (×2)</text>
+          <text class="d-sub"  x="590" y="344" text-anchor="middle">:8201 bge-small · :8202 Qwen2.5</text>
+          <text class="d-sub"  x="590" y="360" text-anchor="middle">llama.cpp — Pi 5 only</text>
+        </g>
+
+        <!-- Mesh sub-services -->
+        <g>
+          <rect class="d-core" x="720" y="300" width="200" height="78" rx="4"/>
+          <text class="d-label" x="820" y="326" text-anchor="middle">rpi-hub-mesh-keygen</text>
+          <text class="d-sub"  x="820" y="344" text-anchor="middle">oneshot · v1.2</text>
+          <text class="d-sub"  x="820" y="360" text-anchor="middle">/var/lib/rpi-hub/keys/</text>
+
+          <rect class="d-scaff" x="940" y="300" width="200" height="78" rx="4"/>
+          <text class="d-label" x="1040" y="326" text-anchor="middle">rpi-hub-reticulum</text>
+          <text class="d-sub"  x="1040" y="344" text-anchor="middle">LoRa scaffold</text>
+          <text class="d-sub"  x="1040" y="360" text-anchor="middle">needs RAK4631</text>
+        </g>
+
+        <!-- Wi-Fi mesh / SAME pipeline -->
+        <g>
+          <rect class="d-scaff" x="940" y="410" width="200" height="78" rx="4"/>
+          <text class="d-label" x="1040" y="436" text-anchor="middle">rpi-hub-batman</text>
+          <text class="d-sub"  x="1040" y="454" text-anchor="middle">Wi-Fi mesh scaffold</text>
+          <text class="d-sub"  x="1040" y="470" text-anchor="middle">needs USB wlan</text>
+
+          <rect class="d-opt" x="720" y="410" width="200" height="78" rx="4"/>
+          <text class="d-label" x="820" y="436" text-anchor="middle">rpi-hub-listen-same</text>
+          <text class="d-sub"  x="820" y="454" text-anchor="middle">rtl_fm | multimon-ng</text>
+          <text class="d-sub"  x="820" y="470" text-anchor="middle">→ /alerts/internal</text>
+        </g>
+
+        <!-- Edges: nginx → core -->
+        <path class="d-edge"  d="M 720 118 C 720 150 120 160 120 190"/>
+        <path class="d-edge"  d="M 760 118 C 760 150 300 160 300 190"/>
+        <path class="d-edge"  d="M 800 118 C 800 150 480 160 480 190"/>
+        <path class="d-edge"  d="M 840 118 C 840 150 660 160 660 190"/>
+        <path class="d-edge"  d="M 880 118 C 880 150 840 160 840 190"/>
+        <path class="d-edge"  d="M 1040 118 C 1040 150 1040 160 1040 190"/>
+
+        <!-- Edges: assist → retrieve, assist → llama -->
+        <path class="d-edge" d="M 240 339 L 260 339"/>
+        <path class="d-edge" d="M 460 339 L 480 339"/>
+
+        <!-- Edges: notes → mesh /notes/publish -->
+        <path class="d-edge-h" d="M 480 268 C 480 280 660 280 660 268"/>
+        <text class="d-sub" x="570" y="296" text-anchor="middle">notes → mesh.publish (best-effort)</text>
+
+        <!-- Edges: keygen → mesh -->
+        <path class="d-edge"  d="M 720 339 L 740 339" />
+        <path class="d-edge"  d="M 760 300 C 760 290 760 280 700 268"/>
+        <text class="d-sub" x="760" y="280" text-anchor="start">LoadCredential=</text>
+
+        <!-- Edges: mesh → bridges (lazy attach) -->
+        <path class="d-edge-d" d="M 740 339 C 880 339 880 339 940 339"/>
+        <path class="d-edge-d" d="M 740 360 C 880 410 880 410 940 449"/>
+
+        <!-- Edges: listen → same pipeline -->
+        <path class="d-edge"  d="M 840 268 C 840 320 820 380 820 410"/>
+        <path class="d-edge-h" d="M 820 488 C 820 510 840 510 840 268"/>
+        <text class="d-sub" x="850" y="514" text-anchor="start">SAME → loopback POST</text>
+
+        <!-- Edges: dump1090 file output -->
+        <path class="d-edge"  d="M 1040 268 C 1040 300 600 540 600 580"/>
+        <rect class="d-public" x="500" y="580" width="220" height="48" rx="4"/>
+        <text class="d-label" x="610" y="603" text-anchor="middle">/run/dump1090-mutability/</text>
+        <text class="d-sub"  x="610" y="617" text-anchor="middle">nginx alias → /adsb/ (static)</text>
+      </svg>
+    </div>
+    <div class="callout">
+      <strong>Reading the diagram</strong>
+      Orange = public surface. Green = core service (always on). Amber
+      = optional capability (gated by hardware or content). Blue dashed
+      = scaffold awaiting bench hardware. Solid arrows = HTTP; amber =
+      best-effort fan-out; blue dashed = lazy radio-bridge attach.
+    </div>
+  </section>
+
+  <!-- =====================  SERVICE GRID  ===================== -->
+  <section>
+    <h2 class="section-h"><span>Services · ports · responsibilities</span><span class="v ok">14 units · +2 opt-in</span></h2>
+    <div class="grid-svc">
+      <div class="svc svc--core">
+        <div class="svc-h"><strong>rpi-hub-ap</strong><span class="svc-port">target unit</span></div>
+        <div class="svc-purpose">Owns hostapd + dnsmasq + sysctl no-forward + iptables drop. Boots before any other rpi-hub unit.</div>
+        <div class="svc-tag core">CORE · Phase 1</div>
+      </div>
+      <div class="svc svc--core">
+        <div class="svc-h"><strong>rpi-hub-status</strong><span class="svc-port">:8000</span></div>
+        <div class="svc-purpose">FastAPI · uptime, load, kiwix disk, vcgencmd, leases, per-service probes, ADS-B file probe.</div>
+        <div class="svc-tag core">CORE · Phase 5</div>
+      </div>
+      <div class="svc svc--core">
+        <div class="svc-h"><strong>rpi-hub-kiwix</strong><span class="svc-port">:8080</span></div>
+        <div class="svc-purpose">kiwix-serve over /var/lib/kiwix. ConditionPathExistsGlob keeps it inactive on empty libraries.</div>
+        <div class="svc-tag core">CORE · Phase 3</div>
+      </div>
+      <div class="svc svc--core">
+        <div class="svc-h"><strong>rpi-hub-notes</strong><span class="svc-port">:8400</span></div>
+        <div class="svc-purpose">FastAPI · SQLite over tmpfs · 280-char cap · 1/min + 10/h rate limit · owner-token DELETE / wipe.</div>
+        <div class="svc-tag core">CORE · Phase 9A</div>
+      </div>
+      <div class="svc svc--core">
+        <div class="svc-h"><strong>rpi-hub-mesh</strong><span class="svc-port">:8500</span></div>
+        <div class="svc-purpose">FastAPI · Ed25519 identity · peer table · signed envelopes · QR fingerprint endpoint.</div>
+        <div class="svc-tag core">CORE · Phase 7 (+v1.2)</div>
+      </div>
+      <div class="svc svc--core">
+        <div class="svc-h"><strong>rpi-hub-mesh-keygen</strong><span class="svc-port">oneshot</span></div>
+        <div class="svc-purpose">Generates /var/lib/rpi-hub/keys/ed25519.{priv,pub} on first boot. RemainAfterExit; Before rpi-hub-mesh.</div>
+        <div class="svc-tag core">CORE · v1.2</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>rpi-hub-listen</strong><span class="svc-port">:8300</span></div>
+        <div class="svc-purpose">FastAPI · single-dongle arbiter · SAME pipeline coordinator · pack-aware NOAA presets.</div>
+        <div class="svc-tag opt">OPTIONAL · Phase 8</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>rpi-hub-listen-same</strong><span class="svc-port">pipeline</span></div>
+        <div class="svc-purpose">rtl_fm | multimon-ng | curl → POST /alerts/internal. Parks on 162.400 MHz default.</div>
+        <div class="svc-tag opt">OPTIONAL · Phase 8</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>rpi-hub-retrieve</strong><span class="svc-port">:8100</span></div>
+        <div class="svc-purpose">Hybrid BM25 + HNSW + RRF over the workstation-built index. Pi 5 path.</div>
+        <div class="svc-tag opt">OPTIONAL · Phase 6</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>rpi-hub-assist</strong><span class="svc-port">:8200</span></div>
+        <div class="svc-purpose">Safety classifier → prompt scaffold → llama → citation validator (60% coverage floor).</div>
+        <div class="svc-tag opt">OPTIONAL · Phase 6</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>rpi-hub-llama</strong><span class="svc-port">:8201/8202</span></div>
+        <div class="svc-purpose">Two llama.cpp instances: bge-small embedder + Qwen2.5-1.5B generator. CPU-only.</div>
+        <div class="svc-tag opt">OPTIONAL · Phase 6</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>dump1090-mutability</strong><span class="svc-port">file output</span></div>
+        <div class="svc-purpose">ADS-B decoder. Writes aircraft.json; nginx /adsb/ aliases the directory. Gated on lsusb hit.</div>
+        <div class="svc-tag opt">OPTIONAL · v1.2.1</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>rpi-hub-adsb-shield</strong><span class="svc-port">timer · 1 s</span></div>
+        <div class="svc-purpose">Opt-in PII shield. Rounds per-aircraft lat/lon and writes aircraft.shielded.json; nginx prefers it over raw. ConditionPathExists=/etc/rpi-hub/adsb-precision.</div>
+        <div class="svc-tag opt">OPTIONAL · v1.2.1</div>
+      </div>
+      <div class="svc svc--opt">
+        <div class="svc-h"><strong>gps_sdr (child)</strong><span class="svc-port">child of :8300</span></div>
+        <div class="svc-purpose">GPS L1 C/A PCPS acquisition sweep. Spawned by rpi-hub-listen as a finite child (mode "gps"). No new port; /api/listen/ proxy covers it. Requires RTL-SDR Blog v3/v4 + active GPS patch antenna.</div>
+        <div class="svc-tag opt">OPTIONAL · Phase 13</div>
+      </div>
+      <div class="svc svc--scaff">
+        <div class="svc-h"><strong>rpi-hub-reticulum</strong><span class="svc-port">LoRa</span></div>
+        <div class="svc-purpose">Reticulum daemon scaffold. Bridge code present; needs RAK4631 on the bench.</div>
+        <div class="svc-tag scaff">SCAFFOLD · Phase 7.1</div>
+      </div>
+      <div class="svc svc--scaff">
+        <div class="svc-h"><strong>rpi-hub-batman</strong><span class="svc-port">Wi-Fi mesh</span></div>
+        <div class="svc-purpose">BATMAN-adv bring-up scaffold. Bridge code present; needs second USB Wi-Fi adapter.</div>
+        <div class="svc-tag scaff">SCAFFOLD · Phase 7.3</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- =====================  HARDWARE TIERS  ===================== -->
+  <section>
+    <h2 class="section-h"><span>Hardware tiers</span><span class="v ok">3 SKUs</span></h2>
+    <table class="dataref">
+      <thead>
+        <tr>
+          <th>Tier</th>
+          <th>Board</th>
+          <th>Storage</th>
+          <th>Capabilities</th>
+          <th>Add-ons</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="ok">Minimal</td>
+          <td>Pi Zero 2 W</td>
+          <td class="mono">16 GB SD</td>
+          <td>AP + portal + small Kiwix library + NOAA WX + FM Listen</td>
+          <td class="dim">RTL-SDR Blog v3/v4 (optional) · No GPS sweep (CPU)</td>
+        </tr>
+        <tr>
+          <td class="warn">Standard</td>
+          <td>Pi 4 (4 GB+)</td>
+          <td class="mono">64 GB SD / USB</td>
+          <td>+ Notes board, Mesh control plane, full Listen incl. ADS-B + GPS sky survey</td>
+          <td class="dim">RTL-SDR Blog v3/v4 · active GPS patch antenna (~$12) · RAK4631 · USB Wi-Fi</td>
+        </tr>
+        <tr>
+          <td class="warn">Full</td>
+          <td>Pi 5 (4 GB+)</td>
+          <td class="mono">NVMe / 256 GB SD</td>
+          <td>+ RAG assistant (retrieve · assist · llama×2)</td>
+          <td class="dim">all of the above</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =====================  PORT MAP  ===================== -->
+  <section>
+    <h2 class="section-h"><span>Port inventory</span><span class="v ok">3 public · 9 loopback</span></h2>
+    <table class="dataref">
+      <thead>
+        <tr><th>Port</th><th>Listener</th><th>Bind</th><th>Path / Purpose</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="mono">80/tcp</td>  <td>nginx</td>           <td class="warn">public</td>    <td>landing · /library · /api/* · /adsb · /print</td></tr>
+        <tr><td class="mono">53/udp</td>  <td>dnsmasq</td>         <td class="warn">public</td>    <td>wildcard DNS → 192.168.4.1</td></tr>
+        <tr><td class="mono">67/udp</td>  <td>dnsmasq</td>         <td class="warn">public</td>    <td>DHCP</td></tr>
+        <tr><td class="mono">8000/tcp</td><td>rpi-hub-status</td>   <td class="ok">127.0.0.1</td>   <td>/api/status</td></tr>
+        <tr><td class="mono">8080/tcp</td><td>kiwix-serve</td>     <td class="ok">127.0.0.1</td>   <td>/library proxy</td></tr>
+        <tr><td class="mono">8100/tcp</td><td>rpi-hub-retrieve</td> <td class="ok">127.0.0.1</td>   <td>/api/retrieve</td></tr>
+        <tr><td class="mono">8200/tcp</td><td>rpi-hub-assist</td>   <td class="ok">127.0.0.1</td>   <td>/api/ask</td></tr>
+        <tr><td class="mono">8201/tcp</td><td>llama-server</td>    <td class="ok">127.0.0.1</td>   <td>bge-small embedder</td></tr>
+        <tr><td class="mono">8202/tcp</td><td>llama-server</td>    <td class="ok">127.0.0.1</td>   <td>Qwen2.5 generator</td></tr>
+        <tr><td class="mono">8300/tcp</td><td>rpi-hub-listen</td>   <td class="ok">127.0.0.1</td>   <td>/api/listen</td></tr>
+        <tr><td class="mono">8400/tcp</td><td>rpi-hub-notes</td>    <td class="ok">127.0.0.1</td>   <td>/api/notes</td></tr>
+        <tr><td class="mono">8500/tcp</td><td>rpi-hub-mesh</td>     <td class="ok">127.0.0.1</td>   <td>/api/mesh</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =====================  PHASE TIMELINE  ===================== -->
+  <section>
+    <h2 class="section-h"><span>Phase timeline</span><span class="v ok">9 phases + 3 polish + Phase 13</span></h2>
+    <div class="rail">
+      <div class="rail-step done"><span class="num">01</span><span class="name">Bare AP</span><span class="tag">v0.1</span></div>
+      <div class="rail-step done"><span class="num">02</span><span class="name">Captive portal</span><span class="tag">v0.2</span></div>
+      <div class="rail-step done"><span class="num">03</span><span class="name">Kiwix content</span><span class="tag">v0.3</span></div>
+      <div class="rail-step done"><span class="num">04</span><span class="name">Frontend</span><span class="tag">v0.4</span></div>
+      <div class="rail-step done"><span class="num">05</span><span class="name">Status API</span><span class="tag">v0.5</span></div>
+      <div class="rail-step done"><span class="num">06</span><span class="name">RAG assistant</span><span class="tag">v0.6</span></div>
+      <div class="rail-step done"><span class="num">09</span><span class="name">Notes &amp; packs</span><span class="tag">v0.9</span></div>
+      <div class="rail-step done"><span class="num">08</span><span class="name">RTL-SDR Listen</span><span class="tag">v0.8</span></div>
+      <div class="rail-step done"><span class="num">07</span><span class="name">Mesh control plane</span><span class="tag">v1.0</span></div>
+      <div class="rail-step poly"><span class="num">+1</span><span class="name">Post-v1 polish</span><span class="tag">v1.1</span></div>
+      <div class="rail-step poly"><span class="num">+2</span><span class="name">Sign + QR + ADS-B gate</span><span class="tag">v1.2.1</span></div>
+      <div class="rail-step done"><span class="num">13</span><span class="name">GPS Sky Survey</span><span class="tag">v1.3.0</span></div>
+    </div>
+    <p class="lede" style="margin-top: 14px;">
+      Approved sequencing was <code>1 → 2 → 3 → 4 → 5 → 6 → 9 → 8 → 7</code>
+      so each tag was end-to-end demoable on real hardware. Polish
+      releases v1.1 and v1.2 closed the post-v1.0 software backlog;
+      v1.2.1 added the dump1090 install gate. Phase 13 (v1.3.0-phase13)
+      adds the GPS L1 C/A sky-survey diagnostic: <code>gps_sdr/</code>
+      vendored engine, <code>GPSSweeper</code>, <code>GET/POST /api/listen/gps</code>,
+      <code>sky.html</code>, and <code>scripts/release.sh</code>. Hardware sweep
+      pending bench validation with RTL-SDR Blog v4 + active GPS patch antenna.
+    </p>
+  </section>
+
+  <!-- =====================  CAPABILITY MATRIX  ===================== -->
+  <section>
+    <h2 class="section-h"><span>Capabilities × hardware</span><span class="v warn">y / o / n</span></h2>
+    <table class="dataref matrix">
+      <thead>
+        <tr>
+          <th>Capability</th>
+          <th class="h">Pi Zero 2 W</th>
+          <th class="h">Pi 4</th>
+          <th class="h">Pi 5</th>
+          <th>Notes</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>AP + captive portal</td>
+          <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
+          <td class="dim">required at every tier</td>
+        </tr>
+        <tr>
+          <td>Kiwix library</td>
+          <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
+          <td class="dim">tier-sized: minimal · core · full</td>
+        </tr>
+        <tr>
+          <td>Notes board (tmpfs)</td>
+          <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
+          <td class="dim">always on; capped at 1024 entries</td>
+        </tr>
+        <tr>
+          <td>Mesh control plane</td>
+          <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
+          <td class="dim">signed envelopes via LoadCredential</td>
+        </tr>
+        <tr>
+          <td>NOAA SAME + FM</td>
+          <td class="h o">w/ dongle</td><td class="h o">w/ dongle</td><td class="h o">w/ dongle</td>
+          <td class="dim">requires RTL-SDR Blog v4</td>
+        </tr>
+        <tr>
+          <td>ADS-B (dump1090)</td>
+          <td class="h o">w/ dongle</td><td class="h o">w/ dongle</td><td class="h o">w/ dongle</td>
+          <td class="dim">single-dongle mutex with SAME</td>
+        </tr>
+        <tr>
+          <td>ADS-B position-rounding (shield)</td>
+          <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
+          <td class="dim">opt-in: write 0–4 into <span class="mono">/etc/rpi-hub/adsb-precision</span></td>
+        </tr>
+        <tr>
+          <td>RAG assistant</td>
+          <td class="h n">no</td><td class="h n">no</td><td class="h y">yes</td>
+          <td class="dim">CPU inference budget: Pi 5 only</td>
+        </tr>
+        <tr>
+          <td>LoRa mesh data plane</td>
+          <td class="h n">scaffold</td><td class="h o">w/ RAK4631</td><td class="h o">w/ RAK4631</td>
+          <td class="dim">awaits bench validation</td>
+        </tr>
+        <tr>
+          <td>Wi-Fi mesh data plane</td>
+          <td class="h n">scaffold</td><td class="h o">w/ USB wlan</td><td class="h o">w/ USB wlan</td>
+          <td class="dim">BATMAN-adv on non-overlapping channel</td>
+        </tr>
+        <tr>
+          <td>Read-only root (overlayfs)</td>
+          <td class="h y">yes</td><td class="h y">yes</td><td class="h y">yes</td>
+          <td class="dim">operator-opt-in: scripts/readonly_root.sh enable</td>
+        </tr>
+        <tr>
+          <td>GPS sky survey (Phase 13)</td>
+          <td class="h n">no</td><td class="h o">w/ antenna</td><td class="h o">w/ antenna</td>
+          <td class="dim">Pi Zero 2 W: CPU too slow for 32-PRN FFT. Requires RTL-SDR Blog v3/v4 + active GPS patch antenna. Sim mode (no hardware) on all tiers.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- =====================  WHAT'S LEFT  ===================== -->
+  <section>
+    <h2 class="section-h"><span>What's left</span><span class="v warn">hardware-gated</span></h2>
+    <table class="dataref">
+      <thead>
+        <tr><th>Item</th><th>Scaffold</th><th>Hardware needed</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>WebSocket audio endpoint (Phase 8.3)</td>
+          <td class="mono">listen/rpi_hub_listen/audio_bridge.py</td>
+          <td class="dim">Pi 4 + RTL-SDR dongle (buffer-tuning)</td>
+        </tr>
+        <tr>
+          <td>LoRa link layer (Phase 7.1)</td>
+          <td class="mono">mesh/rpi_hub_mesh/lora_bridge.py · rpi-hub-reticulum.service</td>
+          <td class="dim">RAK4631 USB hat</td>
+        </tr>
+        <tr>
+          <td>Wi-Fi mesh data plane (Phase 7.3)</td>
+          <td class="mono">mesh/rpi_hub_mesh/wifi_bridge.py · rpi-hub-batman.service</td>
+          <td class="dim">Second USB Wi-Fi adapter</td>
+        </tr>
+        <tr>
+          <td>APRS scanner (Phase 8.5)</td>
+          <td class="mono">listen/rpi_hub_listen/__init__.py schema-only</td>
+          <td class="dim">Pi 4/5 + RTL-SDR on 144.39 MHz</td>
+        </tr>
+        <tr>
+          <td>GPS hardware sweep tuning (Phase 13.1)</td>
+          <td class="mono">gps_sdr/ · listen/rpi_hub_listen/gps.py</td>
+          <td class="dim">RTL-SDR Blog v4 + active GPS patch antenna + clear sky</td>
+        </tr>
+        <tr>
+          <td>Three-node mesh testbed write-up</td>
+          <td class="dim">—</td>
+          <td class="dim">Three Pi 4/5 + LoRa hats</td>
+        </tr>
+      </tbody>
+    </table>
+    <p class="lede" style="margin-top: 14px;">
+      Pack PDF authoring shipped (HTML sources + <span class="mono">build_pack_pdfs.sh</span>);
+      only the workstation build step remains and is tracked under operator workflow.
+      Full gap analysis with file:line citations:
+      <a class="docs" href="docs/GAP_ANALYSIS.md">docs/GAP_ANALYSIS.md</a>.
+    </p>
+  </section>
+
+  <footer class="site">
+    <span>rpi-hub · v1.3.0-phase13 · MIT</span>
+    <span>
+      <a href="README.md">README</a> ·
+      <a href="docs/OVERVIEW.md">Overview</a> ·
+      <a href="docs/GAP_ANALYSIS.md">Gaps</a> ·
+      <a href="CHANGELOG.md">Changelog</a> ·
+      <a href="rpi-hub-wizard.html">Wizard</a>
+    </span>
+    <span>No uplink · No telemetry · Receive-only</span>
+  </footer>
+
+</div>
+</body>
+</html>

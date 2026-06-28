@@ -1,0 +1,63 @@
+# Purpose: /etc/default/dump1090-mutability overrides for rpi-HUB.
+#          Sourced by Debian's dump1090-mutability.service ExecStart.
+#          We pin the JSON output to /run/dump1090-mutability/ (which
+#          nginx aliases at /adsb/) and suppress dump1090's built-in
+#          HTTP listener — nginx is the only public listener.
+# Unit:    dump1090-mutability.service
+# Phase:   8.4 (introduced v1.2.1)
+#
+# This file is only installed when install.sh detects an RTL-SDR
+# dongle at provision time. Without it, the upstream default keeps
+# START_DUMP1090="no" and the unit stays inactive — which is what we
+# want when no dongle is present.
+#
+# Mutually exclusive with rpi-hub-listen-same.service — a single
+# RTL-SDR dongle is claimed by whichever service starts first. Run
+# both only with two dongles + DEVICE= pinned to a serial number.
+# See docs/OVERVIEW.md §7.4.
+#
+# Status probe: api/rpi_hub_status/system.py::_probe_adsb watches
+# ${JSON_DIR}/aircraft.json. Fresh mtime (≤30s) + parseable JSON =
+# "ready"; aircraft count comes from the JSON's "aircraft" array.
+
+# Activate the service. Without this the upstream init logic refuses
+# to start dump1090 even if systemd enables the unit.
+START_DUMP1090="yes"
+
+# Empty = pick the first detected RTL-SDR dongle. Set to "1" if you
+# run two dongles (one for rpi-hub-listen-same, one for ADS-B).
+DEVICE=""
+
+# Latitude / longitude in degrees. Optional — the web UI computes
+# distance to each aircraft when both are set. We leave them blank by
+# default; an operator who cares can edit this file post-install.
+LAT=""
+LON=""
+
+# Gain: "max" yields the best sensitivity for ADS-B on the kit antenna
+# that ships with most RTL-SDR Blog v4 packages.
+GAIN="max"
+
+# CRC fixing improves decode rates with weak signals; phase enhancement
+# is recommended for the v4 dongle but cheap on any chipset.
+FIX="yes"
+PHASE_ENHANCE="yes"
+
+# Disable dump1090's built-in BaseStation TCP listener. We don't want
+# the LAN to see a raw flight data port — anyone scanning the open AP
+# would find it. Anyone who needs the BaseStation feed can flip this
+# back to "yes" themselves.
+NET="no"
+
+# Disable dump1090's built-in HTTP server. nginx already serves
+# /run/dump1090-mutability/ at /adsb/ as static files (config/nginx
+# Phase 8.4 alias). Two HTTP listeners on the same JSON would just
+# confuse a reader.
+HTTP="no"
+
+# JSON output directory. Must match the nginx alias target in
+# config/nginx/rpi-hub-portal.conf (location /adsb/).
+JSON_DIR="/run/dump1090-mutability"
+
+# Refresh the JSON every second. The web UI polls at the same cadence.
+JSON_INTERVAL="1"

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="rpi-hub — ADS-B aircraft tracker. Receive-only.">
+  <title>rpi-hub — Aircraft</title>
+  <link rel="stylesheet" href="/assets/css/rpi-hub.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='40%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>r</text><text x='62%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>P</text></svg>">
+  <script src="/assets/js/contrast.js"></script>
+  <script src="/assets/js/adsb.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="rpi-hub">
+        <span class="b-first">rpi-</span><span class="b-second">POD</span>
+        <span class="brand-sub">Aircraft (ADS-B)</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">High contrast: off</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 id="intro-h">Aircraft within reception range</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
+        <p>
+          Receive only. ADS-B beacons every transponder-equipped aircraft
+          emits on 1090 MHz are decoded by dump1090 and listed below.
+          No transmit, no flight-tracking upload — strictly local.
+        </p>
+      </section>
+
+      <section id="adsb-status" class="svc-status" aria-live="polite">
+        Loading aircraft…
+      </section>
+
+      <table class="dataref" id="adsb-table" aria-live="polite">
+        <caption class="sr-only">Aircraft in range</caption>
+        <thead>
+          <tr>
+            <th>ICAO</th><th>Callsign</th><th>Altitude</th><th>Speed</th>
+            <th>Track</th><th>Seen</th>
+          </tr>
+        </thead>
+        <tbody id="adsb-rows"></tbody>
+      </table>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/">← Back to hub</a>
+        <a href="/listen.html">Listen</a>
+      </nav>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    rpi-hub · Phase 8.4 · ADS-B receive only · Aircraft positions not uploaded anywhere
+  </footer>
+</body>
+</html>

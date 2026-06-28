@@ -1,0 +1,23 @@
+# Purpose: Urban resilience pack. Power outage, water disruption, civil
+#          unrest first aid, transit maps.
+# Unit:    n/a (consumed by install.sh --pack=urban-resilience)
+# Phase:   9B
+name: urban-resilience
+display_name: Urban Resilience
+description: >
+  Power outage logistics, water disruption, civil-unrest first aid,
+  transit-network awareness. Layered on top of the general-purpose corpus.
+version: 1
+tier: core
+zims:
+  - wikipedia_en_simple_all_nopic.zim
+  - zimgit-post-disaster_en.zim
+  - zimgit-water_en.zim
+  - wikem_en_all_maxi.zim
+print:
+  - file: power-outage-first-72h.pdf
+    title: Power outage — first 72 hours at home
+  - file: water-disruption.pdf
+    title: Water disruption — storage, treatment, conservation
+  - file: civil-unrest-first-aid.pdf
+    title: Civil unrest — first aid for tear gas, blunt trauma, crowd injury

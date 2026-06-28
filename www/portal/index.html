@@ -1,0 +1,950 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="rpi-hub InfoHub — offline survival library served from a local Raspberry Pi. No internet required.">
+  <title>rpi-hub InfoHub</title>
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='40%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>r</text><text x='62%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>P</text></svg>">
+  <!--
+    Self-hosted fonts from /assets/fonts/ — populated by scripts/fetch_fonts.sh.
+    Falls back cleanly to system-ui when woff2 files are absent.
+    No CDN, no external requests, full offline-first compliance.
+  -->
+  <style>
+    /* =========================================================
+       CoreConduit brand tokens — identical to /assets/css/rpi-hub.css
+       ========================================================= */
+    :root {
+      --c-navy:         #0b1f3f;
+      --c-navy-deep:    #061229;
+      --c-silver:       #e9ecf1;
+      --c-silver-soft:  #f4f6fa;
+      --c-silver-edge:  #cdd3dd;
+      --c-ink:          #11151c;
+      --c-ink-muted:    #4a5260;
+      --c-blue:         #2a72d8;
+      --c-orange:       #f08a1a;
+      --c-good:         #1f8a4c;
+      --c-warn:         #b3640d;
+      --c-bad:          #b6322a;
+
+      --s-1: .25rem;  --s-2: .5rem;   --s-3: .75rem;
+      --s-4: 1rem;    --s-5: 1.5rem;  --s-6: 2rem;    --s-7: 3rem;
+
+      --r-card:  14px;
+      --r-tile:  16px;
+      --r-chip:  999px;
+
+      --elev-card: 0 1px 3px rgba(11,31,63,.08), 0 2px 8px rgba(11,31,63,.05);
+      --elev-tile: 0 4px 18px rgba(11,31,63,.13);
+
+      --f-display: "Exo 2","Exo2",system-ui,-apple-system,"Segoe UI",sans-serif;
+      --f-body:    "Plus Jakarta Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+      --f-mono:    "IBM Plex Mono",ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;
+
+      --focus-ring: 0 0 0 3px rgba(42,114,216,.55);
+    }
+
+    /* Self-hosted font faces */
+    @font-face { font-family:"Exo 2"; font-style:normal; font-weight:600 800; font-display:swap; src:url("/assets/fonts/exo2-700.woff2") format("woff2"); }
+    @font-face { font-family:"Plus Jakarta Sans"; font-style:normal; font-weight:400 500; font-display:swap; src:url("/assets/fonts/jakarta-400.woff2") format("woff2"); }
+    @font-face { font-family:"Plus Jakarta Sans"; font-style:normal; font-weight:600 800; font-display:swap; src:url("/assets/fonts/jakarta-700.woff2") format("woff2"); }
+    @font-face { font-family:"IBM Plex Mono"; font-style:normal; font-weight:400 500; font-display:swap; src:url("/assets/fonts/plexmono-400.woff2") format("woff2"); }
+
+    /* =========================================================
+       Reset
+       ========================================================= */
+    *, *::before, *::after { box-sizing: border-box; }
+    html { -webkit-text-size-adjust: 100%; }
+    body {
+      margin: 0;
+      font-family: var(--f-body);
+      font-size: 16px;
+      line-height: 1.5;
+      color: var(--c-ink);
+      background: var(--c-silver);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    img, svg { max-width: 100%; display: block; }
+    a { color: var(--c-blue); text-decoration: none; }
+    a:hover, a:focus-visible { text-decoration: underline; }
+    :focus-visible { outline: none; box-shadow: var(--focus-ring); border-radius: 4px; }
+    p { margin: 0; }
+
+    /* =========================================================
+       Accessibility utilities
+       ========================================================= */
+    .skip-link {
+      position: absolute;
+      top: -44px;
+      left: var(--s-3);
+      background: var(--c-navy);
+      color: #fff;
+      padding: var(--s-2) var(--s-4);
+      border-radius: 6px;
+      z-index: 300;
+      font-weight: 600;
+      font-size: .9rem;
+      transition: top .15s ease;
+    }
+    .skip-link:focus { top: var(--s-3); }
+
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
+    }
+
+    /* =========================================================
+       Site header — identical pattern to other portal pages
+       ========================================================= */
+    .site-header {
+      background: linear-gradient(180deg, var(--c-navy) 0%, var(--c-navy-deep) 100%);
+      color: #fff;
+      padding: var(--s-4) var(--s-5);
+      position: relative;
+      z-index: 100;
+    }
+    /* 3px gradient accent bar — CoreConduit brand signature */
+    .site-header::after {
+      content: "";
+      position: absolute;
+      left: 0; right: 0; bottom: -3px;
+      height: 3px;
+      background: linear-gradient(90deg, var(--c-blue) 0%, var(--c-orange) 100%);
+    }
+    .site-header__inner {
+      max-width: 64rem;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--s-4);
+      flex-wrap: wrap;
+    }
+
+    /* Brand */
+    .brand {
+      font-family: var(--f-display);
+      font-weight: 800;
+      font-size: 1.5rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .b-first  { color: #fff; }
+    .b-second { color: var(--c-orange); }
+    .brand-sub {
+      display: block;
+      font-family: var(--f-body);
+      font-weight: 500;
+      font-size: .75rem;
+      letter-spacing: .16em;
+      color: rgba(255,255,255,.65);
+      text-transform: uppercase;
+      margin-top: 2px;
+    }
+
+    /* Header tools */
+    .header-tools {
+      display: flex;
+      align-items: center;
+      gap: var(--s-3);
+    }
+
+    /* Online pill with heartbeat animation */
+    .pill-online {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--s-2);
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.18);
+      color: #fff;
+      padding: var(--s-1) var(--s-3);
+      border-radius: var(--r-chip);
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+    .pill-online::before {
+      content: "";
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #4ade80;
+      box-shadow: 0 0 6px rgba(74,222,128,.7);
+      animation: heartbeat 2.6s ease-in-out infinite;
+    }
+
+    /* Contrast toggle */
+    .contrast-toggle {
+      appearance: none;
+      background: rgba(255,255,255,.06);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,.22);
+      padding: var(--s-1) var(--s-3);
+      border-radius: var(--r-chip);
+      font: inherit;
+      font-size: .78rem;
+      font-weight: 600;
+      letter-spacing: .04em;
+      cursor: pointer;
+    }
+    .contrast-toggle:hover { background: rgba(255,255,255,.12); }
+    html:not(.js) .contrast-toggle { display: none; }
+
+    /* =========================================================
+       Status strip — signature element.
+       Dark sub-header surfacing live API metrics at a glance.
+       ========================================================= */
+    .status-strip {
+      background: var(--c-navy-deep);
+      border-bottom: 1px solid rgba(255,255,255,.06);
+      padding: 6px var(--s-5);
+    }
+    .status-strip__inner {
+      max-width: 64rem;
+      margin: 0 auto;
+      display: flex;
+      align-items: center;
+      gap: var(--s-4);
+      flex-wrap: wrap;
+      min-height: 24px;
+    }
+    .ss-item {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-family: var(--f-mono);
+      font-size: .68rem;
+      letter-spacing: .03em;
+      color: rgba(255,255,255,.3);
+      white-space: nowrap;
+    }
+    .ss-val          { color: rgba(255,255,255,.6); }
+    .ss-val--good    { color: #4ade80; }
+    .ss-val--warn    { color: var(--c-orange); }
+    .ss-divider {
+      width: 1px; height: 12px;
+      background: rgba(255,255,255,.1);
+      flex-shrink: 0;
+    }
+
+    /* =========================================================
+       Page layout
+       ========================================================= */
+    main { flex: 1; padding: var(--s-5) var(--s-4); }
+    .container { max-width: 64rem; margin: 0 auto; }
+
+    /* Intro */
+    .intro { margin-bottom: var(--s-5); }
+    .intro__h {
+      font-family: var(--f-display);
+      font-weight: 800;
+      font-size: clamp(1.3rem, 4vw, 1.85rem);
+      margin: 0 0 var(--s-2);
+      letter-spacing: .01em;
+      color: var(--c-navy);
+    }
+    .intro__p {
+      color: var(--c-ink-muted);
+      max-width: 38rem;
+      font-size: .95rem;
+    }
+
+    /* =========================================================
+       Section groups + labels
+       ========================================================= */
+    .sec { margin-bottom: var(--s-6); }
+
+    .sec__label {
+      display: flex;
+      align-items: center;
+      gap: var(--s-2);
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: .13em;
+      text-transform: uppercase;
+      color: var(--c-ink-muted);
+      margin-bottom: var(--s-3);
+      padding-bottom: var(--s-2);
+      border-bottom: 1px solid var(--c-silver-edge);
+    }
+    /* 3px gradient pip — mirrors the header accent bar, smaller scale */
+    .sec__label::before {
+      content: "";
+      display: inline-block;
+      width: 3px; height: 14px;
+      flex-shrink: 0;
+      background: linear-gradient(180deg, var(--c-blue), var(--c-orange));
+      border-radius: 2px;
+    }
+
+    /* =========================================================
+       Grid systems
+       ========================================================= */
+
+    /* Default grid: 2 → 3 → 4 columns */
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--s-3);
+    }
+    @media (min-width: 480px) { .grid                { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 720px) { .grid                { grid-template-columns: repeat(4, 1fr); } }
+
+    /* Core resources: 2 → 3 → 5 columns (exactly 5 tiles) */
+    .grid--core {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--s-3);
+    }
+    @media (min-width: 480px)  { .grid--core { grid-template-columns: repeat(3, 1fr); } }
+    @media (min-width: 900px)  { .grid--core { grid-template-columns: repeat(5, 1fr); } }
+
+    /* System: always 2 columns, constrained width */
+    .grid--sys {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: var(--s-3);
+      max-width: 28rem;
+    }
+
+    /* =========================================================
+       Tiles
+       ========================================================= */
+    .tile {
+      display: flex;
+      flex-direction: column;
+      background: var(--c-silver-soft);
+      border: 1px solid var(--c-silver-edge);
+      border-radius: var(--r-tile);
+      padding: var(--s-4);
+      color: inherit;
+      text-decoration: none;
+      position: relative;
+      overflow: hidden;
+      transition:
+        transform  120ms ease,
+        box-shadow 120ms ease,
+        border-color 120ms ease;
+      min-height: 130px;
+    }
+
+    /* Left gradient accent bar */
+    .tile::before {
+      content: "";
+      position: absolute;
+      left: 0; top: 0; bottom: 0;
+      width: 3px;
+      background: linear-gradient(180deg, var(--c-blue), var(--c-orange));
+      opacity: .75;
+    }
+
+    .tile:hover, .tile:focus-visible {
+      transform: translateY(-2px);
+      box-shadow: var(--elev-tile);
+      border-color: var(--c-blue);
+      text-decoration: none;
+    }
+
+    /* Icon container */
+    .tile__icon {
+      width: 38px; height: 38px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      background: rgba(42,114,216,.09);
+      margin-bottom: var(--s-3);
+    }
+    .tile__icon svg {
+      width: 20px; height: 20px;
+      fill: none;
+      stroke: var(--c-navy);
+      stroke-width: 1.6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    /* Title */
+    .tile__title {
+      font-family: var(--f-display);
+      font-size: .97rem;
+      font-weight: 700;
+      margin: 0 0 var(--s-1);
+      color: var(--c-navy);
+      line-height: 1.2;
+    }
+
+    /* Description */
+    .tile__desc {
+      font-size: .79rem;
+      color: var(--c-ink-muted);
+      margin: 0;
+      flex: 1;
+      line-height: 1.45;
+    }
+
+    /* State badge — top-right */
+    .tile__state {
+      position: absolute;
+      top: var(--s-3);
+      right: var(--s-3);
+      font-size: .6rem;
+      font-weight: 700;
+      letter-spacing: .07em;
+      text-transform: uppercase;
+      padding: 2px 7px;
+      border-radius: var(--r-chip);
+      /* Default: available/ready */
+      background: rgba(31,138,76,.1);
+      color: var(--c-good);
+    }
+
+    /* "Live" variant — blue tint */
+    .tile[data-state="live"] .tile__state {
+      background: rgba(42,114,216,.1);
+      color: var(--c-blue);
+    }
+
+    /* "Checking" — pulsing muted badge */
+    .tile[data-state="checking"] .tile__state {
+      background: rgba(74,82,96,.1);
+      color: var(--c-ink-muted);
+      animation: blink 1.6s ease-in-out infinite;
+    }
+
+    /* "Offline" — faded tile, not interactive */
+    .tile[data-state="offline"] .tile__state {
+      background: rgba(182,50,42,.08);
+      color: var(--c-bad);
+    }
+    .tile[data-state="offline"] {
+      opacity: .42;
+      pointer-events: none;
+      cursor: default;
+    }
+
+    /* =========================================================
+       Animations
+       ========================================================= */
+    @keyframes heartbeat {
+      0%,100% { transform: scale(1);   opacity: 1;   }
+      40%      { transform: scale(1.5); opacity: .6;  }
+      65%      { transform: scale(.85); opacity: .85; }
+    }
+    @keyframes blink {
+      0%,100% { opacity: 1;  }
+      50%      { opacity: .3; }
+    }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0);    }
+    }
+
+    /* Stagger entrance — tiles cascade in */
+    .tile { animation: fadeUp .3s ease both; }
+    .tile:nth-child(1)  { animation-delay: .04s; }
+    .tile:nth-child(2)  { animation-delay: .08s; }
+    .tile:nth-child(3)  { animation-delay: .12s; }
+    .tile:nth-child(4)  { animation-delay: .16s; }
+    .tile:nth-child(5)  { animation-delay: .20s; }
+    .tile:nth-child(6)  { animation-delay: .24s; }
+    .tile:nth-child(7)  { animation-delay: .28s; }
+    .tile:nth-child(8)  { animation-delay: .32s; }
+
+    /* Honor prefers-reduced-motion */
+    @media (prefers-reduced-motion: reduce) {
+      .tile                 { animation: none; transition: none; }
+      .tile:hover           { transform: none; }
+      .pill-online::before  { animation: none; }
+      .tile[data-state="checking"] .tile__state { animation: none; }
+    }
+
+    /* =========================================================
+       Subnav + footer
+       ========================================================= */
+    .subnav {
+      margin-top: var(--s-6);
+      padding-top: var(--s-4);
+      border-top: 1px solid var(--c-silver-edge);
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--s-2) var(--s-5);
+      font-size: .9rem;
+    }
+    .subnav a { color: var(--c-ink-muted); font-weight: 600; }
+    .subnav a:hover { color: var(--c-navy); }
+
+    .site-footer {
+      padding: var(--s-5);
+      font-size: .75rem;
+      color: var(--c-ink-muted);
+      text-align: center;
+      border-top: 1px solid var(--c-silver-edge);
+    }
+    .site-footer code { font-family: var(--f-mono); }
+
+    /* =========================================================
+       High contrast overrides — class + media query
+       ========================================================= */
+    .contrast-high,
+    .contrast-high body {
+      --c-silver:       #ffffff;
+      --c-silver-soft:  #ffffff;
+      --c-silver-edge:  #000000;
+      --c-ink:          #000000;
+      --c-ink-muted:    #1c1c1c;
+      --c-navy:         #000a26;
+      --c-navy-deep:    #000000;
+      --c-blue:         #003fa3;
+      --c-orange:       #c44b00;
+      --c-good:         #006428;
+      --c-warn:         #7a3a00;
+      --c-bad:          #8a1410;
+    }
+    .contrast-high .tile { border-width: 2px; }
+    .contrast-high .tile__state { border: 1px solid currentColor; background: transparent; }
+    .contrast-high .pill-online { border-color: #fff; }
+
+    @media (prefers-contrast: more) {
+      :root {
+        --c-silver: #fff; --c-silver-soft: #fff; --c-silver-edge: #000;
+        --c-ink: #000; --c-ink-muted: #1c1c1c; --c-navy: #000a26;
+        --c-blue: #003fa3; --c-orange: #c44b00;
+      }
+      .tile { border-width: 2px; }
+    }
+  </style>
+
+  <script src="/assets/js/contrast.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <!-- ======================= HEADER ======================= -->
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="rpi-hub">
+        <span class="b-first">rpi-</span><span class="b-second">POD</span>
+        <span class="brand-sub">Offline InfoHub</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">
+          High contrast: off
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ======================= STATUS STRIP ======================= -->
+  <!--
+    Populated by JS from /api/status.
+    Falls back gracefully to dashes when rpi-hub-status isn't running.
+    role="status" = polite live region (screen readers announce updates without interrupting).
+  -->
+  <div class="status-strip" role="status" aria-label="Hub health">
+    <div class="status-strip__inner">
+      <span class="ss-item">
+        uptime&nbsp;<span class="ss-val" id="ss-uptime">—</span>
+      </span>
+      <span class="ss-divider" aria-hidden="true"></span>
+      <span class="ss-item">
+        clients&nbsp;<span class="ss-val" id="ss-clients">—</span>
+      </span>
+      <span class="ss-divider" aria-hidden="true"></span>
+      <span class="ss-item">
+        storage&nbsp;<span class="ss-val" id="ss-storage">—</span>
+      </span>
+      <span class="ss-divider" aria-hidden="true"></span>
+      <span class="ss-item" aria-hidden="true"><span id="ss-version">—</span> · no uplink</span>
+    </div>
+  </div>
+
+  <!-- ======================= MAIN ======================= -->
+  <main id="main">
+    <div class="container">
+
+      <!-- Intro -->
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 class="intro__h" id="intro-h">You're connected to a local resilience node.</h1>
+        <p class="intro__p">
+          Everything here lives on this device. No internet uplink is used or needed.
+          Pick a category to start reading.
+        </p>
+      </section>
+
+      <!-- ======================= CORE RESOURCES ======================= -->
+      <!-- No service probe — always available regardless of hardware -->
+      <div class="sec">
+        <div class="sec__label" aria-hidden="true">Core resources</div>
+        <nav class="grid--core" aria-label="Core resources">
+
+          <a class="tile" href="/library/" data-state="ready">
+            <span class="tile__state">Available</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Book icon -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                <line x1="4" y1="17" x2="4" y2="19.5"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Library</h2>
+            <p class="tile__desc">Browse every offline collection installed on this hub.</p>
+          </a>
+
+          <a class="tile" href="/library/" data-state="ready">
+            <span class="tile__state">Available</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Globe icon -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="2" y1="12" x2="22" y2="12"/>
+                <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Encyclopedia</h2>
+            <p class="tile__desc">Wikipedia and Wiktionary — general reference offline.</p>
+          </a>
+
+          <a class="tile" href="/library/" data-state="ready">
+            <span class="tile__state">Available</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Wrench icon -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">How-To</h2>
+            <p class="tile__desc">Step-by-step guides — iFixit, field manuals, post-disaster refs.</p>
+          </a>
+
+          <a class="tile" href="/library/" data-state="ready">
+            <span class="tile__state">Available</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Medical cross in circle -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="16"/>
+                <line x1="8"  y1="12" x2="16" y2="12"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Medicine</h2>
+            <p class="tile__desc">First-aid, triage, and clinical refs for non-experts.</p>
+          </a>
+
+          <a class="tile" href="/library/" data-state="ready">
+            <span class="tile__state">Available</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Map pin -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+                <circle cx="12" cy="10" r="3"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Maps</h2>
+            <p class="tile__desc">OpenStreetMap regional bundles — fully offline.</p>
+          </a>
+
+        </nav>
+      </div>
+
+      <!-- ======================= LIVE SERVICES ======================= -->
+      <!--
+        These tiles probe their backing endpoints on page load.
+        Tiles start in "checking" state; JS resolves each to "ready" or "offline".
+        Offline tiles remain visible but faded and non-interactive — showing operators
+        which capabilities exist and which hardware is missing.
+      -->
+      <div class="sec">
+        <div class="sec__label" aria-hidden="true">Live services</div>
+        <nav class="grid" aria-label="Live services">
+
+          <a class="tile" id="tile-ask"    href="/ask.html"   data-state="checking" data-probe="/api/retrieve?q=hub&k=1">
+            <span class="tile__state">Checking…</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Chat bubble with ellipsis dots -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+                <circle cx="9"  cy="11" r="1" fill="#0b1f3f" stroke="none"/>
+                <circle cx="12" cy="11" r="1" fill="#0b1f3f" stroke="none"/>
+                <circle cx="15" cy="11" r="1" fill="#0b1f3f" stroke="none"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Ask</h2>
+            <p class="tile__desc">Local AI assistant — searches the library for answers.</p>
+          </a>
+
+          <a class="tile" id="tile-listen" href="/listen.html" data-state="checking" data-probe="/api/listen/state">
+            <span class="tile__state">Checking…</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Radio tower / antenna -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M8.5 6.5a5 5 0 0 1 7 0"/>
+                <path d="M5 4a9 9 0 0 1 14 0"/>
+                <line x1="12" y1="7" x2="12" y2="22"/>
+                <line x1="8"  y1="22" x2="16" y2="22"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Listen</h2>
+            <p class="tile__desc">NOAA weather, FM radio, ham bands — receive-only.</p>
+          </a>
+
+          <a class="tile" id="tile-board"  href="/board.html" data-state="checking" data-probe="/api/notes?limit=1">
+            <span class="tile__state">Checking…</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Document / notepad -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                <polyline points="14,2 14,8 20,8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Board</h2>
+            <p class="tile__desc">Shared ephemeral notes — wipes on device reboot.</p>
+          </a>
+
+          <a class="tile" id="tile-peers"  href="/peers.html" data-state="checking" data-probe="/api/mesh/identity">
+            <span class="tile__state">Checking…</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Network share / mesh nodes -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="18" cy="5"  r="3"/>
+                <circle cx="6"  cy="12" r="3"/>
+                <circle cx="18" cy="19" r="3"/>
+                <line x1="8.59"  y1="13.51" x2="15.42" y2="17.49"/>
+                <line x1="15.41" y1="6.51"  x2="8.59"  y2="10.49"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Peers</h2>
+            <p class="tile__desc">Other rpi-hub nodes visible on the mesh.</p>
+          </a>
+
+          <a class="tile" id="tile-adsb"   href="/adsb.html"  data-state="checking" data-probe="/adsb/aircraft.json">
+            <span class="tile__state">Checking…</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Paper airplane / tracking send -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <line x1="22" y1="2" x2="11" y2="13"/>
+                <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Aircraft</h2>
+            <p class="tile__desc">ADS-B aircraft within reception range.</p>
+          </a>
+
+          <a class="tile" id="tile-sky"    href="/sky.html"   data-state="checking" data-probe="/api/listen/gps">
+            <span class="tile__state">Checking…</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Compass / sky survey radial -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <circle cx="12" cy="12" r="3"/>
+                <line x1="12" y1="2"  x2="12" y2="5"/>
+                <line x1="12" y1="19" x2="12" y2="22"/>
+                <line x1="2"  y1="12" x2="5"  y2="12"/>
+                <line x1="19" y1="12" x2="22" y2="12"/>
+                <line x1="4.93" y1="4.93"   x2="7.07" y2="7.07"/>
+                <line x1="16.93" y1="16.93" x2="19.07" y2="19.07"/>
+                <line x1="19.07" y1="4.93"  x2="16.93" y2="7.07"/>
+                <line x1="7.07"  y1="16.93" x2="4.93"  y2="19.07"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Sky Survey</h2>
+            <p class="tile__desc">GPS satellite visibility — receive-only diagnostic.</p>
+          </a>
+
+          <a class="tile" id="tile-print"  href="/print/"     data-state="checking" data-probe="/print/">
+            <span class="tile__state">Checking…</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Printer -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <polyline points="6 9 6 2 18 2 18 9"/>
+                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+                <rect x="6" y="14" width="12" height="8"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Print</h2>
+            <p class="tile__desc">Field cards — water, wounds, fire, knots.</p>
+          </a>
+
+        </nav>
+      </div>
+
+      <!-- ======================= SYSTEM ======================= -->
+      <div class="sec">
+        <div class="sec__label" aria-hidden="true">System</div>
+        <nav class="grid--sys" aria-label="System">
+
+          <a class="tile" href="/app/" data-state="ready">
+            <span class="tile__state">Available</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- 2×2 grid / dashboard -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <rect x="3"  y="3"  width="7" height="7"/>
+                <rect x="14" y="3"  width="7" height="7"/>
+                <rect x="14" y="14" width="7" height="7"/>
+                <rect x="3"  y="14" width="7" height="7"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">App</h2>
+            <p class="tile__desc">Mobile dashboard — ask, search, radio, board.</p>
+          </a>
+
+          <a class="tile" href="/status.html" data-state="live">
+            <span class="tile__state">Live</span>
+            <div class="tile__icon" aria-hidden="true">
+              <!-- Activity / waveform -->
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+              </svg>
+            </div>
+            <h2 class="tile__title">Status</h2>
+            <p class="tile__desc">Uptime, storage, voltage, connected clients.</p>
+          </a>
+
+        </nav>
+      </div>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/library/">Open library</a>
+        <a href="/status.html">System status</a>
+        <a href="http://hub.local/">hub.local home</a>
+      </nav>
+    </div>
+  </main>
+
+  <!-- ======================= FOOTER ======================= -->
+  <footer class="site-footer">
+    rpi-hub · Full build · Open SSID · No internet egress · MIT licensed
+  </footer>
+
+  <!-- =========================================================
+       Scripts — inline, no external dependencies.
+       1. Contrast toggle handled by /assets/js/contrast.js.
+       2. Service probing with AbortController timeout.
+       3. Status strip — single fetch on load, no polling (index page is transient).
+       ========================================================= -->
+  <script>
+    (function () {
+      "use strict";
+
+      /* ---- Helper: format uptime seconds → "2d 4h" / "47m" ---- */
+      function fmtUptime(s) {
+        if (typeof s !== "number" || !isFinite(s) || s < 0) return "—";
+        var d = Math.floor(s / 86400);
+        var h = Math.floor((s % 86400) / 3600);
+        var m = Math.floor((s % 3600) / 60);
+        if (d > 0) return d + "d " + h + "h";
+        if (h > 0) return h + "h " + m + "m";
+        return m + "m";
+      }
+
+      /* ---- Helper: format bytes → "12.4 GB" ---- */
+      function fmtBytes(n) {
+        if (typeof n !== "number" || !isFinite(n) || n < 0) return "—";
+        var units = ["B", "KB", "MB", "GB", "TB"];
+        var i = 0;
+        while (n >= 1024 && i < units.length - 1) { n /= 1024; i++; }
+        return (n >= 100 ? n.toFixed(0) : n.toFixed(1)) + "\u00a0" + units[i];
+      }
+
+      /* ---- Status strip ---- */
+      fetch("/api/status", { cache: "no-store" })
+        .then(function (r) {
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        })
+        .then(function (d) {
+          var u = document.getElementById("ss-uptime");
+          var c = document.getElementById("ss-clients");
+          var s = document.getElementById("ss-storage");
+          var v = document.getElementById("ss-version");
+
+          if (u && typeof d.uptime_seconds === "number") {
+            u.textContent = fmtUptime(d.uptime_seconds);
+          }
+          if (c && typeof d.dhcp_clients === "number") {
+            var n = d.dhcp_clients;
+            c.textContent = n + " " + (n === 1 ? "client" : "clients");
+            c.className = n > 0 ? "ss-val ss-val--good" : "ss-val";
+          }
+          if (s && d.storage && typeof d.storage.kiwix_bytes_free === "number") {
+            var free = d.storage.kiwix_bytes_free;
+            s.textContent = fmtBytes(free) + " free";
+            s.className = free < 1e9 ? "ss-val ss-val--warn" : "ss-val ss-val--good";
+          }
+          if (v && d.build_version) {
+            v.textContent = d.build_version;
+          }
+        })
+        .catch(function () {
+          /* rpi-hub-status not running — dashes remain, no error needed */
+        });
+
+      /* ---- Service probing ---- */
+      /*
+       * Each tile with data-probe="<url>" is probed on page load.
+       * 5 s abort timeout prevents hung fetches from stalling the page.
+       * On success → data-state="ready", badge = "Available".
+       * On failure → data-state="offline", badge = "Offline", tile fades + non-interactive.
+       */
+      function probe(id, url) {
+        var tile    = document.getElementById(id);
+        if (!tile) return;
+        var badge   = tile.querySelector(".tile__state");
+
+        var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        var timer      = controller
+          ? setTimeout(function () { controller.abort(); }, 5000)
+          : null;
+
+        fetch(url, {
+          cache:  "no-store",
+          signal: controller ? controller.signal : undefined
+        })
+        .then(function (r) {
+          clearTimeout(timer);
+          if (r.ok) {
+            tile.setAttribute("data-state", "ready");
+            if (badge) badge.textContent = "Available";
+          } else {
+            markOffline(tile, badge, r.status);
+          }
+        })
+        .catch(function (err) {
+          clearTimeout(timer);
+          markOffline(tile, badge, err && err.name === "AbortError" ? "timeout" : "unreachable");
+        });
+      }
+
+      function markOffline(tile, badge, reason) {
+        tile.setAttribute("data-state", "offline");
+        tile.setAttribute("tabindex", "-1");
+        tile.setAttribute("aria-disabled", "true");
+        if (badge) badge.textContent = "Offline";
+        /* Keep href so keyboard users can still read the URL in the status bar,
+           but intercept click so the page doesn't navigate to a dead endpoint. */
+        tile.addEventListener("click", function (e) { e.preventDefault(); }, { once: false });
+      }
+
+      probe("tile-ask",    "/api/retrieve?q=hub&k=1");
+      probe("tile-listen", "/api/listen/state");
+      probe("tile-board",  "/api/notes?limit=1");
+      probe("tile-peers",  "/api/mesh/identity");
+      probe("tile-adsb",   "/adsb/aircraft.json");
+      probe("tile-sky",    "/api/listen/gps");
+      probe("tile-print",  "/print/");
+
+    })();
+  </script>
+</body>
+</html>

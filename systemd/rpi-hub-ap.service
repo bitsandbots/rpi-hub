@@ -1,0 +1,31 @@
+# Purpose: Bring up the rpi-hub access point (hostapd then dnsmasq), reapply
+#          the iptables FORWARD drop on every start.
+# Unit:    rpi-hub-ap.service
+# Phase:   1
+
+[Unit]
+Description=rpi-hub Access Point (hostapd + dnsmasq)
+After=network.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+
+# Unblock the Wi-Fi radio; NM's disconnect call can leave a soft rfkill block.
+ExecStartPre=/usr/sbin/rfkill unblock wifi
+ExecStartPre=/usr/bin/systemctl start hostapd.service
+# Assign the static AP IP after hostapd has claimed wlan0.
+# The '-' prefix silently ignores EEXIST on re-runs.
+ExecStartPre=-/sbin/ip addr add 192.168.4.1/24 dev wlan0
+ExecStart=/usr/bin/systemctl start dnsmasq.service
+
+# Belt-and-braces: ensure the FORWARD drop is present after every start.
+# install.sh applies it once; this guards against manual flushes.
+# Must use /bin/sh -c because || is shell syntax; systemd exec does not parse it.
+ExecStartPost=/bin/sh -c '/sbin/iptables -C FORWARD -i wlan0 ! -o wlan0 -j DROP || /sbin/iptables -I FORWARD 1 -i wlan0 ! -o wlan0 -j DROP'
+
+ExecStop=/usr/bin/systemctl stop dnsmasq.service
+ExecStop=/usr/bin/systemctl stop hostapd.service
+
+[Install]
+WantedBy=multi-user.target

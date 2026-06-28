@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="rpi-hub — search the library with help from a small assistant. Grounded, cited, deferential.">
+  <title>rpi-hub — Ask the library</title>
+  <link rel="stylesheet" href="/assets/css/rpi-hub.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='40%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>r</text><text x='62%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>P</text></svg>">
+  <script src="/assets/js/contrast.js"></script>
+  <script src="/assets/js/ask.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="rpi-hub">
+        <span class="b-first">rpi-</span><span class="b-second">POD</span>
+        <span class="brand-sub">Ask the library</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">High contrast: off</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 id="intro-h">Search the library with help from a small assistant</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
+        <p>
+          The assistant only summarises passages it actually found in the library.
+          Every claim links back to the source. Drug doses, severe injuries,
+          mains-voltage work, and structural questions are shown verbatim — the
+          assistant does not paraphrase those.
+        </p>
+      </section>
+
+      <form id="ask-form" class="ask-form" autocomplete="off">
+        <label class="sr-only" for="ask-q">Your question</label>
+        <input id="ask-q" name="q" type="text" maxlength="500" required
+               placeholder="How do I purify water in the field?" />
+        <button type="submit" id="ask-submit">Ask</button>
+      </form>
+
+      <section id="ask-status" class="ask-status" aria-live="polite" hidden>
+        Searching the library…
+      </section>
+
+      <section id="ask-defer" class="ask-defer" role="alert" hidden>
+        <p class="ask-defer__banner"></p>
+        <article class="ask-defer__passage"></article>
+        <p class="ask-defer__cta">
+          <a href="#" class="ask-defer__link">Open the full article →</a>
+        </p>
+      </section>
+
+      <section id="ask-answer" class="ask-answer" hidden>
+        <p class="ask-answer__text"></p>
+        <h2 class="ask-answer__cite-h">Sources</h2>
+        <ol class="ask-answer__cites"></ol>
+        <details class="ask-answer__how">
+          <summary>How this answer was made</summary>
+          <p>
+            The hub ran your question through a hybrid keyword and vector
+            search of the offline library, then asked a small local model to
+            summarise the matching passages. Every sentence had to be backed
+            by a citation, or it was removed.
+          </p>
+        </details>
+      </section>
+
+      <section id="ask-noanswer" class="svc-fallback" hidden>
+        <p>
+          The library doesn't have a confident answer for that. Try opening
+          the library directly and searching the article you're looking for.
+        </p>
+        <p><a href="/library/" class="btn">Open the library</a></p>
+      </section>
+
+      <section id="ask-error" class="svc-fallback" aria-live="polite" hidden>
+        <p>
+          The assistant isn't reachable right now. You can still search the
+          offline library directly.
+        </p>
+        <p><a href="/library/" class="btn">Open the library</a></p>
+      </section>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/">← Back to hub</a>
+        <a href="/library/">Open library</a>
+        <a href="/status.html">System status</a>
+      </nav>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    rpi-hub · Phase 6 · Grounded, cited, deferential · No internet egress
+  </footer>
+</body>
+</html>

@@ -1,0 +1,74 @@
+# Purpose: Run the FastAPI rpi-hub-mesh control plane on 127.0.0.1:8500.
+#          nginx proxies /api/mesh/ to this upstream. The Ed25519
+#          keypair is provisioned out-of-band by rpi-hub-mesh-keygen
+#          (oneshot) and delivered into this unit via LoadCredential=,
+#          so the daemon never has filesystem access to /var/lib/rpi-hub/keys
+#          while it is running.
+# Unit:    rpi-hub-mesh.service
+# Phase:   7 (signed envelopes wired v1.2)
+#
+# Radio data planes live in their own units that this service ships
+# alongside (Reticulum daemon for LoRa, batctl + alfred for Wi-Fi). We
+# do not start them here because they require physical adapters and the
+# operator's region-specific frequency config.
+
+[Unit]
+Description=rpi-hub mesh control plane (FastAPI)
+After=network.target rpi-hub-ap.service rpi-hub-mesh-keygen.service
+Requires=rpi-hub-mesh-keygen.service
+PartOf=rpi-hub-ap.service
+
+[Service]
+Type=simple
+DynamicUser=yes
+
+# Private key (0600) + public key (0644) are loaded by the credential
+# manager as root before the daemon steps down to its dynamic user. The
+# daemon reads them via $CREDENTIALS_DIRECTORY (see
+# identity.load_from_credentials). If either file is missing the unit
+# fails — keygen runs Before= us and is Requires=, so a fresh boot
+# always has both in place.
+LoadCredential=ed25519_priv:/var/lib/rpi-hub/keys/ed25519.priv
+LoadCredential=ed25519_pub:/var/lib/rpi-hub/keys/ed25519.pub
+
+Environment=PYTHONPATH=/opt/rpi-hub
+Environment=PYTHONDONTWRITEBYTECODE=1
+Environment=rpi_hub_MESH_TOKEN_FILE=/etc/rpi-hub/mesh-owner-token
+WorkingDirectory=/opt/rpi-hub
+
+ExecStart=/usr/bin/python3 -m uvicorn mesh.rpi_hub_mesh.main:app \
+    --host 127.0.0.1 \
+    --port 8500 \
+    --log-level warning \
+    --no-access-log
+
+Restart=on-failure
+RestartSec=3
+TimeoutStopSec=10
+
+MemoryMax=128M
+TasksMax=64
+
+NoNewPrivileges=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectSystem=strict
+ProtectHome=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectKernelLogs=yes
+ProtectControlGroups=yes
+ProtectClock=yes
+RestrictNamespaces=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+LockPersonality=yes
+MemoryDenyWriteExecute=yes
+SystemCallArchitectures=native
+SystemCallFilter=@system-service
+SystemCallFilter=~@privileged @resources
+RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
+ReadOnlyPaths=/opt/rpi-hub /etc/rpi-hub
+
+[Install]
+WantedBy=multi-user.target

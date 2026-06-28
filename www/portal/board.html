@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#0b1f3f">
+  <meta name="description" content="rpi-hub — local notes board. Ephemeral, owner-moderated, text-only.">
+  <title>rpi-hub — Board</title>
+  <link rel="stylesheet" href="/assets/css/rpi-hub.css">
+  <link rel="icon" href="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'><rect width='64' height='64' rx='12' fill='%230b1f3f'/><text x='40%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23ffffff'>r</text><text x='62%25' y='58%25' font-family='system-ui,sans-serif' font-size='30' font-weight='800' text-anchor='middle' fill='%23f08a1a'>P</text></svg>">
+  <script src="/assets/js/contrast.js"></script>
+  <script src="/assets/js/board.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" role="banner">
+    <div class="site-header__inner">
+      <div class="brand" aria-label="rpi-hub">
+        <span class="b-first">rpi-</span><span class="b-second">POD</span>
+        <span class="brand-sub">Board</span>
+      </div>
+      <div class="header-tools">
+        <span class="pill-online" aria-live="polite">Hub online</span>
+        <button type="button" class="contrast-toggle" aria-pressed="false">High contrast: off</button>
+      </div>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="container">
+      <section class="intro" aria-labelledby="intro-h">
+        <h1 id="intro-h">Local notes board</h1>
+        <noscript>
+          <p style="max-width:36rem;margin:1rem 0;padding:1rem;background:#fff6e6;border-left:4px solid #b3640d;">
+            This page polls a local API and renders results with JavaScript.
+            Static fallback: visit <a href="/library/">/library</a> for the
+            offline knowledge base.
+          </p>
+        </noscript>
+        <p>
+          Text-only, 280-char max, plain text. Notes wipe on reboot. One per
+          minute, ten per hour, per device. No accounts. The owner can clear
+          the board from the device shell.
+        </p>
+      </section>
+
+      <form id="board-form" class="board-form" autocomplete="off">
+        <label class="sr-only" for="board-name">Display name (optional)</label>
+        <input id="board-name" name="name" type="text" maxlength="24" placeholder="Name (optional)">
+        <label class="sr-only" for="board-text">Your note</label>
+        <textarea id="board-text" name="text" maxlength="280" required rows="3"
+                  placeholder="Water at the church, 4pm. Bring a clean container."></textarea>
+        <div class="board-form__row">
+          <span class="board-counter" id="board-counter">280</span>
+          <button type="submit" id="board-submit">Post note</button>
+        </div>
+        <p id="board-status" class="svc-status" aria-live="polite"></p>
+      </form>
+
+      <section class="board-list" aria-label="Posted notes" aria-live="polite">
+        <ol id="board-notes" class="board-notes"></ol>
+        <p id="board-empty" class="board-empty" hidden>No notes yet.</p>
+      </section>
+
+      <nav class="subnav" aria-label="More">
+        <a href="/">← Back to hub</a>
+        <a href="/library/">Open library</a>
+      </nav>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    rpi-hub · Phase 9 · Notes wipe on reboot · No accounts · No internet egress
+  </footer>
+</body>
+</html>
