@@ -23,6 +23,8 @@ ExecStart=/usr/bin/systemctl start dnsmasq.service
 # install.sh applies it once; this guards against manual flushes.
 # Must use /bin/sh -c because || is shell syntax; systemd exec does not parse it.
 ExecStartPost=/bin/sh -c '/sbin/iptables -C FORWARD -i wlan0 ! -o wlan0 -j DROP || /sbin/iptables -I FORWARD 1 -i wlan0 ! -o wlan0 -j DROP'
+# Same drop for IPv6 (tolerate ip6tables being absent on a v4-only image).
+ExecStartPost=/bin/sh -c 'command -v ip6tables >/dev/null 2>&1 && { /sbin/ip6tables -C FORWARD -i wlan0 ! -o wlan0 -j DROP || /sbin/ip6tables -I FORWARD 1 -i wlan0 ! -o wlan0 -j DROP; } || true'
 
 ExecStop=/usr/bin/systemctl stop dnsmasq.service
 ExecStop=/usr/bin/systemctl stop hostapd.service

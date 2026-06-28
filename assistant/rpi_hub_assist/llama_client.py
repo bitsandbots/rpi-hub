@@ -11,6 +11,7 @@ imports cleanly under the systemd unit's strict apt-only Python world.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import urllib.error
@@ -19,7 +20,10 @@ import urllib.request
 LLAMA_ENDPOINT = os.environ.get(
     "rpi_hub_LLAMA_ENDPOINT", "http://127.0.0.1:8202/completion"
 )
-LLAMA_TIMEOUT_S = float(os.environ.get("rpi_hub_LLAMA_TIMEOUT_S", "20.0"))
+# Keep the generation timeout inside the ~10s end-to-end /ask budget that
+# retrieve_client documents — 20s could blow it twice over. Override via
+# env if a slower board needs more headroom.
+LLAMA_TIMEOUT_S = float(os.environ.get("rpi_hub_LLAMA_TIMEOUT_S", "8.0"))
 
 # Generation knobs. Tuned for Pi 5 + Qwen2.5 1.5B Instruct Q4_K_M:
 # ~8 tok/s sustained → 80 tokens fits inside the 10s end-to-end budget.
@@ -66,7 +70,13 @@ def complete(
     try:
         with urllib.request.urlopen(req, timeout=LLAMA_TIMEOUT_S) as resp:
             body = json.loads(resp.read())
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,  # ConnectionReset/Refused raised during read()
+        http.client.HTTPException,  # RemoteDisconnected / IncompleteRead
+        json.JSONDecodeError,
+    ) as exc:
         raise LlamaUnavailable(str(exc)) from exc
 
     content = body.get("content") if isinstance(body, dict) else None

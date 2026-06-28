@@ -9,8 +9,80 @@ commit.
 
 ## [Unreleased]
 
+### Security
+
+- **Mesh inbound authentication (G-02).** `_on_lora_frame` now verifies
+  every inbound envelope before it can touch the peer table: the Ed25519
+  signature must verify against the presented public key, that key's
+  fingerprint must equal the claimed `sender` (`identity.fingerprint_of`),
+  and the key is TOFU-pinned (`PeerTable.pin_key`). Envelopes gained a
+  transport-only `pub` field; `/notes/publish` now attaches it. Previously
+  signatures were produced but never checked, so any party on the wire
+  could forge a peer identity. Verification fails closed without the
+  `cryptography` library.
+- **SPA no longer phones home (G-07).** Removed the Google-Fonts `@import`
+  and `preconnect` from the shipped React bundle (`www/portal/app/`), and
+  added a `Content-Security-Policy` (`font-src/connect-src 'self'`) +
+  `X-Content-Type-Options` backstop to the portal nginx server. Restores
+  the "no phone-home / no outbound" invariant for served client code.
+- **Split owner-token isolation (G-16).** The mesh→notes owner-token
+  fallback is OFF by default (it collapsed the two trust domains) and now
+  requires `rpi_hub_MESH_TOKEN_LEGACY_FALLBACK=1`.
+- **IPv6 forward drop (G-20).** `install.sh` and `rpi-hub-ap.service` now
+  apply an `ip6tables` FORWARD drop mirroring the IPv4 rule.
+
+### Fixed
+
+- **Single-dongle mutex is now cross-process (G-03).** The RTL-SDR is
+  arbitrated by an advisory `flock` on `/run/rpi-hub/rtlsdr.lock` (new
+  `config/tmpfiles.d/rpi-hub.conf`) held by the in-process `Tuner`, the
+  SAME pipeline, and a new dump1090 drop-in — not just an in-process
+  `threading.Lock`. Children spawn in their own session and are killed by
+  process group. `/tune` and GPS sweeps now correctly 409 when another
+  process holds the dongle.
+- **Hybrid retrieval vector lane (G-01).** `install.sh` installs `hnswlib`
+  (apt→pip) so the HNSW lane actually runs; `/api/retrieve/health` exposes
+  `vector_ready`/`vector_status` so the BM25-only degradation is no longer
+  silent.
+- **Notes board 1024-entry cap (G-04)** implemented (FIFO prune in
+  `storage.insert`); `rpi_hub_NOTES_DB` env var is now honoured.
+- **Read-only root persistence (G-06).** The overlay upper is a bounded
+  volatile tmpfs and persistent state (`/etc/rpi-hub`, `/var/lib/rpi-hub`,
+  `/var/lib/dnsmasq`, `/var/lib/kiwix`) is bind-mounted from the lower
+  disk — the mesh identity and owner tokens survive reboots again.
+- **Mesh replay protection (G-05).** First-contact sequence numbers are
+  recorded (no longer replayable once); the outbound counter persists
+  across restarts via `StateDirectory=` so a restarted node isn't muted.
+- **Dongle detection is passive (G-13).** `dongle_present()` uses
+  `detect_rtlsdr.sh` (lsusb IDs, cached) instead of `rtl_test -t`, which
+  opened/claimed the radio on every `/state` poll.
+- **SAME unit hardware-gated (G-14).** `ExecCondition=detect_rtlsdr.sh` +
+  `StartLimit*` stop it crash-looping when the binaries exist but no
+  dongle is attached.
+- **Assistant robustness.** Safety classifier widened (paracetamol,
+  codeine, morphine, warfarin, … + misspellings) and now also scans
+  retrieved passages, not just the query (G-08); prompt-injection control
+  tokens are scrubbed from interpolated text (G-11); network clients catch
+  `OSError`/`http.client.HTTPException` so a mid-read reset degrades to
+  no-answer instead of a 500, and the llama timeout fits the 10s budget
+  (G-15).
+- **Index integrity.** Retrieve validates the manifest layout version and
+  reads `embedding_dim` from it; mismatches refuse to serve (G-10). The
+  indexer refuses to build a zero-vector index unless
+  `--allow-stub-embeddings` is passed (G-12). Retrieve closes its SQLite
+  connections (G-09).
+- **Status API (G-19).** Probes run concurrently and are cached ~2s; a
+  readiness probe requires 2xx (4xx no longer reads as "ready"); added a
+  kiwix-serve probe; disk figures flag whether they describe the library
+  or the root fs.
+- **SAME pipeline JSON encoding (F4)** uses `jq` (with a safe fallback)
+  instead of naive quote substitution.
+
 ### Changed
 
+- Mesh `/notes/publish` independently bounds text to 280 chars.
+- APRS scaffold described accurately as a "doc-only mention" in the
+  Blueprint (G-21).
 - Landing page (`www/portal/index.html`) redesigned with grouped tile layout
   (Core resources / Live services / System), a live status strip fed by
   `/api/status`, SVG icons, and clearer offline-state handling for optional

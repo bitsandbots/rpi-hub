@@ -22,6 +22,7 @@ pure helpers don't pull them in.
 from __future__ import annotations
 
 import argparse
+import os
 import sqlite3
 import struct
 import sys
@@ -166,7 +167,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--zim-dir", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--allow-stub-embeddings",
+        action="store_true",
+        help="build with zero-vector embeddings when sentence-transformers is "
+        "absent (plumbing smoke-test only; the vector lane will be useless)",
+    )
     args = ap.parse_args()
+    if args.allow_stub_embeddings:
+        os.environ["rpi_hub_ALLOW_STUB_EMBEDDINGS"] = "1"
 
     manifest = build(args.zim_dir, args.out)
     print(f"[indexer] wrote {manifest.chunk_count} chunks ({manifest.token_count} tokens)")

@@ -54,6 +54,8 @@ class HealthResponse(BaseModel):
     ready: bool
     chunk_count: int
     version: str
+    vector_ready: bool
+    vector_status: str
 
 
 def _hybrid_search(
@@ -118,14 +120,31 @@ def _hybrid_search(
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
+    from . import index_handle
+
     if not store.index_present():
-        return HealthResponse(ready=False, chunk_count=0, version=__version__)
-    with store.open_chunks_ro() as conn:
         return HealthResponse(
-            ready=True,
-            chunk_count=store.chunk_count(conn),
+            ready=False,
+            chunk_count=0,
             version=__version__,
+            vector_ready=index_handle.vector_ready(),
+            vector_status=index_handle.VECTOR_STATUS,
         )
+    layout_ok, _reason = store.manifest_layout_ok()
+    # A `with sqlite3.Connection` block commits/rolls back but does NOT
+    # close the connection — leaking an fd per /health poll. Close it.
+    conn = store.open_chunks_ro()
+    try:
+        count = store.chunk_count(conn)
+    finally:
+        conn.close()
+    return HealthResponse(
+        ready=layout_ok,
+        chunk_count=count,
+        version=__version__,
+        vector_ready=index_handle.vector_ready(),
+        vector_status=index_handle.VECTOR_STATUS,
+    )
 
 
 @app.get("/retrieve", response_model=RetrieveResponse)
@@ -135,12 +154,19 @@ def retrieve(
 ) -> RetrieveResponse:
     if not store.index_present():
         return RetrieveResponse(ready=False, query=q, confidence=0.0, results=[])
+    # Refuse to serve an index whose layout this runtime can't interpret,
+    # rather than returning cosine garbage from a mismatched graph.
+    if not store.manifest_layout_ok()[0]:
+        return RetrieveResponse(ready=False, query=q, confidence=0.0, results=[])
 
-    with store.open_chunks_ro() as conn:
+    conn = store.open_chunks_ro()
+    try:
         ranked = _hybrid_search(conn, q, k)
         conf = retrieval.confidence(ranked)
         chunks = store.fetch_chunks(conn, [r.chunk_id for r in ranked])
         scores = {r.chunk_id: r.score for r in ranked}
+    finally:
+        conn.close()
 
     results = [
         ChunkOut(

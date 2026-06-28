@@ -8,6 +8,7 @@ path while it's down.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import urllib.error
@@ -36,7 +37,13 @@ def fetch(query: str, k: int = 6) -> dict[str, object]:
     try:
         with urllib.request.urlopen(url, timeout=RETRIEVE_TIMEOUT_S) as resp:
             body = json.loads(resp.read())
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,  # ConnectionReset/Refused raised during read()
+        http.client.HTTPException,  # RemoteDisconnected / IncompleteRead
+        json.JSONDecodeError,
+    ) as exc:
         raise RetrieveUnavailable(str(exc)) from exc
     if not isinstance(body, dict):
         raise RetrieveUnavailable(f"unexpected retrieve payload: {body!r}")

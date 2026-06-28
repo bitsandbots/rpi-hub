@@ -141,6 +141,16 @@ def ask(req: AskRequest) -> AskResponse:
     if conf < ANSWER_CONFIDENCE_FLOOR or not results:
         return _empty_noanswer(conf)
 
+    # 2b) Re-run the safety classifier over the RETRIEVED CONTENT, not just
+    #     the query. A benign-looking question ("first aid for my toddler")
+    #     can surface drug-dosing or trauma passages; summarising those is
+    #     exactly what we must not do. If any passage trips a rule we defer
+    #     to the verbatim source instead of letting the model rewrite it.
+    passage_blob = "\n".join(str(r.get("text", "")) for r in results[: prompt.MAX_PASSAGES])
+    passage_verdict = safety.classify(passage_blob)
+    if passage_verdict is not None:
+        return _defer(req.q, passage_verdict)
+
     passages = [
         prompt.PromptPassage(
             number=i + 1,

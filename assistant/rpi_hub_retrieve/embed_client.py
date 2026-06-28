@@ -9,6 +9,7 @@ to BM25-only.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import urllib.error
@@ -37,7 +38,13 @@ def embed_query(text: str) -> list[float]:
     try:
         with urllib.request.urlopen(req, timeout=EMBED_TIMEOUT_S) as resp:
             body = json.loads(resp.read())
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,  # ConnectionReset/Refused raised during read()
+        http.client.HTTPException,  # RemoteDisconnected / IncompleteRead
+        json.JSONDecodeError,
+    ) as exc:
         raise EmbedUnavailable(str(exc)) from exc
 
     # llama.cpp's /embedding response shape is {"embedding": [..floats..]}.

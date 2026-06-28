@@ -56,6 +56,18 @@ def _fingerprint(pub: bytes) -> str:
     return "-".join(b32[i : i + 4] for i in range(0, len(b32), 4))
 
 
+def fingerprint_of(pub: bytes) -> str:
+    """Public wrapper around :func:`_fingerprint`.
+
+    Used by the inbound dispatcher to bind a claimed ``sender``
+    fingerprint to the public key actually presented on the wire: a
+    frame is only accepted when ``fingerprint_of(pub) == sender``, so a
+    peer cannot announce a fingerprint it does not hold the key for.
+    """
+
+    return _fingerprint(pub)
+
+
 def load_or_create() -> Identity:
     """Return the local identity, generating it on first run.
 

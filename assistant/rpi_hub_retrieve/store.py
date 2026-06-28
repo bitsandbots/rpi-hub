@@ -23,6 +23,60 @@ INDEX_DIR = Path("/var/lib/rpi-hub/index")
 CHUNKS_DB = INDEX_DIR / "chunks.sqlite"
 MANIFEST = INDEX_DIR / "manifest.yaml"
 
+# Layout version this runtime understands. Must match
+# indexer.manifest.INDEX_LAYOUT_VERSION; an index built under a newer
+# layout is refused rather than mis-read. Kept as a literal here so the
+# runtime has no build-time (indexer) import dependency.
+SUPPORTED_LAYOUT_VERSION = 1
+
+
+def read_manifest(path: Path | None = None) -> dict[str, str]:
+    """Parse the index manifest's top-level scalar keys.
+
+    The manifest is a tiny hand-rolled YAML emitted by
+    ``indexer.manifest`` — flat ``key: value`` lines plus a nested
+    ``source_zims`` list we don't need at runtime. We parse only the
+    scalar keys (layout_version, embedding_dim, …) without a YAML dep.
+    Returns an empty dict when the manifest is absent or unreadable.
+    """
+
+    if path is None:
+        path = MANIFEST
+    out: dict[str, str] = {}
+    try:
+        text = path.read_text()
+    except OSError:
+        return out
+    for line in text.splitlines():
+        # Skip list items / nested keys (leading whitespace) and blanks.
+        if not line or line[0].isspace() or line.lstrip().startswith("-"):
+            continue
+        key, sep, value = line.partition(":")
+        if sep and value.strip():
+            out[key.strip()] = value.strip()
+    return out
+
+
+def manifest_layout_ok(path: Path | None = None) -> tuple[bool, str]:
+    """Return (ok, reason). ``ok`` is False on a layout-version mismatch.
+
+    A missing manifest is treated as OK-but-unknown (legacy indexes
+    predate the manifest) so we don't hard-fail an otherwise-valid index;
+    a present-but-newer layout is refused.
+    """
+
+    man = read_manifest(path)
+    if not man:
+        return True, "no manifest (legacy index)"
+    raw = man.get("layout_version", "")
+    try:
+        version = int(raw)
+    except ValueError:
+        return False, f"unparseable layout_version={raw!r}"
+    if version > SUPPORTED_LAYOUT_VERSION:
+        return False, f"index layout v{version} newer than supported v{SUPPORTED_LAYOUT_VERSION}"
+    return True, f"layout v{version}"
+
 
 @dataclass(frozen=True)
 class Chunk:

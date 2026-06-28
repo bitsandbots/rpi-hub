@@ -125,6 +125,7 @@ def _pinned_services() -> system.ServicesInfo:
         listen="not-running",
         notes="not-running",
         mesh="not-running",
+        kiwix="not-running",
         adsb="not-running",
         adsb_aircraft=None,
         mesh_fingerprint=None,
@@ -139,7 +140,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(
         system,
         "storage",
-        lambda: system.StorageInfo(kiwix_bytes_free=10, kiwix_bytes_total=100),
+        lambda: system.StorageInfo(kiwix_bytes_free=10, kiwix_bytes_total=100, kiwix_present=True),
     )
     monkeypatch.setattr(
         system,
@@ -158,6 +159,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
             listen="not-running",
             notes="ready",
             mesh="ready",
+            kiwix="ready",
             adsb="ready",
             adsb_aircraft=7,
             mesh_fingerprint="ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
@@ -170,7 +172,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
     assert body == {
         "uptime_seconds": 123.45,
         "load_avg": [0.1, 0.2, 0.3],
-        "storage": {"kiwix_bytes_free": 10, "kiwix_bytes_total": 100},
+        "storage": {"kiwix_bytes_free": 10, "kiwix_bytes_total": 100, "kiwix_present": True},
         "voltage": {"throttled": "0x0", "undervoltage": False},
         "dhcp_clients": 2,
         "time_source": "none",
@@ -181,6 +183,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
             "listen": "not-running",
             "notes": "ready",
             "mesh": "ready",
+            "kiwix": "ready",
             "adsb": "ready",
             "adsb_aircraft": 7,
             "mesh_fingerprint": "ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
@@ -195,7 +198,7 @@ def test_status_endpoint_handles_all_unknowns(client: TestClient, monkeypatch: p
     monkeypatch.setattr(
         system,
         "storage",
-        lambda: system.StorageInfo(kiwix_bytes_free=None, kiwix_bytes_total=None),
+        lambda: system.StorageInfo(kiwix_bytes_free=None, kiwix_bytes_total=None, kiwix_present=False),
     )
     monkeypatch.setattr(
         system,

@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import os
 import secrets
+import threading
 from pathlib import Path
 from typing import Annotated
 
@@ -98,6 +99,12 @@ class HealthOut(BaseModel):
 _CONN: object | None = None  # process-wide handle; set on first request
 
 
+# Serialises the rate-limit check + insert so two concurrent POSTs from
+# the same IP (FastAPI runs sync handlers in a threadpool) can't both read
+# count 0 and both insert, slipping past the 1/min limit.
+_POST_LOCK = threading.Lock()
+
+
 def _get_conn() -> object:
     global _CONN
     if _CONN is None:
@@ -139,15 +146,15 @@ def post_note(req: Request, body: PostNoteIn) -> NoteOut:
     assert isinstance(conn, _sql.Connection)
 
     ip = _client_ip(req)
-    verdict = rate_limit.check(conn, ip)
-    if not verdict.ok:
-        raise HTTPException(
-            status_code=status.HTTP_429_TOO_MANY_REQUESTS,
-            detail=verdict.reason,
-            headers={"Retry-After": str(verdict.retry_after_s)},
-        )
-
-    note = storage.insert(conn, name=name, text=text, ip=ip)
+    with _POST_LOCK:
+        verdict = rate_limit.check(conn, ip)
+        if not verdict.ok:
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail=verdict.reason,
+                headers={"Retry-After": str(verdict.retry_after_s)},
+            )
+        note = storage.insert(conn, name=name, text=text, ip=ip)
 
     # Phase 9.2 wiring: hand the note to rpi-hub-mesh for fan-out. This
     # is best-effort — the local board is the canonical store; the

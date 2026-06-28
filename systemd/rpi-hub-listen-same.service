@@ -4,12 +4,18 @@
 # Unit:    rpi-hub-listen-same.service
 # Phase:   8 (sub-phase 8.2)
 #
-# The pipeline holds the dongle whenever it is active. rpi-hub-listen's
-# /tune endpoint stops this unit on a user tune request and brings it
-# back when the user stops tuning.
+# The pipeline holds the shared RTL-SDR flock (/run/rpi-hub/rtlsdr.lock)
+# for its whole lifetime, so the in-process Tuner (FM/GPS) and
+# dump1090-mutability are locked out while SAME is active. A user /tune
+# request that finds the dongle held returns 409 (TunerBusy); the
+# operator stops this unit to free the radio. There is no longer any
+# implicit stop/restart of this unit from the /tune endpoint — the
+# DynamicUser sandbox cannot manage sibling units, so coordination is via
+# the flock, not systemctl.
 #
 # Mutually exclusive with dump1090-mutability — a single RTL-SDR dongle
-# is claimed by whichever service starts first. See docs/OVERVIEW.md §7.4.
+# is claimed by whichever service holds the flock first. See
+# docs/OVERVIEW.md §7.4.
 
 [Unit]
 Description=rpi-hub SAME alert decoder pipeline (rtl_fm + multimon-ng)
@@ -17,11 +23,21 @@ After=network.target rpi-hub-listen.service rpi-hub-ap.service
 PartOf=rpi-hub-listen.service
 ConditionPathExists=/usr/bin/rtl_fm
 ConditionPathExists=/usr/bin/multimon-ng
+# Cap restart storms: if rtl_fm keeps exiting (e.g. a flapping dongle),
+# stop retrying after 5 failures in 5 minutes instead of looping forever.
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple
 DynamicUser=yes
 SupplementaryGroups=plugdev
+
+# Hardware gate: skip cleanly (condition-failed, not crash-looped) when no
+# RTL-SDR dongle is plugged in. The decoder *binaries* are installed
+# unconditionally, so a binary-only ConditionPathExists is not enough —
+# without this the pipeline's rtl_fm would exit non-zero every 10s.
+ExecCondition=/opt/rpi-hub/scripts/detect_rtlsdr.sh
 
 # /opt/rpi-hub/scripts/same_pipeline.sh chains rtl_fm | multimon-ng |
 # curl. The "exec" wrapper makes systemd track the rtl_fm pid for the

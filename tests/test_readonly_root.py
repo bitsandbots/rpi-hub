@@ -116,6 +116,22 @@ def test_overlay_carves_keys_and_kiwix_per_design() -> None:
     assert "keypair" in text.lower() or "keys" in text.lower()
 
 
+def test_persistent_state_paths_are_bound() -> None:
+    """Regression for the bug where overlay-root regenerated the mesh
+    identity every boot: the state dirs that must survive boots have to be
+    declared in PERSIST_PATHS and bound in the initramfs hook, not left on
+    the volatile tmpfs upper."""
+
+    text = SCRIPT.read_text()
+    assert "PERSIST_PATHS=(" in text, "PERSIST_PATHS list missing"
+    for required in ("/etc/rpi-hub", "/var/lib/rpi-hub", "/var/lib/dnsmasq"):
+        assert required in text, f"{required} not declared persistent"
+    # The hook must actually bind them and the upper must be volatile tmpfs.
+    assert "bind_persist" in text
+    assert "mount --bind" in text
+    assert "tmpfs" in text and "upper" in text
+
+
 # --------------------------------------------------------------------------- #
 # Dynamic — exercise `status` with stubbed findmnt/du.
 # --------------------------------------------------------------------------- #

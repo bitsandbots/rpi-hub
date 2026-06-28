@@ -195,6 +195,87 @@ def test_publish_note_signs_with_real_key_when_available(
     assert messages.verify(pub_bytes, env.canonical_body(), env.sig)
 
 
+def test_peer_first_sequence_not_replayable() -> None:
+    # Regression: the very first seq seen from a peer must be recorded,
+    # so an attacker cannot replay that first frame.
+    table = peers.PeerTable()
+    assert table.accept_sequence("NEW-PEER", 5)  # first contact, recorded
+    assert not table.accept_sequence("NEW-PEER", 5)  # replay of the first frame
+    assert not table.accept_sequence("NEW-PEER", 3)  # older
+    assert table.accept_sequence("NEW-PEER", 6)  # newer ok
+
+
+def test_pin_key_rejects_key_change() -> None:
+    table = peers.PeerTable()
+    assert table.pin_key("FP-1", b"\x01" * 32)  # first use pins
+    assert table.pin_key("FP-1", b"\x01" * 32)  # same key ok
+    assert not table.pin_key("FP-1", b"\x02" * 32)  # different key rejected
+
+
+def _real_keypair():
+    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+
+    priv = Ed25519PrivateKey.generate()
+    priv_bytes = priv.private_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PrivateFormat.Raw,
+        encryption_algorithm=serialization.NoEncryption(),
+    )
+    pub_bytes = priv.public_key().public_bytes(
+        encoding=serialization.Encoding.Raw,
+        format=serialization.PublicFormat.Raw,
+    )
+    return priv_bytes, pub_bytes
+
+
+def test_verify_envelope_accepts_well_formed_signed_frame() -> None:
+    if not messages.CRYPTO_AVAILABLE:
+        pytest.skip("cryptography unavailable")
+    import base64
+
+    priv_bytes, pub_bytes = _real_keypair()
+    sender = identity.fingerprint_of(pub_bytes)
+    env = messages.make_note(
+        sender=sender, seq=1, priv=priv_bytes, note_id=1, name="a", text="hi",
+        pub=base64.b64encode(pub_bytes).decode("ascii"),
+    )
+    parsed = messages.verify_envelope(env.__dict__)
+    assert parsed is not None
+    assert parsed.sender == sender
+
+
+def test_verify_envelope_rejects_fingerprint_mismatch() -> None:
+    if not messages.CRYPTO_AVAILABLE:
+        pytest.skip("cryptography unavailable")
+    import base64
+
+    priv_bytes, pub_bytes = _real_keypair()
+    env = messages.make_note(
+        sender="WRON-GFIN-GERP-RINT-AAAA-BBBB", seq=1, priv=priv_bytes,
+        note_id=1, name="a", text="hi",
+        pub=base64.b64encode(pub_bytes).decode("ascii"),
+    )
+    # Signature is valid but the claimed sender is not fingerprint_of(pub).
+    assert messages.verify_envelope(env.__dict__) is None
+
+
+def test_verify_envelope_rejects_forged_signature() -> None:
+    if not messages.CRYPTO_AVAILABLE:
+        pytest.skip("cryptography unavailable")
+    import base64
+
+    _, pub_bytes = _real_keypair()
+    sender = identity.fingerprint_of(pub_bytes)
+    forged = {
+        "kind": "note", "sender": sender, "seq": 1, "ts": 0.0,
+        "body": {"note_id": 1, "name": "a", "text": "hi", "ttl_s": 3600},
+        "sig": base64.b64encode(b"\x00" * 64).decode("ascii"),
+        "pub": base64.b64encode(pub_bytes).decode("ascii"),
+    }
+    assert messages.verify_envelope(forged) is None
+
+
 def test_verify_rejects_tampered_payload() -> None:
     # Real Ed25519 verification rejects tampering; the stub does not
     # (it's length-only). Skip in stub mode.

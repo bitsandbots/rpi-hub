@@ -45,9 +45,19 @@ class DeferralVerdict:
 _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
     (
         re.compile(
-            r"\b(dose|dosage|mg/kg|micrograms?|how (?:much|many)|overdose|"
-            r"acetaminophen|ibuprofen|aspirin|tylenol|advil|epinephrine|"
-            r"insulin|naloxone)\b",
+            r"\b(dose|dosage|dosing|mg/kg|mg per kg|micrograms?|milligrams?|"
+            r"how (?:much|many)|overdose|"
+            # analgesics / antipyretics (intl. + brand + common misspellings)
+            r"acetaminophen|paracetamol|ibuprofen|ibruprofen|aspirin|"
+            r"tylenol|advil|nurofen|panadol|naproxen|"
+            # opioids / controlled
+            r"codeine|morphine|oxycodone|hydrocodone|fentanyl|tramadol|"
+            # narrow-therapeutic-index / high-risk
+            r"warfarin|digoxin|lithium|methotrexate|theophylline|"
+            # emergency / endocrine
+            r"epinephrine|adrenaline|insulin|naloxone|narcan|"
+            # antibiotics commonly dosed by weight in kids
+            r"amoxicillin|antibiotic)\b",
             re.IGNORECASE,
         ),
         DeferralReason.DRUG_DOSING,
