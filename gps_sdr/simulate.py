@@ -36,12 +36,18 @@ class SimSatellite:
     # amplitude ≈ 0.07 → metric ≈  spc × amp² / 2  ≈ 5 (threshold=2.5) at 2.048 Msps
 
 
-# Default scenario: four satellites in different parts of the sky
+# Default scenario: four satellites in different parts of the sky.
+# Amplitudes are tuned so all four clear the demonstration threshold of 15
+# (see the README "Simulator threshold note") even with the worst-case
+# Doppler-bin scalloping loss — otherwise a full 32-PRN sim sweep would
+# under-report the synthetic constellation. PRN 1 stays the strongest.
+# Cross-correlations remain ≤ (65/1023)² of a source metric (~0.004×),
+# far below 15, so raising amplitudes adds no false positives.
 DEFAULT_SCENARIO: list[SimSatellite] = [
-    SimSatellite(prn= 1, doppler_hz= +1_200.0, code_phase= 512, amplitude=0.10),
-    SimSatellite(prn= 5, doppler_hz= -2_500.0, code_phase= 200, amplitude=0.08),
-    SimSatellite(prn=14, doppler_hz= +4_000.0, code_phase= 987, amplitude=0.07),
-    SimSatellite(prn=22, doppler_hz=   -750.0, code_phase=1500, amplitude=0.09),
+    SimSatellite(prn= 1, doppler_hz= +1_200.0, code_phase= 512, amplitude=0.13),
+    SimSatellite(prn= 5, doppler_hz= -2_500.0, code_phase= 200, amplitude=0.12),
+    SimSatellite(prn=14, doppler_hz= +4_000.0, code_phase= 987, amplitude=0.11),
+    SimSatellite(prn=22, doppler_hz=   -750.0, code_phase=1500, amplitude=0.12),
 ]
 
 

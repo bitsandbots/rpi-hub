@@ -145,10 +145,29 @@ def test_real_simulator_end_to_end() -> None:
     assert last["ok"] is True, f"sweep failed: {last['error']}"
     prns = {r["prn"] for r in last["report"]["results"]}
     assert prns == {1, 5}
-    # PRN 1 is the strongest satellite in DEFAULT_SCENARIO (amp 0.10) and
-    # must clear even the raised simulator threshold of 15.
-    prn1 = next(r for r in last["report"]["results"] if r["prn"] == 1)
-    assert prn1["acquired"] is True
+    # Both injected PRNs (1 and 5) must clear the demonstration threshold
+    # of 15 — amplitudes are tuned so the whole synthetic constellation
+    # acquires, not just the strongest sat (regression for the under-
+    # reporting sim gap).
+    by_prn = {r["prn"]: r for r in last["report"]["results"]}
+    assert by_prn[1]["acquired"] is True
+    assert by_prn[5]["acquired"] is True
+
+
+def test_real_simulator_full_scenario_all_acquire() -> None:
+    """A full default-scenario sweep must report ALL four injected
+    satellites as acquired with no false positives — the sim demonstrates
+    the whole synthetic constellation, not just one sat."""
+    pytest.importorskip("numpy")
+    tuner = dongle.Tuner()
+    sw = gps.GPSSweeper(tuner)
+    injected = {1, 5, 14, 22}
+    sw.start(prns=sorted(injected), integration_ms=1, simulate=True, timeout_s=60)
+    _wait_done(sw, timeout=60)
+    last = sw.last()
+    assert last is not None and last["ok"] is True
+    acquired = {r["prn"] for r in last["report"]["results"] if r["acquired"]}
+    assert injected.issubset(acquired), f"under-reported: {injected - acquired}"
 
 
 # ── API tests ─────────────────────────────────────────────────────────

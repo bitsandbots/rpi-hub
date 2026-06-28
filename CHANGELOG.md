@@ -77,6 +77,22 @@ commit.
   or the root fs.
 - **SAME pipeline JSON encoding (F4)** uses `jq` (with a safe fallback)
   instead of naive quote substitution.
+- **GPS simulator under-reporting (F5).** `DEFAULT_SCENARIO` amplitudes
+  raised so all four injected satellites clear the demonstration
+  threshold of 15 (was 3/4 — PRN 5 lost to Doppler-bin scalloping);
+  cross-correlations stay negligible, so no false positives. New
+  full-scenario e2e test.
+- **Loopback-only upstreams (F6).** Every internal HTTP client
+  (llama/retrieve/embed/notes→mesh) and the SAME pipeline now refuse a
+  non-loopback endpoint at startup unless
+  `rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1` — defence in depth for the
+  no-exfiltration invariant against a stray env/drop-in override.
+
+### Documentation
+
+- Clarified that the no-exfiltration invariant is a *runtime* guarantee;
+  install-time `apt`/pip is provisioning, and field devices should be
+  imaged via `scripts/bake_image.sh` (F7).
 
 ### Changed
 

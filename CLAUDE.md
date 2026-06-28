@@ -57,8 +57,14 @@ docs/                OVERVIEW.md (canonical), GAP_ANALYSIS.md, CONTENT_GUIDE.md,
 ## Non-negotiable invariants
 
 - **No data exfiltration** — the device never initiates outbound IP
-  connections in production. Internet calls only happen in
+  connections *at runtime*. Internet calls only happen in
   `content/fetch.sh` and `models/fetch_models.sh`, both workstation-only.
+  The one on-device outbound path is `install.sh` provisioning (apt / a
+  pip fallback) — that is install-time, not steady state; field devices
+  should be imaged with `scripts/bake_image.sh` so they never apt-update
+  in the field. Internal service clients enforce this in code: each
+  refuses a non-loopback upstream unless
+  `rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1` is set.
 - **No phone-home** — no telemetry, no update checks.
 - **Read-only content** — the library is read-only; `rpi-hub-notes` is
   the only write path (rate-limited, ephemeral, owner-clearable).

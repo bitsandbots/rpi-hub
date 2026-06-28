@@ -15,8 +15,26 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-RETRIEVE_ENDPOINT = os.environ.get(
-    "rpi_hub_RETRIEVE_ENDPOINT", "http://127.0.0.1:8100/retrieve"
+def _require_loopback(url: str) -> str:
+    """Refuse a non-loopback upstream — the device must never initiate
+    outbound IP connections. Override with
+    ``rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1`` for diagnostics.
+    """
+
+    if os.environ.get("rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM") == "1":
+        return url
+    host = urllib.parse.urlsplit(url).hostname or ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise RuntimeError(
+            f"refusing non-loopback upstream {url!r}: this device must not "
+            "initiate outbound connections (set "
+            "rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1 to override)"
+        )
+    return url
+
+
+RETRIEVE_ENDPOINT = _require_loopback(
+    os.environ.get("rpi_hub_RETRIEVE_ENDPOINT", "http://127.0.0.1:8100/retrieve")
 )
 RETRIEVE_TIMEOUT_S = float(os.environ.get("rpi_hub_RETRIEVE_TIMEOUT_S", "5.0"))
 

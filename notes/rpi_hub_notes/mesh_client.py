@@ -13,10 +13,30 @@ from __future__ import annotations
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
-MESH_PUBLISH_URL = os.environ.get(
-    "rpi_hub_MESH_PUBLISH_URL", "http://127.0.0.1:8500/notes/publish"
+
+def _require_loopback(url: str) -> str:
+    """Refuse a non-loopback upstream — the device must never initiate
+    outbound IP connections. Override with
+    ``rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1`` for diagnostics.
+    """
+
+    if os.environ.get("rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM") == "1":
+        return url
+    host = urllib.parse.urlsplit(url).hostname or ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise RuntimeError(
+            f"refusing non-loopback upstream {url!r}: this device must not "
+            "initiate outbound connections (set "
+            "rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1 to override)"
+        )
+    return url
+
+
+MESH_PUBLISH_URL = _require_loopback(
+    os.environ.get("rpi_hub_MESH_PUBLISH_URL", "http://127.0.0.1:8500/notes/publish")
 )
 MESH_PUBLISH_TIMEOUT_S = float(os.environ.get("rpi_hub_MESH_PUBLISH_TIMEOUT_S", "0.5"))
 

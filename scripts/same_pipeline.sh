@@ -18,6 +18,20 @@ RTLSDR_LOCK="${rpi_hub_RTLSDR_LOCK:-/run/rpi-hub/rtlsdr.lock}"
 
 log() { printf '[same-pipeline] %s\n' "$*" >&2; }
 
+# The device must never initiate outbound IP connections: refuse to POST
+# decoded alert text anywhere but loopback. Override with
+# rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1 for diagnostics.
+if [ "${rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM:-0}" != "1" ]; then
+    case "$SERVICE_URL" in
+        http://127.0.0.1[:/]*|http://127.0.0.1|http://localhost[:/]*|http://localhost|http://"[::1]"[:/]*)
+            ;;
+        *)
+            log "refusing non-loopback listen URL '${SERVICE_URL}'; aborting"
+            exit 1
+            ;;
+    esac
+fi
+
 if ! command -v rtl_fm >/dev/null; then
     log "rtl_fm not installed; pipeline cannot start"
     exit 1

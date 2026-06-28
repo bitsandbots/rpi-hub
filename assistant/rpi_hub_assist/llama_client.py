@@ -15,10 +15,35 @@ import http.client
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
-LLAMA_ENDPOINT = os.environ.get(
-    "rpi_hub_LLAMA_ENDPOINT", "http://127.0.0.1:8202/completion"
+
+def _require_loopback(url: str) -> str:
+    """Refuse a non-loopback upstream.
+
+    The device must never initiate outbound IP connections (the
+    no-exfiltration invariant). All internal clients default to
+    127.0.0.1, but each endpoint is env-overridable; a stray drop-in or
+    operator edit pointing one off-box would turn an internal call into
+    exfiltration. We reject that at import. Override for diagnostics with
+    ``rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1``.
+    """
+
+    if os.environ.get("rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM") == "1":
+        return url
+    host = urllib.parse.urlsplit(url).hostname or ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise RuntimeError(
+            f"refusing non-loopback upstream {url!r}: this device must not "
+            "initiate outbound connections (set "
+            "rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1 to override)"
+        )
+    return url
+
+
+LLAMA_ENDPOINT = _require_loopback(
+    os.environ.get("rpi_hub_LLAMA_ENDPOINT", "http://127.0.0.1:8202/completion")
 )
 # Keep the generation timeout inside the ~10s end-to-end /ask budget that
 # retrieve_client documents — 20s could blow it twice over. Override via
