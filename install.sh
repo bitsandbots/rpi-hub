@@ -13,6 +13,11 @@
 #   - Apply iptables FORWARD drop on wlan0 cross-interface traffic
 #   - Enable rpi-hub-ap.service
 #
+# --no-ap (or NO_AP=1): install the full platform but skip Phase 1's network
+#   setup entirely — no hostapd/dnsmasq, no wlan0/dhcpcd changes, no AP. The box
+#   stays on its existing LAN/Wi-Fi so you can keep testing the portal and
+#   services over its normal IP. All other phases run unchanged.
+#
 # Phase 2 scope (additive):
 #   - Install nginx
 #   - Link the rpi-hub-portal site config + landing page into /etc and /var/www
@@ -96,6 +101,11 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHASE="${PHASE:-7}"
 COUNTRY="${rpi_hub_COUNTRY_CODE:-US}"
 PACK=""
+# NO_AP=1 (or --no-ap) installs the full platform but leaves networking
+# untouched: hostapd/dnsmasq/wlan0/dhcpcd are not configured and no AP is
+# brought up. Use this to keep the Pi on its existing LAN/Wi-Fi while
+# testing the portal + services over the box's normal IP.
+NO_AP="${NO_AP:-0}"
 
 log() { printf '[rpi-hub-install] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -110,8 +120,9 @@ while [[ $# -gt 0 ]]; do
         --pack)    PACK="${2:-}"; shift 2 ;;
         --phase=*) PHASE="${1#--phase=}"; shift ;;
         --phase)   PHASE="${2:-}"; shift 2 ;;
+        --no-ap)   NO_AP=1; shift ;;
         --)        shift; break ;;
-        *)         die "unknown argument: $1 (try --phase=N, --pack=NAME)" ;;
+        *)         die "unknown argument: $1 (try --phase=N, --pack=NAME, --no-ap)" ;;
     esac
 done
 
@@ -122,6 +133,11 @@ fi
 if [[ ! "$COUNTRY" =~ ^[A-Z]{2}$ ]]; then
     die "rpi_hub_COUNTRY_CODE must be ISO 3166-1 alpha-2 (got: '$COUNTRY')"
 fi
+
+case "$NO_AP" in
+    0|1) ;;
+    *) die "NO_AP must be 0 or 1 (got: '$NO_AP'); use --no-ap to skip AP setup" ;;
+esac
 
 require_root() {
     [[ $EUID -eq 0 ]] || die "must run as root (try: sudo $0)"
@@ -258,7 +274,34 @@ install_unit() {
     systemctl enable rpi-hub-ap.service
 }
 
+# NO_AP path: install nothing that touches the radio, wlan0, dhcpcd, dnsmasq,
+# or the FORWARD rules. The box keeps its existing network so the rest of the
+# platform can be reached over its normal LAN/Wi-Fi IP during testing. Later
+# phases bind to 127.0.0.1 and nginx listens on :80 on all interfaces, so they
+# work unchanged. hub.local is pointed at loopback so on-box name-based access
+# (the captive-portal redirect target) still resolves.
+phase1_no_ap() {
+    log "Phase 1 — SKIPPED (--no-ap): leaving networking untouched, no AP"
+    require_bookworm
+
+    if grep -qF "hub.local" /etc/hosts; then
+        # A previous full install may have written 192.168.4.1; rewrite it to
+        # loopback so on-box access doesn't chase a now-nonexistent AP IP.
+        sed -i -E 's/^[0-9.]+\thub\.local$/127.0.0.1\thub.local/' /etc/hosts
+    else
+        printf '127.0.0.1\thub.local\n' >> /etc/hosts
+        log "added hub.local → 127.0.0.1 to /etc/hosts (no-AP testing)"
+    fi
+
+    log "Phase 1 (no-AP) complete. Reach the hub at this box's existing IP."
+}
+
 phase1() {
+    if [[ "$NO_AP" == "1" ]]; then
+        phase1_no_ap
+        return
+    fi
+
     log "Phase 1 — Bare AP"
     require_bookworm
 
