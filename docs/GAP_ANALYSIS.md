@@ -123,10 +123,13 @@ priority approval.
 
 | Phase | Name | Effort | Key decision |
 |---|---|---|---|
+| **6.1** | **PDF-backed ZIM content indexing** | ~2–3 d | The 5 `zimgit-*` "minimal tier" survival ZIMs (water, food-prep, knots, post-disaster, medicine) store their real content as bundled PDFs cataloged by a client-rendered `database.js` — confirmed each ZIM has exactly 2 `text/html` entries regardless of size (spot-checked live via libzim, 2026-07-01). `indexer.build_index._iter_articles` (`indexer/build_index.py:86`, `indexer/htmlstrip.py`) correctly indexes `text/html` only, so these five ZIMs currently contribute ~0 real chunks to the assistant index — the RAG assistant cannot answer questions grounded in them today. Decision needed: add a PDF-text-extraction dependency (e.g. `pypdf`) to `indexer/requirements.txt` plus an `application/pdf`-keyed extraction path, or document the limitation in `docs/CONTENT_GUIDE.md` and accept these guides as browse-only (still served fine via `/library/`, just not retrievable through Ask). |
 | **14** | **Offline Stratum-1 Time** | ~1 d + $15 BOM | u-blox GPS module with PPS output → chrony on the Pi. Gives the hub a sane RTC-class clock for TLS-less log correlation + mesh signature timestamps. **This is the right tool for offline time** — not an extension of Phase 13's gps_sdr acquisition engine. Hardware: one active antenna can serve either Phase 13 sweeps OR Phase 14 time (both are L1 1575.42 MHz); budget two antennas if simultaneous use is needed. |
 | **15** | **Power & Storage Lifecycle** | ~3–4 d | UPS HAT telemetry (low-battery state exposed on `/api/status`), low-voltage degradation tiers (graceful service shutdown order), mirrored-storage guidance (Btrfs RAID-1 on NVMe for Pi 5 deployments). Closes the C.O.R.E. narrative gap on "graceful degradation." |
 | **16** | **Resource Directory service** | deferred | Community-scoped phonebook of local resources (mesh-propagated). Deferred pending community deployment feedback. |
 
+Phase 6.1 has no hardware dependency and can be picked up independently
+of the 14 → 15 → 16 sequencing below.
 Phase sequencing recommended: **14 → 15**, then 16 if community feedback demands it.
 Phase 14 and Phase 13's bench step can share the same hardware session (same antenna BOM decision).
 

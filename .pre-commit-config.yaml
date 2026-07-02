@@ -20,7 +20,11 @@ repos:
     hooks:
       - id: ruff
         args: ["--fix"]
-      - id: ruff-format
+        # No ruff-format hook here: black is this repo's authoritative
+        # formatter (pyproject.toml [tool.black], Makefile `fmt` target).
+        # ruff-format and black disagree on some edge cases (comment
+        # spacing, dataclass blank lines), so running both caused an
+        # infinite reformat ping-pong between hook runs.
 
   - repo: https://github.com/psf/black
     rev: 24.10.0
@@ -31,7 +35,7 @@ repos:
     rev: v1.13.0
     hooks:
       - id: mypy
-        args: ["--strict", "--ignore-missing-imports"]
+        args: ["--strict", "--ignore-missing-imports", "--explicit-package-bases"]
         additional_dependencies: ["pydantic", "fastapi"]
 
   - repo: https://github.com/shellcheck-py/shellcheck-py
@@ -49,13 +53,16 @@ repos:
     rev: v1.35.1
     hooks:
       - id: yamllint
-        args: ["-d", "{extends: default, rules: {line-length: {max: 120}}}"]
+        args:
+          [
+            "-d",
+            "{extends: default, rules: {line-length: {max: 120}, document-start: disable}}",
+          ]
 
   - repo: https://github.com/igorshubovych/markdownlint-cli
     rev: v0.43.0
     hooks:
       - id: markdownlint
-        args: ["--disable", "MD013", "MD033", "--"]
 
   - repo: local
     hooks:

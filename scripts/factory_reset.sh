@@ -44,6 +44,8 @@ do_step() {
 }
 
 # 1. DHCP leases. Truncate, then SIGHUP dnsmasq so it re-reads.
+# shellcheck disable=SC2016  # single-quoted on purpose: $f is the child
+# bash -c's own loop variable, not meant to expand in this outer shell.
 do_step "truncate dnsmasq leases" \
     bash -c 'for f in /var/lib/misc/dnsmasq.leases /var/lib/dnsmasq/dnsmasq.leases; do
                  [[ -f "$f" ]] && : >"$f"

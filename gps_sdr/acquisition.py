@@ -26,8 +26,8 @@ from __future__ import annotations
 
 import logging
 import time
-from dataclasses import dataclass, field
-from typing import Sequence
+from collections.abc import Sequence
+from dataclasses import dataclass
 
 import numpy as np
 
@@ -47,10 +47,11 @@ log = logging.getLogger(__name__)
 @dataclass
 class AcquisitionResult:
     """Outcome of a satellite search for one PRN."""
+
     prn: int
     acquired: bool
     doppler_hz: float = 0.0
-    code_phase: int = 0          # samples (offset into 1 ms block)
+    code_phase: int = 0  # samples (offset into 1 ms block)
     peak_power: float = 0.0
     noise_floor: float = 1.0
 
@@ -99,13 +100,13 @@ class GPSAcquisition:
 
         # Pre-compute complex carrier wipe-off vectors for every Doppler bin.
         # Shape: (n_dop, spc) — avoids recomputing exp() in the inner loop.
-        log.info(
-            "Pre-computing %d Doppler carriers and 32 PRN FFTs …", n_dop
-        )
+        log.info("Pre-computing %d Doppler carriers and 32 PRN FFTs …", n_dop)
         t0 = time.monotonic()
         self._carriers = np.exp(
             -1j * 2.0 * np.pi * self.doppler_bins[:, np.newaxis] * t[np.newaxis, :]
-        ).astype(np.complex64)   # (n_dop, spc)
+        ).astype(
+            np.complex64
+        )  # (n_dop, spc)
 
         # Pre-compute conjugate FFTs of all 32 resampled C/A codes.
         # Shape of each value: (spc,)  complex64
@@ -151,7 +152,7 @@ class GPSAcquisition:
     def _search_prn(self, prn: int, samples: np.ndarray) -> AcquisitionResult:
         """Non-coherent PCPS integration across all Doppler bins for one PRN."""
         n_dop = len(self.doppler_bins)
-        code_fft_c = self._code_ffts[prn]   # shape: (spc,)
+        code_fft_c = self._code_ffts[prn]  # shape: (spc,)
 
         # Accumulate power over integration_ms code periods
         power_sum = np.zeros((n_dop, self.spc), dtype=np.float64)
@@ -160,7 +161,7 @@ class GPSAcquisition:
             blk = samples[ms * self.spc : (ms + 1) * self.spc].astype(np.complex64)
 
             # Vectorised carrier wipe: (n_dop, spc) * (spc,) → (n_dop, spc)
-            wiped = blk[np.newaxis, :] * self._carriers   # broadcast
+            wiped = blk[np.newaxis, :] * self._carriers  # broadcast
 
             # Batch FFT along axis-1
             S = np.fft.fft(wiped, axis=1)
@@ -191,7 +192,10 @@ class GPSAcquisition:
         if acquired:
             log.info(
                 "PRN %2d  ACQUIRED  doppler=%+.0f Hz  phase=%d  metric=%.1f",
-                prn, best_dop, best_phase, best_peak / noise_floor,
+                prn,
+                best_dop,
+                best_phase,
+                best_peak / noise_floor,
             )
 
         return AcquisitionResult(

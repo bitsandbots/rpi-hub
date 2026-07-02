@@ -116,6 +116,22 @@ def test_overlay_carves_keys_and_kiwix_per_design() -> None:
     assert "keypair" in text.lower() or "keys" in text.lower()
 
 
+def test_persistent_state_paths_are_bound() -> None:
+    """Regression for the bug where overlay-root regenerated the mesh
+    identity every boot: the state dirs that must survive boots have to be
+    declared in PERSIST_PATHS and bound in the initramfs hook, not left on
+    the volatile tmpfs upper."""
+
+    text = SCRIPT.read_text()
+    assert "PERSIST_PATHS=(" in text, "PERSIST_PATHS list missing"
+    for required in ("/etc/rpi-hub", "/var/lib/rpi-hub", "/var/lib/dnsmasq"):
+        assert required in text, f"{required} not declared persistent"
+    # The hook must actually bind them and the upper must be volatile tmpfs.
+    assert "bind_persist" in text
+    assert "mount --bind" in text
+    assert "tmpfs" in text and "upper" in text
+
+
 # --------------------------------------------------------------------------- #
 # Dynamic — exercise `status` with stubbed findmnt/du.
 # --------------------------------------------------------------------------- #
@@ -124,17 +140,13 @@ def test_overlay_carves_keys_and_kiwix_per_design() -> None:
 def _make_stub(bin_dir: Path, name: str, stdout: str, rc: int = 0) -> Path:
     bin_dir.mkdir(parents=True, exist_ok=True)
     fake = bin_dir / name
-    fake.write_text(
-        f"#!/usr/bin/env bash\nprintf '%s' {stdout!r}\nexit {rc}\n"
-    )
+    fake.write_text(f"#!/usr/bin/env bash\nprintf '%s' {stdout!r}\nexit {rc}\n")
     fake.chmod(fake.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return fake
 
 
 @pytest.fixture
-def stubbed_status_env(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Path:
+def stubbed_status_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """PATH-prefix a tmp bin with stub findmnt + du."""
 
     bin_dir = tmp_path / "bin"
@@ -181,7 +193,9 @@ def test_status_is_default_when_no_arg(stubbed_status_env: Path) -> None:  # noq
     assert "overlay marker" in r.stdout
 
 
-def test_unknown_subcommand_errors_with_usage_line(stubbed_status_env: Path) -> None:  # noqa: ARG001
+def test_unknown_subcommand_errors_with_usage_line(
+    stubbed_status_env: Path,
+) -> None:  # noqa: ARG001
     if shutil.which("bash") is None:
         pytest.skip("bash not on PATH")
     r = subprocess.run(

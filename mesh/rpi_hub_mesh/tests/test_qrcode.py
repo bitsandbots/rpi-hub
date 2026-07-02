@@ -19,6 +19,8 @@ from __future__ import annotations
 
 import re
 
+import pytest
+
 from mesh.rpi_hub_mesh import qrcode
 
 
@@ -70,8 +72,6 @@ def test_timing_patterns_alternate() -> None:
 
 def test_oversize_input_raises() -> None:
     # v3 ECC M caps around 42 effective bytes.
-    import pytest
-
     with pytest.raises(ValueError):
         qrcode.encode("x" * 200)
 

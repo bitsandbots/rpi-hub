@@ -408,6 +408,14 @@ main {
 .subnav a { color: var(--c-ink-muted); font-weight: 600; }
 .subnav a:hover { color: var(--c-navy); }
 
+/* Self-disabled affordances. A tile whose backing service failed its probe
+   (data-state="offline", set by index.html's probe/probeGroup) or an inline
+   link gated offline by library-gate.js (aria-disabled) is dimmed and made
+   non-interactive, so a down endpoint never looks clickable. Until this rule
+   existed, offline tiles only swapped their badge text and still looked live. */
+.tile[data-state="offline"] { opacity: 0.55; }
+a[aria-disabled="true"] { opacity: 0.55; cursor: not-allowed; }
+
 .site-footer {
   padding: var(--s-5);
   font-size: 0.78rem;
@@ -905,4 +913,3 @@ main {
   color: var(--c-ink-muted);
   margin-top: var(--s-1);
 }
-

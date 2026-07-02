@@ -23,7 +23,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from mesh.rpi_hub_mesh import identity, main
+from mesh.rpi_hub_mesh import identity, main, qrcode
 
 
 @pytest.fixture(autouse=True)
@@ -102,7 +102,5 @@ def test_identity_svg_matches_identity_endpoint(keyed_client: TestClient) -> Non
     # encoded in the QR matrix), so we re-encode it and assert the SVG
     # body matches what the encoder produces for the same input — that
     # is a stronger guarantee than substring search.
-    from mesh.rpi_hub_mesh import qrcode
-
     expected = qrcode.to_svg(fp, module_px=8, quiet=4)
     assert svg == expected

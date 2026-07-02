@@ -9,13 +9,34 @@ to BM25-only.
 
 from __future__ import annotations
 
+import http.client
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
-EMBED_ENDPOINT = os.environ.get(
-    "rpi_hub_EMBED_ENDPOINT", "http://127.0.0.1:8201/embedding"
+
+def _require_loopback(url: str) -> str:
+    """Refuse a non-loopback upstream — the device must never initiate
+    outbound IP connections. Override with
+    ``rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1`` for diagnostics.
+    """
+
+    if os.environ.get("rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM") == "1":
+        return url
+    host = urllib.parse.urlsplit(url).hostname or ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise RuntimeError(
+            f"refusing non-loopback upstream {url!r}: this device must not "
+            "initiate outbound connections (set "
+            "rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1 to override)"
+        )
+    return url
+
+
+EMBED_ENDPOINT = _require_loopback(
+    os.environ.get("rpi_hub_EMBED_ENDPOINT", "http://127.0.0.1:8201/embedding")
 )
 EMBED_TIMEOUT_S = float(os.environ.get("rpi_hub_EMBED_TIMEOUT_S", "5.0"))
 
@@ -37,7 +58,13 @@ def embed_query(text: str) -> list[float]:
     try:
         with urllib.request.urlopen(req, timeout=EMBED_TIMEOUT_S) as resp:
             body = json.loads(resp.read())
-    except (urllib.error.URLError, TimeoutError, json.JSONDecodeError) as exc:
+    except (
+        urllib.error.URLError,
+        TimeoutError,
+        OSError,  # ConnectionReset/Refused raised during read()
+        http.client.HTTPException,  # RemoteDisconnected / IncompleteRead
+        json.JSONDecodeError,
+    ) as exc:
         raise EmbedUnavailable(str(exc)) from exc
 
     # llama.cpp's /embedding response shape is {"embedding": [..floats..]}.

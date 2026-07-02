@@ -21,10 +21,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class DeferralReason(str, Enum):
+class DeferralReason(StrEnum):
     DRUG_DOSING = "drug-dosing"
     SEVERE_TRAUMA = "severe-trauma"
     HIGH_VOLTAGE = "high-voltage"
@@ -45,9 +45,19 @@ class DeferralVerdict:
 _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
     (
         re.compile(
-            r"\b(dose|dosage|mg/kg|micrograms?|how (?:much|many)|overdose|"
-            r"acetaminophen|ibuprofen|aspirin|tylenol|advil|epinephrine|"
-            r"insulin|naloxone)\b",
+            r"\b(dose|dosage|dosing|mg/kg|mg per kg|micrograms?|milligrams?|"
+            r"how (?:much|many)|overdose|"
+            # analgesics / antipyretics (intl. + brand + common misspellings)
+            r"acetaminophen|paracetamol|ibuprofen|ibruprofen|aspirin|"
+            r"tylenol|advil|nurofen|panadol|naproxen|"
+            # opioids / controlled
+            r"codeine|morphine|oxycodone|hydrocodone|fentanyl|tramadol|"
+            # narrow-therapeutic-index / high-risk
+            r"warfarin|digoxin|lithium|methotrexate|theophylline|"
+            # emergency / endocrine
+            r"epinephrine|adrenaline|insulin|naloxone|narcan|"
+            # antibiotics commonly dosed by weight in kids
+            r"amoxicillin|antibiotic)\b",
             re.IGNORECASE,
         ),
         DeferralReason.DRUG_DOSING,
@@ -61,7 +71,10 @@ _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
             re.IGNORECASE,
         ),
         DeferralReason.SEVERE_TRAUMA,
-        "This sounds like a life-threatening emergency — call professional help if reachable; read the source verbatim below.",
+        (
+            "This sounds like a life-threatening emergency — call professional "
+            "help if reachable; read the source verbatim below."
+        ),
     ),
     (
         re.compile(
@@ -70,7 +83,10 @@ _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
             re.IGNORECASE,
         ),
         DeferralReason.HIGH_VOLTAGE,
-        "Mains-voltage work is a licensed-electrician task in most jurisdictions — read the source directly.",
+        (
+            "Mains-voltage work is a licensed-electrician task in most "
+            "jurisdictions — read the source directly."
+        ),
     ),
     (
         re.compile(
@@ -97,7 +113,10 @@ _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
             re.IGNORECASE,
         ),
         DeferralReason.WEAPONS,
-        "Firearms and explosives are jurisdiction-specific and dangerous — read the source directly.",
+        (
+            "Firearms and explosives are jurisdiction-specific and dangerous "
+            "— read the source directly."
+        ),
     ),
 )
 

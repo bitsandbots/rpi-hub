@@ -125,6 +125,7 @@ def _pinned_services() -> system.ServicesInfo:
         listen="not-running",
         notes="not-running",
         mesh="not-running",
+        kiwix="not-running",
         adsb="not-running",
         adsb_aircraft=None,
         mesh_fingerprint=None,
@@ -139,7 +140,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
     monkeypatch.setattr(
         system,
         "storage",
-        lambda: system.StorageInfo(kiwix_bytes_free=10, kiwix_bytes_total=100),
+        lambda: system.StorageInfo(kiwix_bytes_free=10, kiwix_bytes_total=100, kiwix_present=True),
     )
     monkeypatch.setattr(
         system,
@@ -158,6 +159,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
             listen="not-running",
             notes="ready",
             mesh="ready",
+            kiwix="ready",
             adsb="ready",
             adsb_aircraft=7,
             mesh_fingerprint="ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
@@ -170,7 +172,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
     assert body == {
         "uptime_seconds": 123.45,
         "load_avg": [0.1, 0.2, 0.3],
-        "storage": {"kiwix_bytes_free": 10, "kiwix_bytes_total": 100},
+        "storage": {"kiwix_bytes_free": 10, "kiwix_bytes_total": 100, "kiwix_present": True},
         "voltage": {"throttled": "0x0", "undervoltage": False},
         "dhcp_clients": 2,
         "time_source": "none",
@@ -181,6 +183,7 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
             "listen": "not-running",
             "notes": "ready",
             "mesh": "ready",
+            "kiwix": "ready",
             "adsb": "ready",
             "adsb_aircraft": 7,
             "mesh_fingerprint": "ABCD-EFGH-IJKL-MNOP-QRST-UVWX",
@@ -188,14 +191,18 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
     }
 
 
-def test_status_endpoint_handles_all_unknowns(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_status_endpoint_handles_all_unknowns(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # If every probe fails the response should still be a 200 with nulls.
     monkeypatch.setattr(system, "uptime_seconds", lambda: None)
     monkeypatch.setattr(system, "load_avg", lambda: None)
     monkeypatch.setattr(
         system,
         "storage",
-        lambda: system.StorageInfo(kiwix_bytes_free=None, kiwix_bytes_total=None),
+        lambda: system.StorageInfo(
+            kiwix_bytes_free=None, kiwix_bytes_total=None, kiwix_present=False
+        ),
     )
     monkeypatch.setattr(
         system,
@@ -226,6 +233,7 @@ def test_services_probe_returns_not_running_for_unreachable() -> None:
 
 # -- ADS-B file probe (Phase 8.4) -----------------------------------------
 
+
 def test_adsb_probe_returns_not_running_when_file_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -252,7 +260,9 @@ def test_adsb_probe_returns_ready_with_aircraft_count(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = tmp_path / "aircraft.json"
-    path.write_text('{"now": 1700000000, "aircraft": [{"hex": "a1"}, {"hex": "b2"}, {"hex": "c3"}]}')
+    path.write_text(
+        '{"now": 1700000000, "aircraft": [{"hex": "a1"}, {"hex": "b2"}, {"hex": "c3"}]}'
+    )
     monkeypatch.setattr(system, "ADSB_JSON", path)
     monkeypatch.setattr(system, "_now", lambda: path.stat().st_mtime + 1.0)
     state, count = system._probe_adsb()

@@ -20,7 +20,7 @@ def test_lora_bridge_reports_unavailable_when_socket_missing(
     monkeypatch.setattr(lora_bridge, "RETICULUM_SOCKET", str(tmp_path / "no-such.sock"))
     monkeypatch.setattr(lora_bridge, "CONNECT_RETRY_S", 0.05)
     seen: list[bytes] = []
-    bridge = lora_bridge.LoraBridge(on_frame=lambda f: seen.append(f))
+    bridge = lora_bridge.LoraBridge(on_frame=seen.append)
     bridge.start()
     time.sleep(0.15)
     bridge.stop()
@@ -56,8 +56,12 @@ def test_wifi_bridge_parses_originator_line(monkeypatch: pytest.MonkeyPatch) -> 
         stderr = ""
 
     monkeypatch.setattr(wifi_bridge, "BATCTL", "/bin/true")  # exists check
-    monkeypatch.setattr(wifi_bridge.os.path, "exists", lambda p: True)
-    monkeypatch.setattr(wifi_bridge.subprocess, "run", lambda *a, **kw: FakeResult())
+    monkeypatch.setattr(wifi_bridge.os.path, "exists", lambda p: True)  # type: ignore[attr-defined]
+    monkeypatch.setattr(
+        wifi_bridge.subprocess,  # type: ignore[attr-defined]
+        "run",
+        lambda *a, **kw: FakeResult(),
+    )
     monkeypatch.setattr(wifi_bridge, "POLL_INTERVAL_S", 0.05)
 
     seen: list[tuple[str, int, str]] = []

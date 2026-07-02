@@ -34,7 +34,15 @@ LoadCredential=ed25519_pub:/var/lib/rpi-hub/keys/ed25519.pub
 Environment=PYTHONPATH=/opt/rpi-hub
 Environment=PYTHONDONTWRITEBYTECODE=1
 Environment=rpi_hub_MESH_TOKEN_FILE=/etc/rpi-hub/mesh-owner-token
+Environment=rpi_hub_MESH_SEQ_FILE=/var/lib/rpi-hub-mesh/seq
 WorkingDirectory=/opt/rpi-hub
+
+# Writable state for the persisted outbound sequence counter. systemd
+# creates /var/lib/rpi-hub-mesh (0700) owned by the dynamic user and
+# keeps it across restarts, so the counter survives reboots and a still-
+# running receiver never drops our post-reboot frames as replays.
+StateDirectory=rpi-hub-mesh
+StateDirectoryMode=0700
 
 ExecStart=/usr/bin/python3 -m uvicorn mesh.rpi_hub_mesh.main:app \
     --host 127.0.0.1 \

@@ -23,7 +23,13 @@ NOAA_PRESETS_FILE = Path("/var/lib/rpi-hub/listen/noaa-presets.yaml")
 
 # Canonical WX frequencies (MHz). Used when no pack has been applied.
 NOAA_DEFAULTS_MHZ: tuple[float, ...] = (
-    162.400, 162.425, 162.450, 162.475, 162.500, 162.525, 162.550,
+    162.400,
+    162.425,
+    162.450,
+    162.475,
+    162.500,
+    162.525,
+    162.550,
 )
 
 
@@ -39,8 +45,10 @@ def _to_hz(mhz: float) -> int:
 
 def load_noaa() -> list[Preset]:
     if not NOAA_PRESETS_FILE.exists():
-        return [Preset(label=f"NOAA {mhz:.3f} MHz", frequency_hz=_to_hz(mhz))
-                for mhz in NOAA_DEFAULTS_MHZ]
+        return [
+            Preset(label=f"NOAA {mhz:.3f} MHz", frequency_hz=_to_hz(mhz))
+            for mhz in NOAA_DEFAULTS_MHZ
+        ]
     # Hand-parse the trivial subset of YAML we emit. PyYAML is not
     # guaranteed to be installed on minimal Bookworm images, and bringing
     # in a dep for two-line files is overkill.
@@ -56,16 +64,20 @@ def load_noaa() -> list[Preset]:
             continue
         presets.append(Preset(label=f"NOAA {mhz:.3f} MHz", frequency_hz=_to_hz(mhz)))
     if not presets:
-        return [Preset(label=f"NOAA {mhz:.3f} MHz", frequency_hz=_to_hz(mhz))
-                for mhz in NOAA_DEFAULTS_MHZ]
+        return [
+            Preset(label=f"NOAA {mhz:.3f} MHz", frequency_hz=_to_hz(mhz))
+            for mhz in NOAA_DEFAULTS_MHZ
+        ]
     return presets
 
 
 # FM broadcast — every 200 kHz from 88.1 to 107.9 is the US allocation
 # grid. We don't ship a per-region presets file in v0.8; the UI lets the
 # user free-tune. This list is for the Broadcast tile dropdown.
-FM_BAND = [Preset(label=f"FM {mhz:.1f}", frequency_hz=_to_hz(mhz))
-           for mhz in (88.1, 91.5, 93.7, 96.3, 99.5, 101.1, 103.5, 105.7, 107.9)]
+FM_BAND = [
+    Preset(label=f"FM {mhz:.1f}", frequency_hz=_to_hz(mhz))
+    for mhz in (88.1, 91.5, 93.7, 96.3, 99.5, 101.1, 103.5, 105.7, 107.9)
+]
 
 # Ham band markers a non-licensed user might still find useful for
 # context (calling frequencies, simplex coordination). Receive-only.

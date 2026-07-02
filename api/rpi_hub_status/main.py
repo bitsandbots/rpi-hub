@@ -27,6 +27,7 @@ app = FastAPI(
 class StorageOut(BaseModel):
     kiwix_bytes_free: int | None
     kiwix_bytes_total: int | None
+    kiwix_present: bool
 
 
 class VoltageOut(BaseModel):
@@ -40,6 +41,7 @@ class ServicesOut(BaseModel):
     listen: str
     notes: str
     mesh: str
+    kiwix: str
     adsb: str
     adsb_aircraft: int | None
     mesh_fingerprint: str | None
@@ -67,6 +69,7 @@ def status() -> StatusResponse:
         storage=StorageOut(
             kiwix_bytes_free=s.kiwix_bytes_free,
             kiwix_bytes_total=s.kiwix_bytes_total,
+            kiwix_present=s.kiwix_present,
         ),
         voltage=VoltageOut(
             throttled=v.throttled,
@@ -81,6 +84,7 @@ def status() -> StatusResponse:
             listen=svc.listen,
             notes=svc.notes,
             mesh=svc.mesh,
+            kiwix=svc.kiwix,
             adsb=svc.adsb,
             adsb_aircraft=svc.adsb_aircraft,
             mesh_fingerprint=svc.mesh_fingerprint,

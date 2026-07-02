@@ -8,14 +8,21 @@ inserts.
 
 from __future__ import annotations
 
+import os
 import sqlite3
 import time
 from dataclasses import dataclass
 from pathlib import Path
 
 # Default location. The systemd unit mounts /run/rpi-hub-notes (tmpfs) and
-# points BIND_DB at it. Tests use a tmp_path.
-DEFAULT_DB = Path("/run/rpi-hub-notes/notes.sqlite")
+# sets rpi_hub_NOTES_DB to it. Tests use a tmp_path. We honour the env var
+# so the unit's configured path actually takes effect.
+DEFAULT_DB = Path(os.environ.get("rpi_hub_NOTES_DB", "/run/rpi-hub-notes/notes.sqlite"))
+
+# Hard cap on stored notes (blueprint: "capped at 1024 entries"). The
+# board is FIFO: once full, the oldest note is pruned as new ones land, so
+# the tmpfs footprint stays bounded regardless of traffic.
+MAX_ENTRIES = 1024
 
 
 @dataclass(frozen=True)
@@ -57,13 +64,27 @@ def insert(conn: sqlite3.Connection, name: str, text: str, ip: str) -> Note:
         (now, name, text, ip),
     )
     note_id = int(cursor.lastrowid or 0)
+    _prune_to_cap(conn)
     return Note(id=note_id, created_ts=now, name=name, text=text)
+
+
+def _prune_to_cap(conn: sqlite3.Connection, max_entries: int = MAX_ENTRIES) -> int:
+    """Drop oldest notes beyond the cap. Returns the number removed.
+
+    Ordered by id (monotonic with insert order) so ties on created_ts can
+    never strand a row above the cap.
+    """
+
+    cur = conn.execute(
+        "DELETE FROM notes WHERE id NOT IN " "(SELECT id FROM notes ORDER BY id DESC LIMIT ?)",
+        (max_entries,),
+    )
+    return cur.rowcount or 0
 
 
 def list_recent(conn: sqlite3.Connection, limit: int = 100) -> list[Note]:
     rows = conn.execute(
-        "SELECT id, created_ts, name, text FROM notes "
-        "ORDER BY created_ts DESC LIMIT ?",
+        "SELECT id, created_ts, name, text FROM notes " "ORDER BY created_ts DESC LIMIT ?",
         (limit,),
     ).fetchall()
     return [

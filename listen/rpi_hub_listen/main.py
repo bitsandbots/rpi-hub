@@ -21,7 +21,7 @@ Endpoints (all GET unless noted):
 from __future__ import annotations
 
 import os
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import FastAPI, HTTPException, Request, status
 from pydantic import BaseModel, Field
@@ -169,7 +169,7 @@ class GpsOut(BaseModel):
     simulate: bool
     # Last completed sweep record: requested_ts/completed_ts/ok/error/report.
     # report is the gps_sdr JSON contract (see gps_sdr/__main__.py).
-    last: dict | None
+    last: dict[str, Any] | None
 
 
 def _gps_payload() -> GpsOut:
@@ -207,9 +207,7 @@ def gps_sweep(body: GpsSweepIn) -> GpsOut:
             simulate=GPS_SIMULATE,
         )
     except dongle.TunerBusy as exc:
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT, detail=str(exc)
-        ) from exc
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc)) from exc
     except dongle.TunerUnavailable as exc:
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)

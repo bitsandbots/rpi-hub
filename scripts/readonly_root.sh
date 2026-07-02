@@ -55,6 +55,20 @@ ensure_dirs() {
     install -d -m 0755 /etc/rpi-hub
 }
 
+# State directories that MUST persist across boots even though / is an
+# overlay with a volatile (tmpfs) upper. Each is bind-mounted in the
+# initramfs hook directly from the persistent lower disk, bypassing the
+# overlay — so the mesh Ed25519 keypair, the notes/mesh owner tokens, the
+# DHCP leases, and the kiwix library all survive a reboot. WITHOUT these
+# binds, enabling overlay root regenerates the mesh identity every boot
+# (breaking peer trust) and rotates the owner tokens.
+PERSIST_PATHS=(
+    /etc/rpi-hub          # owner tokens, adsb-precision, config
+    /var/lib/rpi-hub      # mesh keypair (keys/), index, models
+    /var/lib/dnsmasq      # DHCP lease database
+    /var/lib/kiwix        # ZIM library (read-mostly, but large)
+)
+
 write_fstab_block() {
     local marker_begin="# >>> rpi-hub Phase 1.1 (readonly root) >>>"
     local marker_end="# <<< rpi-hub Phase 1.1 (readonly root) <<<"
@@ -64,9 +78,11 @@ write_fstab_block() {
     {
         printf '\n%s\n' "$marker_begin"
         cat <<'EOF'
-# overlayfs root: lower=/  upper=/var/lib/rpi-hub/overlay/upper
-# These bind mounts keep state writable across boots without giving up
-# read-only protection on the rest of /.
+# overlayfs root: lower=/ (persistent, ro)  upper=tmpfs (volatile)
+# Volatile scratch: logs and /tmp reset every boot (that's the point of a
+# read-only root). Persistent STATE is bind-mounted from the lower disk by
+# the initramfs hook (see PERSIST_PATHS in readonly_root.sh) so the mesh
+# keypair, owner tokens, DHCP leases, and the kiwix library survive boots.
 tmpfs   /var/log           tmpfs   defaults,nosuid,nodev,size=64m   0 0
 tmpfs   /tmp               tmpfs   defaults,nosuid,nodev,size=128m  0 0
 EOF
@@ -85,24 +101,47 @@ enable() {
     # The actual overlay mount happens early in boot via an initramfs
     # script — generated here so it survives kernel upgrades.
     install -d -m 0755 /usr/share/initramfs-tools/scripts/init-bottom
-    cat >/usr/share/initramfs-tools/scripts/init-bottom/rpi-hub-overlay <<'EOF'
+    # The persistent bind list is baked into the hook so it survives kernel
+    # upgrades. Generated from PERSIST_PATHS so the two never drift.
+    local persist_lines=""
+    local p
+    for p in "${PERSIST_PATHS[@]}"; do
+        persist_lines+="bind_persist ${p}"$'\n'
+    done
+    cat >/usr/share/initramfs-tools/scripts/init-bottom/rpi-hub-overlay <<EOF
 #!/bin/sh
 # rpi-hub overlay-root init-bottom hook.
-# Mounts an overlay over the just-mounted rootfs so subsequent writes
-# go to a tmpfs upper layer; bind mounts for /var/log, /tmp, /var/lib
-# are applied by /etc/fstab.
+# Mounts an overlay over the just-mounted rootfs: the lower is the real,
+# persistent disk (read-only); the upper is a VOLATILE tmpfs, so ordinary
+# root writes reset every boot. Specific STATE directories are then
+# bind-mounted straight from the persistent lower (bypassing the overlay)
+# so the mesh keypair, owner tokens, DHCP leases, and the kiwix library
+# survive reboots. /var/log and /tmp are tmpfs via /etc/fstab.
 PREREQ=""
-prereqs() { echo "$PREREQ"; }
-case $1 in
+prereqs() { echo "\$PREREQ"; }
+case \$1 in
     prereqs) prereqs; exit 0 ;;
 esac
 . /scripts/functions
 
 mkdir -p /overlay/upper /overlay/work /overlay/lower
-mount --move ${rootmnt} /overlay/lower
-mount -t overlay overlay \
-    -o lowerdir=/overlay/lower,upperdir=/overlay/upper,workdir=/overlay/work \
-    ${rootmnt}
+# Bounded, volatile upper so root writes can't exhaust RAM.
+mount -t tmpfs -o size=128m,mode=0755 tmpfs /overlay/upper
+mkdir -p /overlay/upper/data /overlay/upper/work
+mount --move \${rootmnt} /overlay/lower
+mount -t overlay overlay \\
+    -o lowerdir=/overlay/lower,upperdir=/overlay/upper/data,workdir=/overlay/upper/work \\
+    \${rootmnt}
+
+# Re-expose persistent state from the lower disk (read-write) over the
+# overlay so it is NOT volatile. The lower is the real rootfs, so writes
+# here hit the SD card and persist.
+bind_persist() {
+    [ -d "/overlay/lower\$1" ] || mkdir -p "/overlay/lower\$1"
+    mkdir -p "\${rootmnt}\$1"
+    mount --bind "/overlay/lower\$1" "\${rootmnt}\$1"
+}
+${persist_lines}
 EOF
     chmod 0755 /usr/share/initramfs-tools/scripts/init-bottom/rpi-hub-overlay
     # Regenerate initramfs so the hook is picked up.

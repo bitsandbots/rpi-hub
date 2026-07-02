@@ -23,6 +23,7 @@ what the device should do when joined to `RPI-HUB-INFOHUB`.
 ## Behaviour notes
 
 ### iOS / iPadOS
+
 - The captive sheet is a sandboxed WebKit view; cookies and local storage
   in it are NOT shared with Safari. Anything we want persistent must live
   on the portal page once the user clicks "Done" and the sheet hands off.
@@ -32,6 +33,7 @@ what the device should do when joined to `RPI-HUB-INFOHUB`.
   the portal. Users can still reach `http://hub.local/` from Safari.
 
 ### Android
+
 - 14+ may evaluate the HTTPS probe (`https://www.google.com/generate_204`)
   before the HTTP one. Our box has no cert for that name, so TLS fails and
   Android falls back to HTTP within a few seconds. Expect a small delay
@@ -43,6 +45,7 @@ what the device should do when joined to `RPI-HUB-INFOHUB`.
   a "Connected, no internet" badge on the Wi-Fi name. This is expected.
 
 ### Windows
+
 - NCSI uses two channels: HTTP probe AND DNS probe (`dns.msftncsi.com`,
   which expects to resolve to `131.107.255.255`). Our wildcard DNS returns
   `192.168.4.1` instead — Windows treats that mismatch as additional
@@ -50,12 +53,14 @@ what the device should do when joined to `RPI-HUB-INFOHUB`.
 - The captive browser on Windows 10/11 is Edge in a kiosk-like mode.
 
 ### Firefox
+
 - Only triggers the "Log in to network" UI when the underlying OS has
   already flagged the network as captive. On a system where the OS-level
   probe failed (e.g. a desktop Linux without NM), Firefox does its own
   check and shows the banner independently.
 
 ### Linux desktops
+
 - GNOME / NetworkManager: works as described above.
 - KDE Plasma / NM: same NM probe, same result.
 - Headless Linux (no NM): no captive-portal UI. User must manually browse
@@ -75,16 +80,19 @@ in the test log (`tests/phase2-results.md` — to be created when first run):
    - **t_render** — seconds until the rpi-hub landing page is fully rendered.
    - **dismiss_behaviour** — what happens when the user closes the sheet.
 6. From a terminal on the device (if available):
+
    ```bash
    curl -v -H "Host: captive.apple.com" http://192.168.4.1/hotspot-detect.html
    curl -v -H "Host: connectivitycheck.gstatic.com" http://192.168.4.1/generate_204
    curl -v -H "Host: www.msftconnecttest.com" http://192.168.4.1/connecttest.txt
    ```
+
    All three should return `HTTP/1.1 302 Found` with `Location: http://hub.local/`.
 
 ## Pass criteria
 
 A row passes when:
+
 - **t_sheet ≤ 15 s** on a 2.4 GHz join (Pi Zero 2 W radio).
 - **t_render ≤ 3 s** after the sheet opens.
 - Landing page is visually correct (responsive, dark-mode aware, no

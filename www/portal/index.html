@@ -582,13 +582,17 @@
       </section>
 
       <!-- ======================= CORE RESOURCES ======================= -->
-      <!-- No service probe — always available regardless of hardware -->
+      <!-- These all route to /library/ (kiwix-serve on :8080), which is
+           inactive until a ZIM is installed (ConditionPathExistsGlob in
+           rpi-hub-kiwix.service). They share data-probe-group="/library/"
+           so a single probe gates the whole group: empty hub → tiles
+           self-disable instead of navigating to a 502 Bad Gateway. -->
       <div class="sec">
         <div class="sec__label" aria-hidden="true">Core resources</div>
         <nav class="grid--core" aria-label="Core resources">
 
-          <a class="tile" href="/library/" data-state="ready">
-            <span class="tile__state">Available</span>
+          <a class="tile" href="/library/" data-state="checking" data-probe-group="/library/">
+            <span class="tile__state">Checking…</span>
             <div class="tile__icon" aria-hidden="true">
               <!-- Book icon -->
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -601,8 +605,8 @@
             <p class="tile__desc">Browse every offline collection installed on this hub.</p>
           </a>
 
-          <a class="tile" href="/library/" data-state="ready">
-            <span class="tile__state">Available</span>
+          <a class="tile" href="/library/" data-state="checking" data-probe-group="/library/">
+            <span class="tile__state">Checking…</span>
             <div class="tile__icon" aria-hidden="true">
               <!-- Globe icon -->
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -615,8 +619,8 @@
             <p class="tile__desc">Wikipedia and Wiktionary — general reference offline.</p>
           </a>
 
-          <a class="tile" href="/library/" data-state="ready">
-            <span class="tile__state">Available</span>
+          <a class="tile" href="/library/" data-state="checking" data-probe-group="/library/">
+            <span class="tile__state">Checking…</span>
             <div class="tile__icon" aria-hidden="true">
               <!-- Wrench icon -->
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -627,8 +631,8 @@
             <p class="tile__desc">Step-by-step guides — iFixit, field manuals, post-disaster refs.</p>
           </a>
 
-          <a class="tile" href="/library/" data-state="ready">
-            <span class="tile__state">Available</span>
+          <a class="tile" href="/library/" data-state="checking" data-probe-group="/library/">
+            <span class="tile__state">Checking…</span>
             <div class="tile__icon" aria-hidden="true">
               <!-- Medical cross in circle -->
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -641,8 +645,8 @@
             <p class="tile__desc">First-aid, triage, and clinical refs for non-experts.</p>
           </a>
 
-          <a class="tile" href="/library/" data-state="ready">
-            <span class="tile__state">Available</span>
+          <a class="tile" href="/library/" data-state="checking" data-probe-group="/library/">
+            <span class="tile__state">Checking…</span>
             <div class="tile__icon" aria-hidden="true">
               <!-- Map pin -->
               <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -815,7 +819,7 @@
       </div>
 
       <nav class="subnav" aria-label="More">
-        <a href="/library/">Open library</a>
+        <a href="/library/" data-probe-group="/library/">Open library</a>
         <a href="/status.html">System status</a>
         <a href="http://hub.local/">hub.local home</a>
       </nav>
@@ -936,6 +940,51 @@
         tile.addEventListener("click", function (e) { e.preventDefault(); }, { once: false });
       }
 
+      /*
+       * Group probe: several tiles can share one backing endpoint
+       * (the Core-resources tiles all route to /library/). Probe the URL
+       * once and apply the verdict to every tile carrying
+       * data-probe-group="<url>", so an empty hub self-disables the whole
+       * group instead of navigating any of them to a 502. Uses GET (not
+       * HEAD) to match the other probes and because kiwix-serve's
+       * libmicrohttpd backend can reject HEAD even when it is healthy.
+       */
+      function probeGroup(url) {
+        var tiles = document.querySelectorAll('[data-probe-group="' + url + '"]');
+        if (!tiles.length) return;
+
+        var controller = typeof AbortController !== "undefined" ? new AbortController() : null;
+        var timer      = controller
+          ? setTimeout(function () { controller.abort(); }, 5000)
+          : null;
+
+        function applyAll(ok, reason) {
+          for (var i = 0; i < tiles.length; i++) {
+            var tile  = tiles[i];
+            var badge = tile.querySelector(".tile__state");
+            if (ok) {
+              tile.setAttribute("data-state", "ready");
+              if (badge) badge.textContent = "Available";
+            } else {
+              markOffline(tile, badge, reason);
+            }
+          }
+        }
+
+        fetch(url, {
+          cache:  "no-store",
+          signal: controller ? controller.signal : undefined
+        })
+        .then(function (r) {
+          clearTimeout(timer);
+          applyAll(r.ok, r.status);
+        })
+        .catch(function (err) {
+          clearTimeout(timer);
+          applyAll(false, err && err.name === "AbortError" ? "timeout" : "unreachable");
+        });
+      }
+
       probe("tile-ask",    "/api/retrieve?q=hub&k=1");
       probe("tile-listen", "/api/listen/state");
       probe("tile-board",  "/api/notes?limit=1");
@@ -943,6 +992,7 @@
       probe("tile-adsb",   "/adsb/aircraft.json");
       probe("tile-sky",    "/api/listen/gps");
       probe("tile-print",  "/print/");
+      probeGroup("/library/");
 
     })();
   </script>

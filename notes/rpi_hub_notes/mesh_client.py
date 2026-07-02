@@ -13,20 +13,43 @@ from __future__ import annotations
 import json
 import os
 import urllib.error
+import urllib.parse
 import urllib.request
 
-MESH_PUBLISH_URL = os.environ.get(
-    "rpi_hub_MESH_PUBLISH_URL", "http://127.0.0.1:8500/notes/publish"
+
+def _require_loopback(url: str) -> str:
+    """Refuse a non-loopback upstream — the device must never initiate
+    outbound IP connections. Override with
+    ``rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1`` for diagnostics.
+    """
+
+    if os.environ.get("rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM") == "1":
+        return url
+    host = urllib.parse.urlsplit(url).hostname or ""
+    if host not in ("127.0.0.1", "::1", "localhost"):
+        raise RuntimeError(
+            f"refusing non-loopback upstream {url!r}: this device must not "
+            "initiate outbound connections (set "
+            "rpi_hub_ALLOW_NONLOOPBACK_UPSTREAM=1 to override)"
+        )
+    return url
+
+
+MESH_PUBLISH_URL = _require_loopback(
+    os.environ.get("rpi_hub_MESH_PUBLISH_URL", "http://127.0.0.1:8500/notes/publish")
 )
 MESH_PUBLISH_TIMEOUT_S = float(os.environ.get("rpi_hub_MESH_PUBLISH_TIMEOUT_S", "0.5"))
+
+HTTP_SUCCESS_MIN = 200
+HTTP_SUCCESS_MAX = 300
 
 
 def publish(note_id: int, name: str, text: str, ttl_s: int = 86400) -> bool:
     """Try to push the note onto the mesh. Returns True on 2xx."""
 
-    payload = json.dumps(
-        {"note_id": note_id, "name": name, "text": text, "ttl_s": ttl_s}
-    ).encode("utf-8")
+    payload = json.dumps({"note_id": note_id, "name": name, "text": text, "ttl_s": ttl_s}).encode(
+        "utf-8"
+    )
     req = urllib.request.Request(
         MESH_PUBLISH_URL,
         data=payload,
@@ -35,6 +58,6 @@ def publish(note_id: int, name: str, text: str, ttl_s: int = 86400) -> bool:
     )
     try:
         with urllib.request.urlopen(req, timeout=MESH_PUBLISH_TIMEOUT_S) as resp:
-            return 200 <= resp.status < 300
+            return bool(HTTP_SUCCESS_MIN <= resp.status < HTTP_SUCCESS_MAX)
     except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
         return False

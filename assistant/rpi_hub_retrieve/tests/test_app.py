@@ -58,14 +58,14 @@ def test_health_empty_index(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> 
     assert r.json()["ready"] is False
 
 
-def test_retrieve_returns_ranked_chunks(
-    index_db: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_retrieve_returns_ranked_chunks(index_db: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     # Pin both lanes so the test doesn't depend on FTS5 or hnswlib being
     # installed. BM25 lane returns [1, 2]; vector lane returns [3, 1].
     monkeypatch.setattr(retrieval, "bm25_search", lambda conn, q, n: [1, 2])
     monkeypatch.setattr(
-        main, "_embed_query", lambda q: [0.1] * 384  # type: ignore[attr-defined]
+        main,
+        "_embed_query",
+        lambda q: [0.1] * 384,
     )
     monkeypatch.setattr(retrieval, "vector_search", lambda *args, **kw: [3, 1])
 
@@ -88,7 +88,7 @@ def test_retrieve_bm25_only_when_embed_fails(
     def boom(_q: str) -> list[float]:
         raise RuntimeError("embedding service down")
 
-    monkeypatch.setattr(main, "_embed_query", boom)  # type: ignore[attr-defined]
+    monkeypatch.setattr(main, "_embed_query", boom)
 
     client = TestClient(main.app)
     r = client.get("/retrieve?q=wound")
@@ -97,9 +97,7 @@ def test_retrieve_bm25_only_when_embed_fails(
     assert [res["chunk_id"] for res in body["results"]] == [1]
 
 
-def test_retrieve_no_index_returns_empty(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_retrieve_no_index_returns_empty(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(store, "CHUNKS_DB", tmp_path / "nope.sqlite")
     client = TestClient(main.app)
     r = client.get("/retrieve?q=anything")

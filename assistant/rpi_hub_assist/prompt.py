@@ -29,6 +29,21 @@ SYSTEM = (
 )
 
 
+# Qwen2.5 chat-template control tokens. User input and retrieved passage
+# text are untrusted; if either contained these literally it could close
+# the user turn and inject a forged system/assistant turn (prompt
+# injection), defeating the "summarise only the passages" rules. We strip
+# them from all interpolated text — the scaffold below is the only place
+# these tokens may appear.
+_CONTROL_TOKENS = ("<|im_start|>", "<|im_end|>")
+
+
+def _scrub(s: str) -> str:
+    for tok in _CONTROL_TOKENS:
+        s = s.replace(tok, "")
+    return s
+
+
 @dataclass(frozen=True)
 class PromptPassage:
     """Subset of a retrieved chunk used to build the prompt."""
@@ -45,7 +60,9 @@ def build_prompt(question: str, passages: list[PromptPassage]) -> str:
     The format matches Qwen2.5's chat template: ``<|im_start|>role`` /
     ``<|im_end|>`` markers. llama.cpp's HTTP server accepts this verbatim
     via the raw ``prompt`` parameter (we deliberately bypass its
-    /chat/completions wrapper so we can pin the exact bytes).
+    /chat/completions wrapper so we can pin the exact bytes). All
+    interpolated text is scrubbed of control tokens first to close the
+    prompt-injection surface.
     """
 
     if len(passages) > MAX_PASSAGES:
@@ -53,15 +70,15 @@ def build_prompt(question: str, passages: list[PromptPassage]) -> str:
 
     body_lines = ["Passages from the library:"]
     for p in passages:
-        body_lines.append(f"[{p.number}] {p.article} — {p.section}")
-        body_lines.append(p.text.strip())
+        body_lines.append(f"[{p.number}] {_scrub(p.article)} — {_scrub(p.section)}")
+        body_lines.append(_scrub(p.text.strip()))
         body_lines.append("")  # blank between passages
 
-    body_lines.append(f"Question: {question.strip()}")
+    body_lines.append(f"Question: {_scrub(question.strip())}")
     body_lines.append(
         "Answer in one paragraph of at most 80 words. End every sentence "
         "with the bracketed number of the passage it draws from. If the "
-        "passages do not contain the answer, reply: \"The library "
+        'passages do not contain the answer, reply: "The library '
         "doesn't have that.\""
     )
     user = "\n".join(body_lines)

@@ -102,6 +102,7 @@ cd /opt/rpi-hub     # or wherever the repo is checked out
 ```
 
 Exit codes:
+
 - `0` — everything matches the manifest
 - `1` — at least one file is corrupt (hash mismatch)
 - `2` — at least one manifest entry has no sha256 (incomplete pinning)

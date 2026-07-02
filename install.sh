@@ -13,6 +13,11 @@
 #   - Apply iptables FORWARD drop on wlan0 cross-interface traffic
 #   - Enable rpi-hub-ap.service
 #
+# --no-ap (or NO_AP=1): install the full platform but skip Phase 1's network
+#   setup entirely — no hostapd/dnsmasq, no wlan0/dhcpcd changes, no AP. The box
+#   stays on its existing LAN/Wi-Fi so you can keep testing the portal and
+#   services over its normal IP. All other phases run unchanged.
+#
 # Phase 2 scope (additive):
 #   - Install nginx
 #   - Link the rpi-hub-portal site config + landing page into /etc and /var/www
@@ -96,6 +101,11 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PHASE="${PHASE:-7}"
 COUNTRY="${rpi_hub_COUNTRY_CODE:-US}"
 PACK=""
+# NO_AP=1 (or --no-ap) installs the full platform but leaves networking
+# untouched: hostapd/dnsmasq/wlan0/dhcpcd are not configured and no AP is
+# brought up. Use this to keep the Pi on its existing LAN/Wi-Fi while
+# testing the portal + services over the box's normal IP.
+NO_AP="${NO_AP:-0}"
 
 log() { printf '[rpi-hub-install] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }
@@ -110,8 +120,9 @@ while [[ $# -gt 0 ]]; do
         --pack)    PACK="${2:-}"; shift 2 ;;
         --phase=*) PHASE="${1#--phase=}"; shift ;;
         --phase)   PHASE="${2:-}"; shift 2 ;;
+        --no-ap)   NO_AP=1; shift ;;
         --)        shift; break ;;
-        *)         die "unknown argument: $1 (try --phase=N, --pack=NAME)" ;;
+        *)         die "unknown argument: $1 (try --phase=N, --pack=NAME, --no-ap)" ;;
     esac
 done
 
@@ -122,6 +133,11 @@ fi
 if [[ ! "$COUNTRY" =~ ^[A-Z]{2}$ ]]; then
     die "rpi_hub_COUNTRY_CODE must be ISO 3166-1 alpha-2 (got: '$COUNTRY')"
 fi
+
+case "$NO_AP" in
+    0|1) ;;
+    *) die "NO_AP must be 0 or 1 (got: '$NO_AP'); use --no-ap to skip AP setup" ;;
+esac
 
 require_root() {
     [[ $EUID -eq 0 ]] || die "must run as root (try: sudo $0)"
@@ -235,6 +251,15 @@ apply_iptables() {
         iptables -I FORWARD 1 -i wlan0 ! -o wlan0 -j DROP
         log "applied iptables FORWARD drop"
     fi
+    # Belt-and-braces for IPv6: the sysctl disables v6 forwarding, but mirror
+    # the v4 FORWARD drop so a stray RA/route can't turn the hub into a v6
+    # router. ip6tables may be absent on a v4-only image — tolerate that.
+    if command -v ip6tables >/dev/null 2>&1; then
+        if ! ip6tables -C FORWARD -i wlan0 ! -o wlan0 -j DROP 2>/dev/null; then
+            ip6tables -I FORWARD 1 -i wlan0 ! -o wlan0 -j DROP
+            log "applied ip6tables FORWARD drop"
+        fi
+    fi
     netfilter-persistent save >/dev/null
 }
 
@@ -249,7 +274,34 @@ install_unit() {
     systemctl enable rpi-hub-ap.service
 }
 
+# NO_AP path: install nothing that touches the radio, wlan0, dhcpcd, dnsmasq,
+# or the FORWARD rules. The box keeps its existing network so the rest of the
+# platform can be reached over its normal LAN/Wi-Fi IP during testing. Later
+# phases bind to 127.0.0.1 and nginx listens on :80 on all interfaces, so they
+# work unchanged. hub.local is pointed at loopback so on-box name-based access
+# (the captive-portal redirect target) still resolves.
+phase1_no_ap() {
+    log "Phase 1 — SKIPPED (--no-ap): leaving networking untouched, no AP"
+    require_bookworm
+
+    if grep -qF "hub.local" /etc/hosts; then
+        # A previous full install may have written 192.168.4.1; rewrite it to
+        # loopback so on-box access doesn't chase a now-nonexistent AP IP.
+        sed -i -E 's/^[0-9.]+\thub\.local$/127.0.0.1\thub.local/' /etc/hosts
+    else
+        printf '127.0.0.1\thub.local\n' >> /etc/hosts
+        log "added hub.local → 127.0.0.1 to /etc/hosts (no-AP testing)"
+    fi
+
+    log "Phase 1 (no-AP) complete. Reach the hub at this box's existing IP."
+}
+
 phase1() {
+    if [[ "$NO_AP" == "1" ]]; then
+        phase1_no_ap
+        return
+    fi
+
     log "Phase 1 — Bare AP"
     require_bookworm
 
@@ -483,8 +535,8 @@ print('-'.join(b[i:i+4] for i in range(0, len(b), 4)))
     # Smoke test: give uvicorn ~3s to bind, then probe /api/status. Failure
     # here is non-fatal (install completed; the user can investigate via
     # journalctl) but loud.
-    local i probe_ok=0
-    for i in 1 2 3 4 5 6; do
+    local probe_ok=0
+    for _ in 1 2 3 4 5 6; do
         if curl --silent --fail --max-time 1 \
             http://127.0.0.1:8000/status >/dev/null 2>&1; then
             probe_ok=1
@@ -512,6 +564,16 @@ phase6() {
     # Stage the assistant package alongside the api/ tree from Phase 5.
     install -d -m 0755 /opt/rpi-hub/assistant
     install_tree "${REPO_DIR}/assistant" /opt/rpi-hub/assistant
+
+    # ANN library for the vector lane. The blueprint sells "hybrid BM25 +
+    # HNSW + RRF"; without hnswlib the vector half silently returns
+    # nothing and "hybrid" collapses to BM25-only. Try apt, then pip; warn
+    # loudly (not fatal — BM25-only still answers) so the gap is visible.
+    if ! python3 -c "import hnswlib" 2>/dev/null; then
+        apt_install python3-hnswlib 2>/dev/null \
+            || pip3 install --break-system-packages "hnswlib==0.8.*" 2>/dev/null \
+            || log "WARNING: hnswlib install failed — vector lane DISABLED; /api/retrieve will be BM25-only. Check /api/retrieve/health vector_status."
+    fi
 
     # Runtime data dirs. These hold prebuilt index + downloaded weights;
     # both are produced on a workstation and rsynced over.
@@ -591,8 +653,8 @@ phase7() {
     # Surface the local fingerprint right after start so the operator
     # can confirm the keypair landed. 6×0.5s mirrors phase 5's status
     # probe — Pi Zero 2 W can take >1s for keygen + mesh bind.
-    local i fp=""
-    for i in 1 2 3 4 5 6; do
+    local fp=""
+    for _ in 1 2 3 4 5 6; do
         fp=$(curl --silent --max-time 1 http://127.0.0.1:8500/identity 2>/dev/null \
               | python3 -c "import json,sys;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)
         [[ -n "$fp" ]] && break
@@ -624,6 +686,15 @@ phase8() {
     install_tree "${REPO_DIR}/listen" /opt/rpi-hub/listen
     install -d -m 0755 /opt/rpi-hub/scripts
     install -m 0755 "${REPO_DIR}/scripts/same_pipeline.sh" /opt/rpi-hub/scripts/same_pipeline.sh
+    install -m 0755 "${REPO_DIR}/scripts/detect_rtlsdr.sh" /opt/rpi-hub/scripts/detect_rtlsdr.sh
+
+    # Shared single-dongle RTL-SDR mutex. tmpfiles.d provisions
+    # /run/rpi-hub/rtlsdr.lock (0666) so the Tuner, the SAME pipeline, and
+    # dump1090 can all flock it. --create lays it down now without a reboot.
+    install -m 0644 "${REPO_DIR}/config/tmpfiles.d/rpi-hub.conf" \
+        /etc/tmpfiles.d/rpi-hub.conf
+    systemd-tmpfiles --create /etc/tmpfiles.d/rpi-hub.conf 2>/dev/null \
+        || log "systemd-tmpfiles --create failed; RTL-SDR lock will appear on next boot"
 
     install -d -m 0755 /var/lib/rpi-hub/listen
 
@@ -644,12 +715,15 @@ phase8() {
     systemctl enable rpi-hub-listen.service rpi-hub-listen-same.service
     systemctl restart rpi-hub-listen.service
 
-    # SAME pipeline starts only if the rtl_fm binary is present (a
-    # ConditionPathExists= guard inside the unit handles missing
-    # dongles cleanly).
-    if command -v rtl_fm >/dev/null; then
+    # SAME pipeline is gated on a real dongle, not just the rtl_fm binary
+    # (the unit's ExecCondition=detect_rtlsdr.sh enforces this at runtime
+    # too, so a later unplug condition-skips instead of crash-looping). We
+    # only kick a restart when a dongle is actually present to avoid noise.
+    if "${REPO_DIR}/scripts/detect_rtlsdr.sh" >/dev/null 2>&1; then
         systemctl restart rpi-hub-listen-same.service 2>/dev/null \
-            || log "rpi-hub-listen-same did not start (no dongle?); check journalctl"
+            || log "rpi-hub-listen-same did not start; check journalctl -u rpi-hub-listen-same"
+    else
+        log "Phase 8 — no RTL-SDR dongle detected; SAME pipeline stays dormant (ExecCondition gate)."
     fi
 
     phase8_adsb
@@ -683,6 +757,20 @@ phase8_adsb() {
     if dpkg -s dump1090-mutability >/dev/null 2>&1; then
         install -m 0644 "${REPO_DIR}/config/dump1090/dump1090-mutability.default" \
             /etc/default/dump1090-mutability
+        # Make dump1090 hold the shared RTL-SDR flock for its lifetime so
+        # it can never claim the dongle while the Tuner or SAME own it.
+        install -d -m 0755 /etc/systemd/system/dump1090-mutability.service.d
+        install -m 0644 "${REPO_DIR}/config/dump1090/rpi-hub-rtlsdr-lock.conf" \
+            /etc/systemd/system/dump1090-mutability.service.d/rpi-hub-rtlsdr-lock.conf
+        # The drop-in wraps the packaged launcher under flock. Warn if the
+        # launcher path differs from what the drop-in expects, so the
+        # mutex doesn't silently break ADS-B startup.
+        if [ ! -x /usr/share/dump1090-mutability/start-dump1090-mutability ]; then
+            log "warning: dump1090 launcher path differs from the flock drop-in;"
+            log "    check 'systemctl cat dump1090-mutability' and adjust"
+            log "    config/dump1090/rpi-hub-rtlsdr-lock.conf's ExecStart."
+        fi
+        systemctl daemon-reload
     else
         log "dump1090-mutability package absent; sub-phase 8.4 will stay dormant."
         return 0

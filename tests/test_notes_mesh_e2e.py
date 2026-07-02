@@ -25,10 +25,11 @@ loop end-to-end.
 
 from __future__ import annotations
 
+import base64
 import json
 import urllib.request
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import pytest
 from fastapi.testclient import TestClient
@@ -37,7 +38,7 @@ from mesh.rpi_hub_mesh import identity as mesh_identity
 from mesh.rpi_hub_mesh import main as mesh_main
 from mesh.rpi_hub_mesh import messages
 from notes.rpi_hub_notes import main as notes_main
-from notes.rpi_hub_notes import mesh_client, storage
+from notes.rpi_hub_notes import storage
 
 
 @pytest.fixture
@@ -94,20 +95,24 @@ def notes_app_client(
 
     def routed_urlopen(req: urllib.request.Request, timeout: float = 0.0) -> Any:  # noqa: ARG001
         assert req.full_url.endswith("/notes/publish"), req.full_url
-        body = bytes(req.data) if req.data is not None else b""
-        resp = mesh_client_app.post("/notes/publish", content=body, headers={"Content-Type": "application/json"})
+        body = req.data if isinstance(req.data, bytes) else b""
+        resp = mesh_client_app.post(
+            "/notes/publish",
+            content=body,
+            headers={"Content-Type": "application/json"},
+        )
 
         class _Wrapped:
             status = resp.status_code
 
-            def __enter__(self) -> "_Wrapped":
+            def __enter__(self) -> _Wrapped:
                 return self
 
             def __exit__(self, *_: object) -> None:
                 return None
 
             def read(self) -> bytes:
-                return resp.content
+                return cast(bytes, resp.content)
 
         return _Wrapped()
 
@@ -131,9 +136,9 @@ def _verify_signed_note(
             "body": envelope["body"],
         }
     )
-    assert messages.verify(pub_key, payload, envelope["sig"]), (
-        "signature did not verify against the mesh app's public key"
-    )
+    assert messages.verify(
+        pub_key, payload, envelope["sig"]
+    ), "signature did not verify against the mesh app's public key"
 
 
 def test_post_note_round_trips_signed_envelope(
@@ -153,7 +158,9 @@ def test_post_note_round_trips_signed_envelope(
     # Wrap publish on the wifi bridge — easiest way to capture what
     # the mesh app actually signs. Falls through to the no-op bridge
     # behavior on no-hardware (publish returns False).
-    from mesh.rpi_hub_mesh import wifi_bridge
+    from mesh.rpi_hub_mesh import (  # noqa: PLC0415 # deferred to reduce test coupling
+        wifi_bridge,
+    )
 
     original_attach = wifi_bridge.attach
 
@@ -169,9 +176,7 @@ def test_post_note_round_trips_signed_envelope(
         bridge.publish = capturing_publish  # type: ignore[method-assign]
         return bridge
 
-    import pytest as _pt
-
-    with _pt.MonkeyPatch.context() as mp:
+    with pytest.MonkeyPatch.context() as mp:
         mp.setattr(wifi_bridge, "attach", attach_capture)
         mp.setattr(mesh_main, "_WIFI", None)
         mp.setattr(mesh_main, "_LORA", None)
@@ -181,9 +186,7 @@ def test_post_note_round_trips_signed_envelope(
         h = mesh_client_app.get("/health")
         assert h.status_code == 200
 
-        r = notes_app_client.post(
-            "/notes", json={"text": "water at the church", "name": "Maya"}
-        )
+        r = notes_app_client.post("/notes", json={"text": "water at the church", "name": "Maya"})
         assert r.status_code == 201, r.text
         note = r.json()
         assert note["text"] == "water at the church"
@@ -193,7 +196,6 @@ def test_post_note_round_trips_signed_envelope(
     identity_resp = mesh_client_app.get("/identity")
     assert identity_resp.status_code == 200
     pub_b64 = identity_resp.json()["public_key_b64"]
-    import base64
 
     pub_key = base64.b64decode(pub_b64)
 

@@ -13,6 +13,8 @@ process-wide lock is fine.
 
 from __future__ import annotations
 
+import contextlib
+import fcntl
 import os
 import shlex
 import shutil
@@ -26,6 +28,21 @@ from dataclasses import dataclass
 RTL_FM = "/usr/bin/rtl_fm"
 DUMP1090 = "/usr/bin/dump1090"
 MULTIMON = "/usr/bin/multimon-ng"
+
+# Cross-process dongle mutex. The RTL-SDR has ONE USB endpoint shared by
+# three *independent OS processes*: this in-process Tuner (FM/GPS), the
+# SAME pipeline (rpi-hub-listen-same.service), and dump1090-mutability. A
+# threading.Lock only arbitrates callers inside this process, so every
+# consumer must instead hold this advisory flock — see same_pipeline.sh
+# and the dump1090 drop-in. The lock file is provisioned 0666 by
+# tmpfiles.d so each unit's (dynamic) user can open it.
+RTLSDR_LOCK_PATH = os.environ.get("rpi_hub_RTLSDR_LOCK", "/run/rpi-hub/rtlsdr.lock")
+DETECT_SCRIPT = os.environ.get("rpi_hub_DETECT_RTLSDR", "/opt/rpi-hub/scripts/detect_rtlsdr.sh")
+
+# Cache passive detection briefly so the Listen UI polling /state does not
+# re-probe USB on every request.
+_DETECT_CACHE: tuple[float, bool] | None = None
+_DETECT_TTL_S = 5.0
 
 
 @dataclass(frozen=True)
@@ -49,23 +66,30 @@ def _binary_present(path: str) -> bool:
 
 
 def dongle_present() -> bool:
-    """Cheap detection: does an rtl_test report any device?
+    """Passive USB-ID detection that does NOT open/claim the dongle.
 
-    rtl_test exits non-zero if the kernel has no USB device matching the
-    Realtek vendor IDs the driver claims. We treat any non-zero as
-    "no dongle"; the UI just shows a "no hardware" banner.
+    The old implementation shelled ``rtl_test -t``, which *opens* the
+    radio — so polling ``/state`` while SAME/broadcast/GPS held the
+    dongle both reported a false "no device" and disrupted the live
+    stream. We instead reuse ``scripts/detect_rtlsdr.sh``, which only
+    matches USB vendor:product IDs (lsusb), and cache the result for a
+    few seconds so the polling Listen UI never re-probes per request.
     """
 
-    if not _binary_present("rtl_test"):
-        return False
+    global _DETECT_CACHE  # noqa: PLW0603 brief cache for dongle detection
+    now = time.monotonic()
+    if _DETECT_CACHE is not None and (now - _DETECT_CACHE[0]) < _DETECT_TTL_S:
+        return _DETECT_CACHE[1]
+    present = False
     try:
-        out = subprocess.run(
-            ["rtl_test", "-t"], capture_output=True, text=True, timeout=2.0
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired):
-        return False
-    blob = (out.stdout + out.stderr).lower()
-    return "found 1 device" in blob or "found " in blob and "device" in blob
+        rc = subprocess.run(
+            [DETECT_SCRIPT], capture_output=True, timeout=2.0, check=False
+        ).returncode
+        present = rc == 0
+    except (FileNotFoundError, PermissionError, subprocess.TimeoutExpired, OSError):
+        present = False
+    _DETECT_CACHE = (now, present)
+    return present
 
 
 class Tuner:
@@ -74,6 +98,7 @@ class Tuner:
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._proc: subprocess.Popen[bytes] | None = None
+        self._lock_fd: int | None = None  # held flock fd while a child owns the dongle
         self._state = TunerState(mode="idle", frequency_hz=0, label="idle", started_ts=0.0)
 
     @property
@@ -84,17 +109,66 @@ class Tuner:
         with self._lock:
             self._kill_locked()
 
+    def _acquire_dongle_locked(self) -> None:
+        """Take the cross-process RTL-SDR flock; raise TunerBusy if held.
+
+        Degrades gracefully when the lock file cannot be created (e.g. a
+        dev box with no /run/rpi-hub) — there we fall back to the
+        in-process lock only, which is correct off-device.
+        """
+
+        try:
+            fd = os.open(RTLSDR_LOCK_PATH, os.O_RDWR | os.O_CREAT, 0o666)
+        except OSError:
+            self._lock_fd = None
+            return
+        try:
+            fcntl.flock(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except OSError as exc:
+            os.close(fd)
+            raise TunerBusy(
+                "RTL-SDR is held by another process (SAME pipeline or dump1090); "
+                "stop it before tuning"
+            ) from exc
+        self._lock_fd = fd
+
+    def _release_dongle_locked(self) -> None:
+        if self._lock_fd is not None:
+            with contextlib.suppress(OSError):
+                fcntl.flock(self._lock_fd, fcntl.LOCK_UN)
+            with contextlib.suppress(OSError):
+                os.close(self._lock_fd)
+            self._lock_fd = None
+
+    def _signal_group(self, sig: int) -> None:
+        """Signal the child's whole process group (it is a session leader).
+
+        Falls back to signalling the bare child if the group lookup
+        fails (e.g. the child already exited).
+        """
+
+        proc = self._proc
+        if proc is None:
+            return
+        try:
+            os.killpg(os.getpgid(proc.pid), sig)
+        except (ProcessLookupError, PermissionError, OSError):
+            with contextlib.suppress(OSError):
+                proc.send_signal(sig)
+
     def _kill_locked(self) -> None:
         if self._proc is not None and self._proc.poll() is None:
             try:
-                self._proc.send_signal(signal.SIGTERM)
+                self._signal_group(signal.SIGTERM)
                 self._proc.wait(timeout=2.0)
             except (subprocess.TimeoutExpired, OSError):
                 try:
-                    self._proc.kill()
-                except OSError:
+                    self._signal_group(signal.SIGKILL)
+                    self._proc.wait(timeout=2.0)
+                except (OSError, subprocess.TimeoutExpired):
                     pass
         self._proc = None
+        self._release_dongle_locked()
         self._state = TunerState(mode="idle", frequency_hz=0, label="idle", started_ts=0.0)
 
     def start_weather(self, frequency_hz: int, label: str) -> TunerState:
@@ -111,12 +185,18 @@ class Tuner:
             label=label,
             argv=[
                 RTL_FM,
-                "-M", "fm",
-                "-f", str(frequency_hz),
-                "-s", "22050",
-                "-r", "22050",
-                "-g", "40",
-                "-l", "0",
+                "-M",
+                "fm",
+                "-f",
+                str(frequency_hz),
+                "-s",
+                "22050",
+                "-r",
+                "22050",
+                "-g",
+                "40",
+                "-l",
+                "0",
                 "-",  # stdout
             ],
         )
@@ -130,11 +210,16 @@ class Tuner:
             label=label,
             argv=[
                 RTL_FM,
-                "-M", "wbfm",
-                "-f", str(frequency_hz),
-                "-s", "200000",
-                "-r", "44100",
-                "-g", "30",
+                "-M",
+                "wbfm",
+                "-f",
+                str(frequency_hz),
+                "-s",
+                "200000",
+                "-r",
+                "44100",
+                "-g",
+                "30",
                 "-",
             ],
         )
@@ -150,11 +235,16 @@ class Tuner:
             label=label,
             argv=[
                 RTL_FM,
-                "-M", mode,
-                "-f", str(frequency_hz),
-                "-s", "22050",
-                "-r", "22050",
-                "-g", "40",
+                "-M",
+                mode,
+                "-f",
+                str(frequency_hz),
+                "-s",
+                "22050",
+                "-r",
+                "22050",
+                "-g",
+                "40",
                 "-",
             ],
         )
@@ -164,7 +254,7 @@ class Tuner:
         argv: list[str],
         label: str = "GPS sky survey",
         env: dict[str, str] | None = None,
-    ) -> tuple[TunerState, "subprocess.Popen[bytes]"]:
+    ) -> tuple[TunerState, subprocess.Popen[bytes]]:
         """Phase 13: spawn a finite ``gps_sdr`` sweep under the arbiter.
 
         Unlike the rtl_fm modes this child is *expected to exit on its
@@ -179,9 +269,8 @@ class Tuner:
         """
         with self._lock:
             if self._state.mode != "idle":
-                raise TunerBusy(
-                    f"current mode={self._state.mode!s}; stop before re-tuning"
-                )
+                raise TunerBusy(f"current mode={self._state.mode!s}; stop before re-tuning")
+            self._acquire_dongle_locked()  # raises TunerBusy if another process holds it
             try:
                 self._proc = subprocess.Popen(
                     argv,
@@ -189,8 +278,10 @@ class Tuner:
                     stderr=subprocess.PIPE,
                     stdin=subprocess.DEVNULL,
                     env=env,
+                    start_new_session=True,
                 )
             except (FileNotFoundError, OSError) as exc:
+                self._release_dongle_locked()
                 raise TunerUnavailable(str(exc)) from exc
             self._state = TunerState(
                 mode="gps",
@@ -211,26 +302,25 @@ class Tuner:
             if self._state.mode == mode:
                 self._kill_locked()
 
-    def _start(
-        self, mode: str, frequency_hz: int, label: str, argv: list[str]
-    ) -> TunerState:
+    def _start(self, mode: str, frequency_hz: int, label: str, argv: list[str]) -> TunerState:
         if not _binary_present(RTL_FM):
             raise TunerUnavailable("rtl_fm not installed")
         with self._lock:
             if self._state.mode != "idle":
-                raise TunerBusy(
-                    f"current mode={self._state.mode!s}; stop before re-tuning"
-                )
+                raise TunerBusy(f"current mode={self._state.mode!s}; stop before re-tuning")
             # Sanity-quote the argv in logs — never shell out via `bash -c`.
             _ = " ".join(shlex.quote(a) for a in argv)
+            self._acquire_dongle_locked()  # raises TunerBusy if another process holds it
             try:
                 self._proc = subprocess.Popen(
                     argv,
                     stdout=subprocess.DEVNULL,  # WebSocket bridge will replace this
                     stderr=subprocess.DEVNULL,
                     stdin=subprocess.DEVNULL,
+                    start_new_session=True,
                 )
             except (FileNotFoundError, OSError) as exc:
+                self._release_dongle_locked()
                 raise TunerUnavailable(str(exc)) from exc
             self._state = TunerState(
                 mode=mode,

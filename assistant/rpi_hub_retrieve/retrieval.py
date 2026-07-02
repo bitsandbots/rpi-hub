@@ -90,9 +90,7 @@ def vector_search(
     return [int(id_map[int(label)]) for label in labels[0] if int(label) < len(id_map)]
 
 
-def reciprocal_rank_fusion(
-    ranked_lists: list[list[int]], k: int = RRF_K
-) -> list[RankedResult]:
+def reciprocal_rank_fusion(ranked_lists: list[list[int]], k: int = RRF_K) -> list[RankedResult]:
     """Merge multiple ranked lists by RRF.
 
     Score per chunk = sum over lanes of 1 / (k + rank_in_lane). A chunk
@@ -135,17 +133,37 @@ def diversity_filter(
     return out
 
 
-def confidence(ranked: list[RankedResult]) -> float:
-    """Confidence score in [0, 1]. Used to gate the "no good answer" UX.
+def confidence(ranked: list[RankedResult], contributing_lanes: int = 1) -> float:
+    """Confidence score in [0, 1], gating the "no good answer" UX.
 
-    The top RRF score is unbounded above but in practice tops out around
-    0.06 (two perfect-rank-1 lanes → 2 * 1/61 ≈ 0.0328 minimum-meaningful
-    threshold). We map onto [0, 1] with a soft cap; the exact curve is
-    less important than the *threshold* the eval harness pins.
+    The previous curve (``1 - exp(-top*20)``) was mis-calibrated to the
+    RRF score scale: a single-lane rank-1 hit scored ~0.28 and the gate
+    rejected almost nothing. RRF scores are bounded and depend on *rank*
+    and *how many lanes agree*, so we normalise against that structure
+    instead of an arbitrary exponential:
+
+    * one lane ranking a chunk #1 contributes ``1/(RRF_K+1)`` ("one
+      unit");
+    * two lanes both ranking it #1 contributes ``2/(RRF_K+1)`` ("two
+      units") — strong lexical+semantic agreement.
+
+    We express the top score in those units and squash so a single strong
+    lane lands mid-scale (~0.45) and cross-lane agreement approaches 1.0.
+    This makes the assist-side floor meaningful: a result that only one
+    lane surfaced, weakly, now scores below a result both lanes confirm.
+
+    ``contributing_lanes`` is the count of non-empty ranked lists fused;
+    it is accepted for callers that want to factor it in and to document
+    the score's dependence on lane agreement.
+
+    NOTE: rank-based RRF cannot distinguish a strong from a weak #1 hit
+    within a lane; tightening this further needs raw BM25 magnitudes from
+    the eval harness (tracked in docs/GAP_ANALYSIS.md).
     """
 
     if not ranked:
         return 0.0
-    top = ranked[0].score
-    # Smooth squash; saturates around top≈0.15.
-    return 1.0 - math.exp(-top * 20.0)
+    one_unit = 1.0 / (RRF_K + 1)
+    units = ranked[0].score / one_unit if one_unit else 0.0
+    # 1 unit → ~0.45, 2 units → ~0.70, saturating toward 1.0.
+    return 1.0 - math.exp(-0.6 * units)

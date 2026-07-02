@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import socket
 import subprocess
 import urllib.error
 import urllib.request
@@ -39,6 +38,10 @@ VCGENCMD_TIMEOUT_S = 1.0
 class StorageInfo:
     kiwix_bytes_free: int | None
     kiwix_bytes_total: int | None
+    # False when /var/lib/kiwix is absent and the figures describe the
+    # root filesystem instead — so the UI doesn't mislabel root free space
+    # as library space.
+    kiwix_present: bool = True
 
 
 @dataclass(frozen=True)
@@ -68,13 +71,17 @@ def load_avg() -> tuple[float, float, float] | None:
 def storage(path: Path = KIWIX_DIR) -> StorageInfo:
     # If the kiwix dir doesn't exist yet (Phase 3 hasn't run), fall back to
     # the root filesystem — gives the user *something* meaningful rather
-    # than a hole in the page.
-    target = path if path.exists() else Path("/")
+    # than a hole in the page — but flag that the numbers are root-fs, not
+    # library, so the UI can label them honestly.
+    present = path.exists()
+    target = path if present else Path("/")
     try:
         u = shutil.disk_usage(target)
-        return StorageInfo(kiwix_bytes_free=u.free, kiwix_bytes_total=u.total)
+        return StorageInfo(
+            kiwix_bytes_free=u.free, kiwix_bytes_total=u.total, kiwix_present=present
+        )
     except OSError:
-        return StorageInfo(kiwix_bytes_free=None, kiwix_bytes_total=None)
+        return StorageInfo(kiwix_bytes_free=None, kiwix_bytes_total=None, kiwix_present=present)
 
 
 def dhcp_clients() -> int | None:
@@ -113,7 +120,7 @@ def voltage() -> VoltageInfo:
     if not raw.startswith(prefix):
         return VoltageInfo(throttled=raw or None, undervoltage=None)
 
-    word = raw[len(prefix):]
+    word = raw[len(prefix) :]
     try:
         bits = int(word, 16)
     except ValueError:
@@ -153,13 +160,22 @@ def build_version() -> str:
 # inactive, each probe falls through to "not-running" in ~5ms.
 
 PROBE_TIMEOUT_S = 0.4
+HTTP_STATUS_OK = 200
+HTTP_STATUS_REDIRECT = 300
+HTTP_STATUS_SERVER_ERROR = 500
 
 
 def _probe_local_http(url: str) -> str:
     try:
         with urllib.request.urlopen(url, timeout=PROBE_TIMEOUT_S) as resp:
-            return "ready" if 200 <= resp.status < 500 else "unknown"
-    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, OSError):
+            # Only a 2xx is "ready". A 4xx (e.g. missing /health route) or
+            # 5xx means the port answered but the service is not actually
+            # serving — surface that as "unknown", not a false "ready".
+            return "ready" if HTTP_STATUS_OK <= resp.status < HTTP_STATUS_REDIRECT else "unknown"
+    except urllib.error.HTTPError as exc:
+        # urlopen raises on 4xx/5xx; treat 5xx as down, 4xx as unknown.
+        return "not-running" if exc.code >= HTTP_STATUS_SERVER_ERROR else "unknown"
+    except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
         return "not-running"
 
 
@@ -169,7 +185,7 @@ def _probe_json_field(url: str, field: str) -> str | None:
     try:
         with urllib.request.urlopen(url, timeout=PROBE_TIMEOUT_S) as resp:
             body = json.loads(resp.read())
-    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, json.JSONDecodeError, OSError):
+    except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError, OSError):
         return None
     if not isinstance(body, dict):
         return None
@@ -180,11 +196,12 @@ def _probe_json_field(url: str, field: str) -> str | None:
 @dataclass(frozen=True)
 class ServicesInfo:
     retrieve: str  # Phase 6
-    assist: str    # Phase 6
-    listen: str    # Phase 8
-    notes: str     # Phase 9A
-    mesh: str      # Phase 7
-    adsb: str      # Phase 8.4
+    assist: str  # Phase 6
+    listen: str  # Phase 8
+    notes: str  # Phase 9A
+    mesh: str  # Phase 7
+    kiwix: str  # Phase 3 — core library backend
+    adsb: str  # Phase 8.4
     adsb_aircraft: int | None  # surfaced from aircraft.json on a ready probe
     mesh_fingerprint: str | None  # surfaced for owner-to-owner trust
 
@@ -234,15 +251,52 @@ def _now() -> float:
     return time.time()
 
 
+# Cache the (relatively expensive) probe fan-out so a status page polling
+# every second doesn't pile up threadpool work or re-probe 8 sockets each
+# tick. A 2s TTL keeps the page lively while bounding load.
+_SERVICES_CACHE: tuple[float, ServicesInfo] | None = None
+_SERVICES_TTL_S = 2.0
+_HTTP_PROBES = {
+    "retrieve": "http://127.0.0.1:8100/health",
+    "assist": "http://127.0.0.1:8200/health",
+    "listen": "http://127.0.0.1:8300/health",
+    "notes": "http://127.0.0.1:8400/health",
+    "mesh": "http://127.0.0.1:8500/health",
+    "kiwix": "http://127.0.0.1:8080/",
+}
+
+
 def services() -> ServicesInfo:
-    adsb_state, adsb_count = _probe_adsb()
-    return ServicesInfo(
-        retrieve=_probe_local_http("http://127.0.0.1:8100/health"),
-        assist=_probe_local_http("http://127.0.0.1:8200/health"),
-        listen=_probe_local_http("http://127.0.0.1:8300/health"),
-        notes=_probe_local_http("http://127.0.0.1:8400/health"),
-        mesh=_probe_local_http("http://127.0.0.1:8500/health"),
+    global _SERVICES_CACHE  # noqa: PLW0603 module-level probe cache for TTL
+    now = _now()
+    if _SERVICES_CACHE is not None and (now - _SERVICES_CACHE[0]) < _SERVICES_TTL_S:
+        return _SERVICES_CACHE[1]
+
+    # Run all independent probes concurrently so total wall time is the
+    # slowest single probe (~0.4s), not their sum (~3s) when several
+    # services are unreachable.
+    from concurrent.futures import ThreadPoolExecutor  # noqa: PLC0415
+
+    with ThreadPoolExecutor(max_workers=len(_HTTP_PROBES) + 2) as pool:
+        http_futs = {
+            name: pool.submit(_probe_local_http, url) for name, url in _HTTP_PROBES.items()
+        }
+        adsb_fut = pool.submit(_probe_adsb)
+        fp_fut = pool.submit(_probe_json_field, "http://127.0.0.1:8500/identity", "fingerprint")
+        http = {name: fut.result() for name, fut in http_futs.items()}
+        adsb_state, adsb_count = adsb_fut.result()
+        fingerprint = fp_fut.result()
+
+    info = ServicesInfo(
+        retrieve=http["retrieve"],
+        assist=http["assist"],
+        listen=http["listen"],
+        notes=http["notes"],
+        mesh=http["mesh"],
+        kiwix=http["kiwix"],
         adsb=adsb_state,
         adsb_aircraft=adsb_count,
-        mesh_fingerprint=_probe_json_field("http://127.0.0.1:8500/identity", "fingerprint"),
+        mesh_fingerprint=fingerprint,
     )
+    _SERVICES_CACHE = (now, info)
+    return info

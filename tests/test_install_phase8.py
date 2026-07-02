@@ -75,9 +75,9 @@ def test_shield_extracted_into_own_function() -> None:
     adsb_fn_start = text.index("phase8_adsb()")
     shield_fn_start = text.index("phase8_adsb_shield()")
     adsb_fn_body = text[adsb_fn_start:shield_fn_start]
-    assert "adsb_shield.py" not in adsb_fn_body, (
-        "adsb_shield.py install must be in phase8_adsb_shield(), not phase8_adsb()"
-    )
+    assert (
+        "adsb_shield.py" not in adsb_fn_body
+    ), "adsb_shield.py install must be in phase8_adsb_shield(), not phase8_adsb()"
 
 
 def test_phase8_calls_shield_unconditionally() -> None:
@@ -88,9 +88,9 @@ def test_phase8_calls_shield_unconditionally() -> None:
     # Find the next top-level function after phase8_adsb_shield
     after = text.find("\nphase8_adsb()", phase8_start)
     phase8_body = text[phase8_start:after]
-    assert "phase8_adsb_shield" in phase8_body, (
-        "phase8() must call phase8_adsb_shield unconditionally"
-    )
+    assert (
+        "phase8_adsb_shield" in phase8_body
+    ), "phase8() must call phase8_adsb_shield unconditionally"
 
 
 def test_detect_rtlsdr_lists_known_dongles() -> None:

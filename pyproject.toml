@@ -12,6 +12,10 @@ target-version = "py311"
 select = ["E", "F", "I", "B", "UP", "SIM", "PL"]
 ignore = [
     "PLR0913",  # too-many-arguments — common in FastAPI endpoint signatures
+    "SIM112",   # all env vars use the deliberate lowercase rpi_hub_ prefix
+                # (see CLAUDE.md's no-exfiltration invariant env vars); the
+                # names are a cross-file contract with install.sh and the
+                # systemd units, not a style choice to fix locally.
 ]
 
 [tool.ruff.lint.per-file-ignores]
@@ -31,6 +35,15 @@ python_version = "3.11"
 strict = true
 warn_unused_ignores = true
 warn_redundant_casts = true
+
+# pytest's @pytest.fixture (and TestClient patterns built on it) trip
+# strict's disallow_untyped_decorators across the whole test suite even
+# though the decorated functions themselves are fully annotated — a
+# well-known mypy/pytest friction point, not a real typing gap. Test files
+# stay strict on everything else (return types, arg types, etc.).
+[[tool.mypy.overrides]]
+module = ["tests.*", "*.tests.*"]
+disallow_untyped_decorators = false
 
 [tool.pytest.ini_options]
 testpaths = [

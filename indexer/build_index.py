@@ -22,14 +22,17 @@ pure helpers don't pull them in.
 from __future__ import annotations
 
 import argparse
+import os
 import sqlite3
 import struct
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 from . import chunk as chunker
 from . import embed as embedder
 from . import manifest as manifest_mod
+from .htmlstrip import html_to_text
 
 
 def _open_db(path: Path) -> sqlite3.Connection:
@@ -57,7 +60,7 @@ def _open_db(path: Path) -> sqlite3.Connection:
     return conn
 
 
-def _iter_articles(zim_dir: Path):
+def _iter_articles(zim_dir: Path) -> Iterator[tuple[str, str, str]]:
     """Yield ``(article_name, body_text, url)`` tuples from every ZIM.
 
     Imports libzim lazily so the rest of the indexer is importable on a
@@ -65,7 +68,9 @@ def _iter_articles(zim_dir: Path):
     """
 
     try:
-        from libzim.reader import Archive  # type: ignore[import-not-found]
+        from libzim.reader import (  # noqa: PLC0415 # optional heavy dep — see module docstring
+            Archive,
+        )
     except ImportError:
         print(
             "[indexer] libzim not installed; install with `pip install libzim` to read ZIMs",
@@ -81,11 +86,14 @@ def _iter_articles(zim_dir: Path):
                 continue
             item = entry.get_item()
             mime = item.mimetype or ""
-            if not mime.startswith("text/"):
+            if mime != "text/html":
                 continue
             try:
-                body = bytes(item.content).decode("utf-8", errors="ignore")
+                raw_html = bytes(item.content).decode("utf-8", errors="ignore")
             except Exception:  # noqa: BLE001
+                continue
+            body = html_to_text(raw_html)
+            if not body:
                 continue
             yield (entry.title or entry.path, body, f"/library/{zim_path.stem}/A/{entry.path}")
 
@@ -134,7 +142,7 @@ def build(zim_dir: Path, out_dir: Path) -> manifest_mod.IndexManifest:
 
     # Write HNSW + id map.
     try:
-        import hnswlib  # type: ignore[import-untyped]  # noqa: PLC0415
+        import hnswlib  # noqa: PLC0415
 
         if embeddings:
             index = hnswlib.Index(space="cosine", dim=embedder.EMBED_DIM)
@@ -166,7 +174,15 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--zim-dir", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
+    ap.add_argument(
+        "--allow-stub-embeddings",
+        action="store_true",
+        help="build with zero-vector embeddings when sentence-transformers is "
+        "absent (plumbing smoke-test only; the vector lane will be useless)",
+    )
     args = ap.parse_args()
+    if args.allow_stub_embeddings:
+        os.environ["rpi_hub_ALLOW_STUB_EMBEDDINGS"] = "1"
 
     manifest = build(args.zim_dir, args.out)
     print(f"[indexer] wrote {manifest.chunk_count} chunks ({manifest.token_count} tokens)")

@@ -39,19 +39,44 @@ app = FastAPI(
 
 _PEERS = peers.PeerTable()
 _BUNDLE: identity.IdentityBundle | None = None
-_OUTBOUND_SEQ = 0  # per-process monotonic; persists for the unit's lifetime
 # Per-domain owner token: the mesh file gates /peers/{fp}/{trust,block};
 # the notes file gates /api/notes DELETE + wipe. They are independent so
-# the two trust domains can be rotated separately. The legacy fallback
-# below preserves pre-v1.3 single-token deployments — drop it once
-# install.sh stops being able to land on a token-less /etc/rpi-hub.
+# the two trust domains can be rotated separately. The legacy fallback to
+# the notes token is OFF by default (it collapses the two trust domains)
+# and only re-enabled for pre-v1.3 single-token deployments via
+# rpi_hub_MESH_TOKEN_LEGACY_FALLBACK=1.
 OWNER_TOKEN_PATH = Path(os.environ.get("rpi_hub_MESH_TOKEN_FILE", "/etc/rpi-hub/mesh-owner-token"))
 LEGACY_OWNER_TOKEN_PATH = Path("/etc/rpi-hub/notes-owner-token")
+_LEGACY_TOKEN_FALLBACK = os.environ.get("rpi_hub_MESH_TOKEN_LEGACY_FALLBACK") == "1"
+
+# Outbound sequence numbers must be strictly increasing *across restarts*,
+# otherwise a still-running receiver drops every post-reboot frame as a
+# replay. We persist the counter to a writable state dir (StateDirectory=
+# in the unit) and reload it on boot; the write is best-effort so a
+# read-only deployment simply degrades to per-process monotonicity.
+SEQ_FILE = Path(os.environ.get("rpi_hub_MESH_SEQ_FILE", "/var/lib/rpi-hub-mesh/seq"))
+
+
+def _load_initial_seq() -> int:
+    try:
+        return max(0, int(SEQ_FILE.read_text().strip()))
+    except (OSError, ValueError):
+        return 0
+
+
+_OUTBOUND_SEQ = _load_initial_seq()
 
 
 def _next_seq() -> int:
-    global _OUTBOUND_SEQ
+    global _OUTBOUND_SEQ  # noqa: PLW0603 (lazy sequence counter)
     _OUTBOUND_SEQ += 1
+    try:
+        SEQ_FILE.parent.mkdir(parents=True, exist_ok=True)
+        tmp = SEQ_FILE.with_suffix(".tmp")
+        tmp.write_text(str(_OUTBOUND_SEQ))
+        os.replace(tmp, SEQ_FILE)
+    except OSError:
+        pass  # best-effort persistence; falls back to per-process counter
     return _OUTBOUND_SEQ
 
 
@@ -63,29 +88,35 @@ _WIFI: wifi_bridge.WifiBridge | None = None
 
 
 def _on_lora_frame(frame: bytes) -> None:
-    """Inbound LoRa frame → peer-table upsert.
+    """Inbound LoRa frame → authenticated peer-table upsert.
 
     The frame is the canonical envelope bytes emitted by another
-    rpi-hub-mesh node. The full dispatcher (notes / presence / index)
-    lands with the Reticulum daemon wiring; here we just bump
-    last-seen so peers show up in /api/mesh/peers.
+    rpi-hub-mesh node. Every frame is authenticated before it can touch
+    state: the signature must verify against the presented public key,
+    that key's fingerprint must equal the claimed ``sender``, the key is
+    TOFU-pinned, and the sequence number must be fresh. Anything that
+    fails is dropped silently — an unauthenticated party on the wire can
+    no longer forge a peer identity or poison a peer's replay counter.
     """
 
     try:
         import json as _json  # noqa: PLC0415
 
-        env = _json.loads(frame.decode("utf-8", errors="ignore"))
+        raw = _json.loads(frame.decode("utf-8", errors="ignore"))
     except (ValueError, UnicodeDecodeError):
         return
-    if not isinstance(env, dict):
+    env = messages.verify_envelope(raw)
+    if env is None:
+        return  # unsigned / forged / unverifiable — drop
+    try:
+        pub = base64.b64decode(env.pub, validate=True)
+    except (ValueError, TypeError):
         return
-    sender = str(env.get("sender") or "")
-    if not sender:
-        return
-    seq = int(env.get("seq") or 0)
-    if not _PEERS.accept_sequence(sender, seq):
+    if not _PEERS.pin_key(env.sender, pub):
+        return  # key mismatch for a known fingerprint
+    if not _PEERS.accept_sequence(env.sender, env.seq):
         return  # replay
-    _PEERS.upsert(sender, radio="lora")
+    _PEERS.upsert(env.sender, radio="lora")
 
 
 def _on_wifi_peer(mac: str, tq: int, _next_hop: str) -> None:
@@ -102,7 +133,7 @@ def _on_wifi_peer(mac: str, tq: int, _next_hop: str) -> None:
 
 
 def _ensure_bridges() -> None:
-    global _LORA, _WIFI
+    global _LORA, _WIFI  # noqa: PLW0603 (lazy bridge initialization)
     if _LORA is None:
         _LORA = lora_bridge.attach(_on_lora_frame)
     if _WIFI is None:
@@ -119,7 +150,7 @@ def _get_bundle() -> identity.IdentityBundle:
     ReadWritePaths / ReadOnlyPaths to the key dir).
     """
 
-    global _BUNDLE
+    global _BUNDLE  # noqa: PLW0603 (lazy bundle initialization)
     if _BUNDLE is None:
         _BUNDLE = identity.load_from_credentials()
     return _BUNDLE
@@ -130,7 +161,12 @@ def _get_identity() -> identity.Identity:
 
 
 def _read_owner_token() -> str | None:
-    for path in (OWNER_TOKEN_PATH, LEGACY_OWNER_TOKEN_PATH):
+    paths = [OWNER_TOKEN_PATH]
+    if _LEGACY_TOKEN_FALLBACK:
+        # Opt-in only: sharing the notes token collapses the mesh and
+        # notes trust domains the v1.2 split was meant to separate.
+        paths.append(LEGACY_OWNER_TOKEN_PATH)
+    for path in paths:
         try:
             token = path.read_text().strip()
         except OSError:
@@ -191,7 +227,9 @@ class HealthOut(BaseModel):
 class PublishNoteIn(BaseModel):
     note_id: int = Field(ge=0)
     name: str = ""
-    text: Annotated[str, Field(min_length=1, max_length=400)]
+    # Mesh-originated notes are independently bounded to the blueprint's
+    # 280-char rule, not just trusted to be pre-clamped by rpi-hub-notes.
+    text: Annotated[str, Field(min_length=1, max_length=280)]
     ttl_s: int = Field(default=86400, ge=60, le=604800)
 
 
@@ -218,8 +256,16 @@ def health() -> HealthOut:
         version=__version__,
         fingerprint=ident.fingerprint,
         peer_count=len(_PEERS.all()),
-        lora=RadioStatusOut(state=lora_st.state, detail=lora_st.detail, last_change_ts=lora_st.last_change_ts),
-        wifi=RadioStatusOut(state=wifi_st.state, detail=wifi_st.detail, last_change_ts=wifi_st.last_change_ts),
+        lora=RadioStatusOut(
+            state=lora_st.state,
+            detail=lora_st.detail,
+            last_change_ts=lora_st.last_change_ts,
+        ),
+        wifi=RadioStatusOut(
+            state=wifi_st.state,
+            detail=wifi_st.detail,
+            last_change_ts=wifi_st.last_change_ts,
+        ),
     )
 
 
@@ -243,6 +289,7 @@ def publish_note(body: PublishNoteIn) -> PublishOut:
         name=body.name,
         text=body.text,
         ttl_s=body.ttl_s,
+        pub=base64.b64encode(bundle.identity.public_key).decode("ascii"),
     )
     import json as _json  # noqa: PLC0415
 

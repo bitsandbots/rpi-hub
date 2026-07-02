@@ -91,15 +91,15 @@ zims:
 
   # ---------- full tier (assistant-enabled) ----------------------------
   - name: wikipedia_en_all_nopic.zim
-    url: https://download.kiwix.org/zim/wikipedia/wikipedia_en_all_nopic_2024-09.zim
-    size_mb: 51200
-    sha256: ""
-    description: English Wikipedia, no images. Every article (~50 GB on disk).
+    url: https://download.kiwix.org/zim/wikipedia/wikipedia_en_all_nopic_2026-06.zim
+    size_mb: 50249
+    sha256: 441a56d9e05b2d98f8ae9acb7986a513ed47904d73852c92dc6b7d50baa122e5
+    description: English Wikipedia, no images. Every article (~49 GB on disk).
     tier: full
 
   - name: gutenberg_en_all.zim
-    url: https://download.kiwix.org/zim/gutenberg/gutenberg_en_all_2023-08.zim
-    size_mb: 65000
-    sha256: ""
-    description: Project Gutenberg English library — every public-domain book they host.
+    url: https://download.kiwix.org/zim/gutenberg/gutenberg_en_all_2025-11.zim
+    size_mb: 211001
+    sha256: 01677c8d554a1cab2cbfd020ac99ebca7dd6c74d3ce0d13f266a2ba603dfaf28
+    description: Project Gutenberg English library — full public-domain catalog (~206 GB; needs a dedicated drive).
     tier: full

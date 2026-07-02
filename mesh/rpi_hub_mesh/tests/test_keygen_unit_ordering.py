@@ -46,9 +46,7 @@ class _MultiDict(OrderedDict):  # type: ignore[type-arg]
 
 
 def _parse_unit(path: Path) -> configparser.RawConfigParser:
-    cp = configparser.RawConfigParser(
-        dict_type=_MultiDict, strict=False, allow_no_value=True
-    )
+    cp = configparser.RawConfigParser(dict_type=_MultiDict, strict=False, allow_no_value=True)
     # Preserve case — systemd directives are case-sensitive.
     cp.optionxform = str  # type: ignore[assignment]
     cp.read(path)
@@ -61,7 +59,7 @@ def _tokens(section: configparser.SectionProxy, key: str) -> set[str]:
     Handles both forms: ``After=a b c`` and repeated ``After=`` lines.
     """
 
-    if not section.parser.has_option(section.name, key):  # type: ignore[attr-defined]
+    if not section.parser.has_option(section.name, key):
         return set()
     raw = section[key]
     # configparser concatenates duplicates with newlines.
@@ -83,12 +81,8 @@ def test_keygen_runs_before_mesh() -> None:
     keygen_before = _tokens(keygen["Unit"], "Before")
     mesh_after = _tokens(mesh["Unit"], "After")
 
-    assert (
-        "rpi-hub-mesh.service" in keygen_before
-        or "rpi-hub-mesh-keygen.service" in mesh_after
-    ), (
-        "keygen must be ordered ahead of rpi-hub-mesh.service "
-        "(keygen Before= or mesh After=)"
+    assert "rpi-hub-mesh.service" in keygen_before or "rpi-hub-mesh-keygen.service" in mesh_after, (
+        "keygen must be ordered ahead of rpi-hub-mesh.service " "(keygen Before= or mesh After=)"
     )
 
 
@@ -100,8 +94,7 @@ def test_mesh_requires_keygen() -> None:
     requires = _tokens(mesh["Unit"], "Requires")
     wants = _tokens(mesh["Unit"], "Wants")
     assert (
-        "rpi-hub-mesh-keygen.service" in requires
-        or "rpi-hub-mesh-keygen.service" in wants
+        "rpi-hub-mesh-keygen.service" in requires or "rpi-hub-mesh-keygen.service" in wants
     ), "rpi-hub-mesh.service must Requires= or Wants= the keygen unit"
 
 

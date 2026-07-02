@@ -57,6 +57,12 @@ class AskResponse(BaseModel):
     confidence: float
 
 
+def _as_confidence(value: object, default: float = 0.0) -> float:
+    """Coerce retrieve's JSON `confidence` field, defending against a
+    malformed/unexpected upstream response rather than raising."""
+    return float(value) if isinstance(value, int | float) else default
+
+
 def _empty_noanswer(confidence: float = 0.0) -> AskResponse:
     return AskResponse(
         mode="noanswer",
@@ -111,7 +117,7 @@ def _defer(query: str, verdict: safety.DeferralVerdict) -> AskResponse:
             )
         ],
         banner=verdict.banner,
-        confidence=float(body.get("confidence", 0.0)),
+        confidence=_as_confidence(body.get("confidence", 0.0)),
     )
 
 
@@ -121,7 +127,7 @@ def health() -> dict[str, object]:
 
 
 @app.post("/ask", response_model=AskResponse)
-def ask(req: AskRequest) -> AskResponse:
+def ask(req: AskRequest) -> AskResponse:  # noqa: PLR0911 — validation pipeline
     # 1) Safety. The classifier is the first gate by design — if a query
     #    asks about pediatric ibuprofen dosing, we never want a model
     #    summary, regardless of how confident retrieval is.
@@ -135,11 +141,21 @@ def ask(req: AskRequest) -> AskResponse:
     except retrieve_client.RetrieveUnavailable:
         return _empty_noanswer()
 
-    conf = float(body.get("confidence", 0.0))
+    conf = _as_confidence(body.get("confidence", 0.0))
     raw_results = body.get("results")
     results = raw_results if isinstance(raw_results, list) else []
     if conf < ANSWER_CONFIDENCE_FLOOR or not results:
         return _empty_noanswer(conf)
+
+    # 2b) Re-run the safety classifier over the RETRIEVED CONTENT, not just
+    #     the query. A benign-looking question ("first aid for my toddler")
+    #     can surface drug-dosing or trauma passages; summarising those is
+    #     exactly what we must not do. If any passage trips a rule we defer
+    #     to the verbatim source instead of letting the model rewrite it.
+    passage_blob = "\n".join(str(r.get("text", "")) for r in results[: prompt.MAX_PASSAGES])
+    passage_verdict = safety.classify(passage_blob)
+    if passage_verdict is not None:
+        return _defer(req.q, passage_verdict)
 
     passages = [
         prompt.PromptPassage(
