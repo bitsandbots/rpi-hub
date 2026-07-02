@@ -37,12 +37,7 @@ def test_long_section_windowed() -> None:
 
 
 def test_tiny_sections_dropped() -> None:
-    body = (
-        "short lead\n"
-        "== Empty ==\n"
-        "short\n"
-        "== Real ==\n" + (" ".join(["w"] * 30))
-    )
+    body = "short lead\n" "== Empty ==\n" "short\n" "== Real ==\n" + (" ".join(["w"] * 30))
     out = chunk.chunk_article("Article", body, "/library/A")
     sections = [c.section for c in out]
     # "Empty" body and the "short" lead both fall under the 20-token floor.

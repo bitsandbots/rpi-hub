@@ -68,7 +68,7 @@ _OUTBOUND_SEQ = _load_initial_seq()
 
 
 def _next_seq() -> int:
-    global _OUTBOUND_SEQ
+    global _OUTBOUND_SEQ  # noqa: PLW0603 (lazy sequence counter)
     _OUTBOUND_SEQ += 1
     try:
         SEQ_FILE.parent.mkdir(parents=True, exist_ok=True)
@@ -133,7 +133,7 @@ def _on_wifi_peer(mac: str, tq: int, _next_hop: str) -> None:
 
 
 def _ensure_bridges() -> None:
-    global _LORA, _WIFI
+    global _LORA, _WIFI  # noqa: PLW0603 (lazy bridge initialization)
     if _LORA is None:
         _LORA = lora_bridge.attach(_on_lora_frame)
     if _WIFI is None:
@@ -150,7 +150,7 @@ def _get_bundle() -> identity.IdentityBundle:
     ReadWritePaths / ReadOnlyPaths to the key dir).
     """
 
-    global _BUNDLE
+    global _BUNDLE  # noqa: PLW0603 (lazy bundle initialization)
     if _BUNDLE is None:
         _BUNDLE = identity.load_from_credentials()
     return _BUNDLE
@@ -256,8 +256,16 @@ def health() -> HealthOut:
         version=__version__,
         fingerprint=ident.fingerprint,
         peer_count=len(_PEERS.all()),
-        lora=RadioStatusOut(state=lora_st.state, detail=lora_st.detail, last_change_ts=lora_st.last_change_ts),
-        wifi=RadioStatusOut(state=wifi_st.state, detail=wifi_st.detail, last_change_ts=wifi_st.last_change_ts),
+        lora=RadioStatusOut(
+            state=lora_st.state,
+            detail=lora_st.detail,
+            last_change_ts=lora_st.last_change_ts,
+        ),
+        wifi=RadioStatusOut(
+            state=wifi_st.state,
+            detail=wifi_st.detail,
+            last_change_ts=wifi_st.last_change_ts,
+        ),
     )
 
 

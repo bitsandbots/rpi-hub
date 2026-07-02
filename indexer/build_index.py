@@ -26,6 +26,7 @@ import os
 import sqlite3
 import struct
 import sys
+from collections.abc import Iterator
 from pathlib import Path
 
 from . import chunk as chunker
@@ -59,7 +60,7 @@ def _open_db(path: Path) -> sqlite3.Connection:
     return conn
 
 
-def _iter_articles(zim_dir: Path):
+def _iter_articles(zim_dir: Path) -> Iterator[tuple[str, str, str]]:
     """Yield ``(article_name, body_text, url)`` tuples from every ZIM.
 
     Imports libzim lazily so the rest of the indexer is importable on a
@@ -67,7 +68,9 @@ def _iter_articles(zim_dir: Path):
     """
 
     try:
-        from libzim.reader import Archive  # type: ignore[import-not-found]
+        from libzim.reader import (  # noqa: PLC0415 # optional heavy dep — see module docstring
+            Archive,
+        )
     except ImportError:
         print(
             "[indexer] libzim not installed; install with `pip install libzim` to read ZIMs",
@@ -139,7 +142,7 @@ def build(zim_dir: Path, out_dir: Path) -> manifest_mod.IndexManifest:
 
     # Write HNSW + id map.
     try:
-        import hnswlib  # type: ignore[import-untyped]  # noqa: PLC0415
+        import hnswlib  # noqa: PLC0415
 
         if embeddings:
             index = hnswlib.Index(space="cosine", dim=embedder.EMBED_DIM)

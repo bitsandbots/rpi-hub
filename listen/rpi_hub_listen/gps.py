@@ -40,8 +40,9 @@ import subprocess
 import sys
 import threading
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from . import dongle
 
@@ -57,9 +58,7 @@ DEFAULT_TIMEOUT_S = 180.0
 INTEGRATION_MS_MIN, INTEGRATION_MS_MAX = 1, 10
 
 
-def default_argv(
-    *, prns: list[int] | None, integration_ms: int, simulate: bool
-) -> list[str]:
+def default_argv(*, prns: list[int] | None, integration_ms: int, simulate: bool) -> list[str]:
     """Build the gps_sdr child argv. Split out for test injection."""
     argv = [
         sys.executable,
@@ -88,11 +87,11 @@ def _parse_report(stdout: bytes) -> dict[str, Any] | None:
     lines costs nothing and protects against future preamble leaks.
     """
     for raw in reversed(stdout.decode("utf-8", errors="replace").splitlines()):
-        raw = raw.strip()
-        if not raw.startswith("{"):
+        line = raw.strip()
+        if not line.startswith("{"):
             continue
         try:
-            doc = json.loads(raw)
+            doc = json.loads(line)
         except json.JSONDecodeError:
             continue
         if isinstance(doc, dict) and "results" in doc:
@@ -139,15 +138,11 @@ class GPSSweeper:
         child cannot be spawned. Returns immediately; poll ``running()``
         / ``last()``.
         """
-        integration_ms = max(
-            INTEGRATION_MS_MIN, min(INTEGRATION_MS_MAX, integration_ms)
-        )
+        integration_ms = max(INTEGRATION_MS_MIN, min(INTEGRATION_MS_MAX, integration_ms))
         with self._lock:
             if self._thread is not None and self._thread.is_alive():
                 raise dongle.TunerBusy("sweep already in progress")
-            argv = self._argv_builder(
-                prns=prns, integration_ms=integration_ms, simulate=simulate
-            )
+            argv = self._argv_builder(prns=prns, integration_ms=integration_ms, simulate=simulate)
             # PYTHONPATH must reach the repo root so `-m gps_sdr` resolves
             # under DynamicUser with no site install.
             env = dict(os.environ)
@@ -166,9 +161,7 @@ class GPSSweeper:
 
     # ── internals ─────────────────────────────────────────────────────
 
-    def _reap(
-        self, proc: subprocess.Popen[bytes], timeout_s: float, started: float
-    ) -> None:
+    def _reap(self, proc: subprocess.Popen[bytes], timeout_s: float, started: float) -> None:
         record: dict[str, Any] = {
             "requested_ts": started,
             "completed_ts": None,

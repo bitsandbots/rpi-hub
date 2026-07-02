@@ -18,6 +18,7 @@ from dataclasses import dataclass
 
 MAX_TOKENS = 800
 OVERLAP_TOKENS = 100
+MIN_CHUNK_TOKENS = 20  # Skip trivially short chunks (usually boilerplate)
 
 # A heading line in Wikipedia HTML-stripped text looks like "== Section ==".
 # We accept 2–4 equals signs to cover sub-sections.
@@ -89,11 +90,9 @@ def chunk_article(article: str, text: str, url: str) -> list[Chunk]:
     chunks: list[Chunk] = []
     for section, body in _split_into_sections(text):
         for window in _window(body, MAX_TOKENS, OVERLAP_TOKENS):
-            if _approx_tokens(window) < 20:
+            if _approx_tokens(window) < MIN_CHUNK_TOKENS:
                 # Drop trivially short chunks — usually navigation
                 # boilerplate stripped to one sentence.
                 continue
-            chunks.append(
-                Chunk(article=article, section=section, text=window, url=url)
-            )
+            chunks.append(Chunk(article=article, section=section, text=window, url=url))
     return chunks

@@ -90,9 +90,7 @@ def vector_search(
     return [int(id_map[int(label)]) for label in labels[0] if int(label) < len(id_map)]
 
 
-def reciprocal_rank_fusion(
-    ranked_lists: list[list[int]], k: int = RRF_K
-) -> list[RankedResult]:
+def reciprocal_rank_fusion(ranked_lists: list[list[int]], k: int = RRF_K) -> list[RankedResult]:
     """Merge multiple ranked lists by RRF.
 
     Score per chunk = sum over lanes of 1 / (k + rank_in_lane). A chunk

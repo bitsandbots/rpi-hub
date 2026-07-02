@@ -40,13 +40,16 @@ MESH_PUBLISH_URL = _require_loopback(
 )
 MESH_PUBLISH_TIMEOUT_S = float(os.environ.get("rpi_hub_MESH_PUBLISH_TIMEOUT_S", "0.5"))
 
+HTTP_SUCCESS_MIN = 200
+HTTP_SUCCESS_MAX = 300
+
 
 def publish(note_id: int, name: str, text: str, ttl_s: int = 86400) -> bool:
     """Try to push the note onto the mesh. Returns True on 2xx."""
 
-    payload = json.dumps(
-        {"note_id": note_id, "name": name, "text": text, "ttl_s": ttl_s}
-    ).encode("utf-8")
+    payload = json.dumps({"note_id": note_id, "name": name, "text": text, "ttl_s": ttl_s}).encode(
+        "utf-8"
+    )
     req = urllib.request.Request(
         MESH_PUBLISH_URL,
         data=payload,
@@ -55,6 +58,6 @@ def publish(note_id: int, name: str, text: str, ttl_s: int = 86400) -> bool:
     )
     try:
         with urllib.request.urlopen(req, timeout=MESH_PUBLISH_TIMEOUT_S) as resp:
-            return 200 <= resp.status < 300
+            return bool(HTTP_SUCCESS_MIN <= resp.status < HTTP_SUCCESS_MAX)
     except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
         return False

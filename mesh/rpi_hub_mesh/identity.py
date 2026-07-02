@@ -89,10 +89,10 @@ def load_or_create() -> Identity:
         pass
 
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore[import-not-found]
+        from cryptography.hazmat.primitives import serialization  # noqa: PLC0415, I001
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # noqa: PLC0415
             Ed25519PrivateKey,
         )
-        from cryptography.hazmat.primitives import serialization  # type: ignore[import-not-found]
 
         priv = Ed25519PrivateKey.generate()
         priv_bytes = priv.private_bytes(

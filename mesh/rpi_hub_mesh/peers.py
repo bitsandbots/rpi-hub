@@ -18,10 +18,10 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import StrEnum
 
 
-class TrustState(str, Enum):
+class TrustState(StrEnum):
     UNVERIFIED = "unverified"
     TRUSTED = "trusted"
     BLOCKED = "blocked"

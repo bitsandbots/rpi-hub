@@ -21,9 +21,7 @@ def test_strips_uncited_sentences() -> None:
 
 def test_rejects_when_coverage_too_low() -> None:
     # 1 cited out of 4 = 25% coverage; floor is 60%.
-    text = (
-        "Sentence one. Sentence two. Sentence three. Cited only here [1]."
-    )
+    text = "Sentence one. Sentence two. Sentence three. Cited only here [1]."
     result = postprocess.process(text, valid_numbers={1})
     assert result.rejected
     assert result.text == ""

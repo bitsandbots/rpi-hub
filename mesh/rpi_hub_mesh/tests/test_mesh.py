@@ -8,6 +8,7 @@ We exercise:
 
 from __future__ import annotations
 
+import base64
 from pathlib import Path
 
 import pytest
@@ -74,8 +75,10 @@ def test_sign_verify_round_trip() -> None:
     # the stub path is only reachable via rpi_hub_ALLOW_INSECURE_CRYPTO=1.
     if not messages.CRYPTO_AVAILABLE:
         pytest.skip("cryptography unavailable; install python3-cryptography to run")
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-    from cryptography.hazmat.primitives import serialization
+    from cryptography.hazmat.primitives import serialization  # noqa: PLC0415
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # noqa: PLC0415
+        Ed25519PrivateKey,
+    )
 
     priv = Ed25519PrivateKey.generate()
     priv_bytes = priv.private_bytes(
@@ -87,9 +90,7 @@ def test_sign_verify_round_trip() -> None:
         encoding=serialization.Encoding.Raw,
         format=serialization.PublicFormat.Raw,
     )
-    payload = messages.canonical_bytes(
-        {"kind": "presence", "sender": "x", "seq": 1, "body": {}}
-    )
+    payload = messages.canonical_bytes({"kind": "presence", "sender": "x", "seq": 1, "body": {}})
     sig = messages.sign(priv_bytes, payload)
     assert messages.verify(pub_bytes, payload, sig)
 
@@ -166,8 +167,10 @@ def test_publish_note_signs_with_real_key_when_available(
     against the published public key. Skipped without cryptography."""
 
     try:
-        from cryptography.hazmat.primitives import serialization  # type: ignore[import-not-found]
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # type: ignore[import-not-found]
+        from cryptography.hazmat.primitives import (  # noqa: PLC0415
+            serialization,
+        )
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # noqa: PLC0415
             Ed25519PrivateKey,
         )
     except ImportError:
@@ -212,9 +215,11 @@ def test_pin_key_rejects_key_change() -> None:
     assert not table.pin_key("FP-1", b"\x02" * 32)  # different key rejected
 
 
-def _real_keypair():
-    from cryptography.hazmat.primitives import serialization
-    from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+def _real_keypair() -> tuple[bytes, bytes]:
+    from cryptography.hazmat.primitives import serialization  # noqa: PLC0415
+    from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # noqa: PLC0415
+        Ed25519PrivateKey,
+    )
 
     priv = Ed25519PrivateKey.generate()
     priv_bytes = priv.private_bytes(
@@ -232,12 +237,16 @@ def _real_keypair():
 def test_verify_envelope_accepts_well_formed_signed_frame() -> None:
     if not messages.CRYPTO_AVAILABLE:
         pytest.skip("cryptography unavailable")
-    import base64
 
     priv_bytes, pub_bytes = _real_keypair()
     sender = identity.fingerprint_of(pub_bytes)
     env = messages.make_note(
-        sender=sender, seq=1, priv=priv_bytes, note_id=1, name="a", text="hi",
+        sender=sender,
+        seq=1,
+        priv=priv_bytes,
+        note_id=1,
+        name="a",
+        text="hi",
         pub=base64.b64encode(pub_bytes).decode("ascii"),
     )
     parsed = messages.verify_envelope(env.__dict__)
@@ -248,12 +257,15 @@ def test_verify_envelope_accepts_well_formed_signed_frame() -> None:
 def test_verify_envelope_rejects_fingerprint_mismatch() -> None:
     if not messages.CRYPTO_AVAILABLE:
         pytest.skip("cryptography unavailable")
-    import base64
 
     priv_bytes, pub_bytes = _real_keypair()
     env = messages.make_note(
-        sender="WRON-GFIN-GERP-RINT-AAAA-BBBB", seq=1, priv=priv_bytes,
-        note_id=1, name="a", text="hi",
+        sender="WRON-GFIN-GERP-RINT-AAAA-BBBB",
+        seq=1,
+        priv=priv_bytes,
+        note_id=1,
+        name="a",
+        text="hi",
         pub=base64.b64encode(pub_bytes).decode("ascii"),
     )
     # Signature is valid but the claimed sender is not fingerprint_of(pub).
@@ -263,12 +275,14 @@ def test_verify_envelope_rejects_fingerprint_mismatch() -> None:
 def test_verify_envelope_rejects_forged_signature() -> None:
     if not messages.CRYPTO_AVAILABLE:
         pytest.skip("cryptography unavailable")
-    import base64
 
     _, pub_bytes = _real_keypair()
     sender = identity.fingerprint_of(pub_bytes)
     forged = {
-        "kind": "note", "sender": sender, "seq": 1, "ts": 0.0,
+        "kind": "note",
+        "sender": sender,
+        "seq": 1,
+        "ts": 0.0,
         "body": {"note_id": 1, "name": "a", "text": "hi", "ttl_s": 3600},
         "sig": base64.b64encode(b"\x00" * 64).decode("ascii"),
         "pub": base64.b64encode(pub_bytes).decode("ascii"),
@@ -280,8 +294,10 @@ def test_verify_rejects_tampered_payload() -> None:
     # Real Ed25519 verification rejects tampering; the stub does not
     # (it's length-only). Skip in stub mode.
     try:
-        from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
-        from cryptography.hazmat.primitives import serialization
+        from cryptography.hazmat.primitives import serialization  # noqa: PLC0415
+        from cryptography.hazmat.primitives.asymmetric.ed25519 import (  # noqa: PLC0415
+            Ed25519PrivateKey,
+        )
     except ImportError:
         pytest.skip("cryptography not installed; stub verify is length-only")
         return
@@ -300,7 +316,5 @@ def test_verify_rejects_tampered_payload() -> None:
         priv_bytes,
         messages.canonical_bytes({"kind": "presence", "sender": "x", "seq": 1, "body": {}}),
     )
-    tampered = messages.canonical_bytes(
-        {"kind": "presence", "sender": "x", "seq": 2, "body": {}}
-    )
+    tampered = messages.canonical_bytes({"kind": "presence", "sender": "x", "seq": 2, "body": {}})
     assert not messages.verify(pub_bytes, tampered, sig)

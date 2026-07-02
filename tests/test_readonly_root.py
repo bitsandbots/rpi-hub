@@ -140,17 +140,13 @@ def test_persistent_state_paths_are_bound() -> None:
 def _make_stub(bin_dir: Path, name: str, stdout: str, rc: int = 0) -> Path:
     bin_dir.mkdir(parents=True, exist_ok=True)
     fake = bin_dir / name
-    fake.write_text(
-        f"#!/usr/bin/env bash\nprintf '%s' {stdout!r}\nexit {rc}\n"
-    )
+    fake.write_text(f"#!/usr/bin/env bash\nprintf '%s' {stdout!r}\nexit {rc}\n")
     fake.chmod(fake.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
     return fake
 
 
 @pytest.fixture
-def stubbed_status_env(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> Path:
+def stubbed_status_env(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
     """PATH-prefix a tmp bin with stub findmnt + du."""
 
     bin_dir = tmp_path / "bin"
@@ -197,7 +193,9 @@ def test_status_is_default_when_no_arg(stubbed_status_env: Path) -> None:  # noq
     assert "overlay marker" in r.stdout
 
 
-def test_unknown_subcommand_errors_with_usage_line(stubbed_status_env: Path) -> None:  # noqa: ARG001
+def test_unknown_subcommand_errors_with_usage_line(
+    stubbed_status_env: Path,
+) -> None:  # noqa: ARG001
     if shutil.which("bash") is None:
         pytest.skip("bash not on PATH")
     r = subprocess.run(

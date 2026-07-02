@@ -15,7 +15,6 @@ from __future__ import annotations
 import time
 from collections import deque
 from dataclasses import dataclass, field
-from typing import Deque
 
 from . import same
 
@@ -38,7 +37,7 @@ class StoredAlert:
 
 class AlertRing:
     def __init__(self, capacity: int = RING_CAPACITY) -> None:
-        self._dq: Deque[StoredAlert] = deque(maxlen=capacity)
+        self._dq: deque[StoredAlert] = deque(maxlen=capacity)
 
     def push(self, alert: same.SameAlert) -> StoredAlert:
         stored = StoredAlert(alert=alert)

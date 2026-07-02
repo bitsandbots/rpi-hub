@@ -22,6 +22,7 @@ from __future__ import annotations
 import os
 import struct
 from pathlib import Path
+from typing import cast
 
 from . import store
 
@@ -65,7 +66,7 @@ def _load_id_map(path: Path) -> list[int]:
 
 
 def _load_hnsw(path: Path, ids: list[int]) -> object | None:
-    global VECTOR_STATUS
+    global VECTOR_STATUS  # noqa: PLW0603 — update module status during init
     if not path.exists():
         VECTOR_STATUS = "no vectors.hnsw (index has no vector lane)"
         return None
@@ -77,7 +78,7 @@ def _load_hnsw(path: Path, ids: list[int]) -> object | None:
         VECTOR_STATUS = f"refused: {reason}"
         return None
     try:
-        import hnswlib  # type: ignore[import-untyped]  # noqa: PLC0415
+        import hnswlib  # noqa: PLC0415
     except ImportError:
         # This is the production-critical case: the blueprint promises a
         # vector lane but the host lacks the ANN library. Make it loud.
@@ -91,7 +92,7 @@ def _load_hnsw(path: Path, ids: list[int]) -> object | None:
         VECTOR_STATUS = f"hnsw load failed: {exc}"
         return None
     VECTOR_STATUS = f"ready ({len(ids)} vectors, dim={EMBED_DIM})"
-    return index
+    return cast(object, index)
 
 
 # Eager load. Failure here is non-fatal — vector lane disables itself but

@@ -20,12 +20,13 @@ Operator workflow:
 
 from __future__ import annotations
 
+import contextlib
 import os
 import socket
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 # Reticulum's default socket location. Operators can override via env.
 RETICULUM_SOCKET = os.environ.get("rpi_hub_RETICULUM_SOCKET", "/run/reticulum/rnsapi.sock")
@@ -50,7 +51,11 @@ class LoraBridge:
 
     def __init__(self, on_frame: Callable[[bytes], None]) -> None:
         self._on_frame = on_frame
-        self._status = LoraStatus(state="unavailable", detail="not started", last_change_ts=time.time())
+        self._status = LoraStatus(
+            state="unavailable",
+            detail="not started",
+            last_change_ts=time.time(),
+        )
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
 
@@ -109,7 +114,7 @@ class LoraBridge:
         while not self._stop.is_set():
             try:
                 chunk = s.recv(4096)
-            except socket.timeout:
+            except TimeoutError:
                 continue
             if not chunk:
                 return
@@ -118,10 +123,10 @@ class LoraBridge:
                 line, _, rest = buf.partition(b"\n")
                 buf[:] = rest
                 if line:
-                    try:
+                    with contextlib.suppress(
+                        Exception
+                    ):  # noqa: BLE001 — never let one bad frame kill the bridge
                         self._on_frame(bytes(line))
-                    except Exception:  # noqa: BLE001 — never let one bad frame kill the bridge
-                        pass
 
 
 def attach(on_frame: Callable[[bytes], None]) -> LoraBridge:

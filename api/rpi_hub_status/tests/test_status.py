@@ -191,14 +191,18 @@ def test_status_endpoint_shape(client: TestClient, monkeypatch: pytest.MonkeyPat
     }
 
 
-def test_status_endpoint_handles_all_unknowns(client: TestClient, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_status_endpoint_handles_all_unknowns(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
     # If every probe fails the response should still be a 200 with nulls.
     monkeypatch.setattr(system, "uptime_seconds", lambda: None)
     monkeypatch.setattr(system, "load_avg", lambda: None)
     monkeypatch.setattr(
         system,
         "storage",
-        lambda: system.StorageInfo(kiwix_bytes_free=None, kiwix_bytes_total=None, kiwix_present=False),
+        lambda: system.StorageInfo(
+            kiwix_bytes_free=None, kiwix_bytes_total=None, kiwix_present=False
+        ),
     )
     monkeypatch.setattr(
         system,
@@ -229,6 +233,7 @@ def test_services_probe_returns_not_running_for_unreachable() -> None:
 
 # -- ADS-B file probe (Phase 8.4) -----------------------------------------
 
+
 def test_adsb_probe_returns_not_running_when_file_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -255,7 +260,9 @@ def test_adsb_probe_returns_ready_with_aircraft_count(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     path = tmp_path / "aircraft.json"
-    path.write_text('{"now": 1700000000, "aircraft": [{"hex": "a1"}, {"hex": "b2"}, {"hex": "c3"}]}')
+    path.write_text(
+        '{"now": 1700000000, "aircraft": [{"hex": "a1"}, {"hex": "b2"}, {"hex": "c3"}]}'
+    )
     monkeypatch.setattr(system, "ADSB_JSON", path)
     monkeypatch.setattr(system, "_now", lambda: path.stat().st_mtime + 1.0)
     state, count = system._probe_adsb()

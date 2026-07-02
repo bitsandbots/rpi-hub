@@ -54,7 +54,7 @@ def generate_ca_code(prn: int) -> np.ndarray:
         fb2 = g2[1] ^ g2[2] ^ g2[5] ^ g2[7] ^ g2[8] ^ g2[9]
         g2 = [fb2] + g2[:9]
 
-    return (1 - 2 * chips).astype(np.float32)   # 0→+1, 1→−1
+    return (1 - 2 * chips).astype(np.float32)  # 0→+1, 1→−1
 
 
 def resample_code(prn: int, sample_rate: float) -> np.ndarray:

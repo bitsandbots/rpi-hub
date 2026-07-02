@@ -13,6 +13,7 @@ process-wide lock is fine.
 
 from __future__ import annotations
 
+import contextlib
 import fcntl
 import os
 import shlex
@@ -75,14 +76,14 @@ def dongle_present() -> bool:
     few seconds so the polling Listen UI never re-probes per request.
     """
 
-    global _DETECT_CACHE
+    global _DETECT_CACHE  # noqa: PLW0603 brief cache for dongle detection
     now = time.monotonic()
     if _DETECT_CACHE is not None and (now - _DETECT_CACHE[0]) < _DETECT_TTL_S:
         return _DETECT_CACHE[1]
     present = False
     try:
         rc = subprocess.run(
-            [DETECT_SCRIPT], capture_output=True, timeout=2.0
+            [DETECT_SCRIPT], capture_output=True, timeout=2.0, check=False
         ).returncode
         present = rc == 0
     except (FileNotFoundError, PermissionError, subprocess.TimeoutExpired, OSError):
@@ -133,14 +134,10 @@ class Tuner:
 
     def _release_dongle_locked(self) -> None:
         if self._lock_fd is not None:
-            try:
+            with contextlib.suppress(OSError):
                 fcntl.flock(self._lock_fd, fcntl.LOCK_UN)
-            except OSError:
-                pass
-            try:
+            with contextlib.suppress(OSError):
                 os.close(self._lock_fd)
-            except OSError:
-                pass
             self._lock_fd = None
 
     def _signal_group(self, sig: int) -> None:
@@ -156,10 +153,8 @@ class Tuner:
         try:
             os.killpg(os.getpgid(proc.pid), sig)
         except (ProcessLookupError, PermissionError, OSError):
-            try:
+            with contextlib.suppress(OSError):
                 proc.send_signal(sig)
-            except OSError:
-                pass
 
     def _kill_locked(self) -> None:
         if self._proc is not None and self._proc.poll() is None:
@@ -190,12 +185,18 @@ class Tuner:
             label=label,
             argv=[
                 RTL_FM,
-                "-M", "fm",
-                "-f", str(frequency_hz),
-                "-s", "22050",
-                "-r", "22050",
-                "-g", "40",
-                "-l", "0",
+                "-M",
+                "fm",
+                "-f",
+                str(frequency_hz),
+                "-s",
+                "22050",
+                "-r",
+                "22050",
+                "-g",
+                "40",
+                "-l",
+                "0",
                 "-",  # stdout
             ],
         )
@@ -209,11 +210,16 @@ class Tuner:
             label=label,
             argv=[
                 RTL_FM,
-                "-M", "wbfm",
-                "-f", str(frequency_hz),
-                "-s", "200000",
-                "-r", "44100",
-                "-g", "30",
+                "-M",
+                "wbfm",
+                "-f",
+                str(frequency_hz),
+                "-s",
+                "200000",
+                "-r",
+                "44100",
+                "-g",
+                "30",
                 "-",
             ],
         )
@@ -229,11 +235,16 @@ class Tuner:
             label=label,
             argv=[
                 RTL_FM,
-                "-M", mode,
-                "-f", str(frequency_hz),
-                "-s", "22050",
-                "-r", "22050",
-                "-g", "40",
+                "-M",
+                mode,
+                "-f",
+                str(frequency_hz),
+                "-s",
+                "22050",
+                "-r",
+                "22050",
+                "-g",
+                "40",
                 "-",
             ],
         )
@@ -243,7 +254,7 @@ class Tuner:
         argv: list[str],
         label: str = "GPS sky survey",
         env: dict[str, str] | None = None,
-    ) -> tuple[TunerState, "subprocess.Popen[bytes]"]:
+    ) -> tuple[TunerState, subprocess.Popen[bytes]]:
         """Phase 13: spawn a finite ``gps_sdr`` sweep under the arbiter.
 
         Unlike the rtl_fm modes this child is *expected to exit on its
@@ -258,9 +269,7 @@ class Tuner:
         """
         with self._lock:
             if self._state.mode != "idle":
-                raise TunerBusy(
-                    f"current mode={self._state.mode!s}; stop before re-tuning"
-                )
+                raise TunerBusy(f"current mode={self._state.mode!s}; stop before re-tuning")
             self._acquire_dongle_locked()  # raises TunerBusy if another process holds it
             try:
                 self._proc = subprocess.Popen(
@@ -293,16 +302,12 @@ class Tuner:
             if self._state.mode == mode:
                 self._kill_locked()
 
-    def _start(
-        self, mode: str, frequency_hz: int, label: str, argv: list[str]
-    ) -> TunerState:
+    def _start(self, mode: str, frequency_hz: int, label: str, argv: list[str]) -> TunerState:
         if not _binary_present(RTL_FM):
             raise TunerUnavailable("rtl_fm not installed")
         with self._lock:
             if self._state.mode != "idle":
-                raise TunerBusy(
-                    f"current mode={self._state.mode!s}; stop before re-tuning"
-                )
+                raise TunerBusy(f"current mode={self._state.mode!s}; stop before re-tuning")
             # Sanity-quote the argv in logs — never shell out via `bash -c`.
             _ = " ".join(shlex.quote(a) for a in argv)
             self._acquire_dongle_locked()  # raises TunerBusy if another process holds it

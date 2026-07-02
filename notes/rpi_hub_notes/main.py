@@ -39,7 +39,9 @@ app = FastAPI(
 # rpi-hub-mesh has its own file (`/etc/rpi-hub/mesh-owner-token`) for peer
 # trust/block actions so the two trust domains can be rotated
 # independently. See OVERVIEW §5.5–5.6.
-OWNER_TOKEN_PATH = Path(os.environ.get("rpi_hub_NOTES_TOKEN_FILE", "/etc/rpi-hub/notes-owner-token"))
+OWNER_TOKEN_PATH = Path(
+    os.environ.get("rpi_hub_NOTES_TOKEN_FILE", "/etc/rpi-hub/notes-owner-token")
+)
 
 
 def _owner_token() -> str | None:
@@ -106,7 +108,7 @@ _POST_LOCK = threading.Lock()
 
 
 def _get_conn() -> object:
-    global _CONN
+    global _CONN  # noqa: PLW0603 # singleton pattern for process-wide db connection
     if _CONN is None:
         _CONN = storage.open_db()
     return _CONN
@@ -137,7 +139,10 @@ def list_notes(limit: int = 100) -> NoteListOut:
 def post_note(req: Request, body: PostNoteIn) -> NoteOut:
     text = validation.clean_text(body.text)
     if text is None:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="empty after sanitisation")
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="empty after sanitisation",
+        )
     name = validation.clean_name(body.name)
 
     conn = _get_conn()

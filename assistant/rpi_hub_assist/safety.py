@@ -21,10 +21,10 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class DeferralReason(str, Enum):
+class DeferralReason(StrEnum):
     DRUG_DOSING = "drug-dosing"
     SEVERE_TRAUMA = "severe-trauma"
     HIGH_VOLTAGE = "high-voltage"
@@ -71,7 +71,10 @@ _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
             re.IGNORECASE,
         ),
         DeferralReason.SEVERE_TRAUMA,
-        "This sounds like a life-threatening emergency — call professional help if reachable; read the source verbatim below.",
+        (
+            "This sounds like a life-threatening emergency — call professional "
+            "help if reachable; read the source verbatim below."
+        ),
     ),
     (
         re.compile(
@@ -80,7 +83,10 @@ _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
             re.IGNORECASE,
         ),
         DeferralReason.HIGH_VOLTAGE,
-        "Mains-voltage work is a licensed-electrician task in most jurisdictions — read the source directly.",
+        (
+            "Mains-voltage work is a licensed-electrician task in most "
+            "jurisdictions — read the source directly."
+        ),
     ),
     (
         re.compile(
@@ -107,7 +113,10 @@ _RULES: tuple[tuple[re.Pattern[str], DeferralReason, str], ...] = (
             re.IGNORECASE,
         ),
         DeferralReason.WEAPONS,
-        "Firearms and explosives are jurisdiction-specific and dangerous — read the source directly.",
+        (
+            "Firearms and explosives are jurisdiction-specific and dangerous "
+            "— read the source directly."
+        ),
     ),
 )
 

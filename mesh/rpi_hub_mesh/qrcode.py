@@ -23,8 +23,7 @@ small enough to implement directly for our narrow slice of the spec.
 
 from __future__ import annotations
 
-from typing import Callable, List, Tuple
-
+from collections.abc import Callable
 
 # ECC level M, one block per version:
 #   version → (data codewords, ECC codewords)
@@ -41,10 +40,18 @@ _ALIGN_CENTRES: dict[int, list[int]] = {
     3: [22],
 }
 
+# QR specification constants for function patterns
+_FINDER_PATTERN_SIZE = 7  # 7×7 pattern (indexed 0-6)
+_FINDER_INNER_START = 2  # Inner white ring starts at distance 2 from edge
+_FINDER_INNER_END = 4  # Inner dark center ends at distance 4 from edge
+_TIMING_COLUMN = 6  # Vertical timing column position
+_MIN_RUN_LENGTH = 5  # Minimum run length for penalty rule (ISO 18004 Rule 1)
+
 
 # ---------------------------------------------------------------------------
 # GF(256) arithmetic for Reed-Solomon ECC
 # ---------------------------------------------------------------------------
+
 
 def _gf_tables() -> tuple[list[int], list[int]]:
     """Log / antilog tables under primitive polynomial 0x11d."""
@@ -98,6 +105,7 @@ def _rs_ecc(data: list[int], ecc_count: int) -> list[int]:
 # ---------------------------------------------------------------------------
 # Data encoding
 # ---------------------------------------------------------------------------
+
 
 def _pick_version(byte_len: int) -> int:
     """Smallest supported version that fits ``byte_len`` bytes."""
@@ -155,6 +163,7 @@ def _data_plus_ecc_bits(data: bytes, version: int) -> list[int]:
 # Matrix placement
 # ---------------------------------------------------------------------------
 
+
 def _matrix_size(version: int) -> int:
     return 21 + 4 * (version - 1)
 
@@ -171,9 +180,15 @@ def _place_function_patterns(
                 if not (0 <= r < n and 0 <= c < n):
                     continue
                 reserved[r][c] = True
-                if 0 <= i <= 6 and 0 <= j <= 6:
-                    on_ring = i in (0, 6) or j in (0, 6)
-                    inner = 2 <= i <= 4 and 2 <= j <= 4
+                if 0 <= i < _FINDER_PATTERN_SIZE and 0 <= j < _FINDER_PATTERN_SIZE:
+                    on_ring = i in (0, _FINDER_PATTERN_SIZE - 1) or j in (
+                        0,
+                        _FINDER_PATTERN_SIZE - 1,
+                    )
+                    inner = (
+                        _FINDER_INNER_START <= i <= _FINDER_INNER_END
+                        and _FINDER_INNER_START <= j <= _FINDER_INNER_END
+                    )
                     matrix[r][c] = 1 if (on_ring or inner) else 0
                 else:
                     matrix[r][c] = 0
@@ -225,7 +240,7 @@ def _place_data_bits(
     col = n - 1
     going_up = True
     while col > 0:
-        if col == 6:  # Skip vertical timing column
+        if col == _TIMING_COLUMN:  # Skip vertical timing column
             col -= 1
         rows = range(n - 1, -1, -1) if going_up else range(n)
         for r in rows:
@@ -270,8 +285,11 @@ def _apply_mask(
     return out
 
 
-def _penalty(matrix: list[list[int]]) -> int:
-    """ISO 18004 mask-penalty rules."""
+def _penalty(matrix: list[list[int]]) -> int:  # noqa: PLR0912
+    """ISO 18004 mask-penalty rules.
+
+    Implements 4 distinct penalty rules (branches map 1:1 to QR spec sections).
+    """
 
     n = len(matrix)
     p = 0
@@ -283,10 +301,10 @@ def _penalty(matrix: list[list[int]]) -> int:
             if matrix[r][c] == matrix[r][c - 1]:
                 run += 1
             else:
-                if run >= 5:
+                if run >= _MIN_RUN_LENGTH:
                     p += run - 2
                 run = 1
-        if run >= 5:
+        if run >= _MIN_RUN_LENGTH:
             p += run - 2
     for c in range(n):
         run = 1
@@ -294,10 +312,10 @@ def _penalty(matrix: list[list[int]]) -> int:
             if matrix[r][c] == matrix[r - 1][c]:
                 run += 1
             else:
-                if run >= 5:
+                if run >= _MIN_RUN_LENGTH:
                     p += run - 2
                 run = 1
-        if run >= 5:
+        if run >= _MIN_RUN_LENGTH:
             p += run - 2
 
     # Rule 2: 2×2 same-colour blocks.
@@ -313,12 +331,12 @@ def _penalty(matrix: list[list[int]]) -> int:
     for r in range(n):
         for c in range(n - 10):
             seg = [matrix[r][c + i] for i in range(11)]
-            if seg == pat or seg == revpat:
+            if seg in (pat, revpat):
                 p += 40
     for c in range(n):
         for r in range(n - 10):
             seg = [matrix[r + i][c] for i in range(11)]
-            if seg == pat or seg == revpat:
+            if seg in (pat, revpat):
                 p += 40
 
     # Rule 4: dark-module ratio.
@@ -331,6 +349,7 @@ def _penalty(matrix: list[list[int]]) -> int:
 # ---------------------------------------------------------------------------
 # Format-info word (BCH(15,5) over ECC level + mask + mask XOR pattern)
 # ---------------------------------------------------------------------------
+
 
 def _format_word(mask: int) -> int:
     """15-bit format info: 2-bit ECC indicator (M=00) + 3-bit mask + 10-bit BCH."""
@@ -352,11 +371,41 @@ def _place_format(matrix: list[list[int]], mask: int) -> None:
     bits = [(word >> i) & 1 for i in range(14, -1, -1)]  # MSB first
 
     # Top-left strip: row 8 cols 0..5, (8,7), (8,8), (7,8), rows 5..0 col 8
-    a_coords = [(8, 0), (8, 1), (8, 2), (8, 3), (8, 4), (8, 5), (8, 7), (8, 8),
-                (7, 8), (5, 8), (4, 8), (3, 8), (2, 8), (1, 8), (0, 8)]
+    a_coords = [
+        (8, 0),
+        (8, 1),
+        (8, 2),
+        (8, 3),
+        (8, 4),
+        (8, 5),
+        (8, 7),
+        (8, 8),
+        (7, 8),
+        (5, 8),
+        (4, 8),
+        (3, 8),
+        (2, 8),
+        (1, 8),
+        (0, 8),
+    ]
     # Bottom-left + top-right strips: rows n-1..n-7 col 8, then row 8 cols n-8..n-1
-    b_coords = [(n - 1, 8), (n - 2, 8), (n - 3, 8), (n - 4, 8), (n - 5, 8), (n - 6, 8), (n - 7, 8),
-                (8, n - 8), (8, n - 7), (8, n - 6), (8, n - 5), (8, n - 4), (8, n - 3), (8, n - 2), (8, n - 1)]
+    b_coords = [
+        (n - 1, 8),
+        (n - 2, 8),
+        (n - 3, 8),
+        (n - 4, 8),
+        (n - 5, 8),
+        (n - 6, 8),
+        (n - 7, 8),
+        (8, n - 8),
+        (8, n - 7),
+        (8, n - 6),
+        (8, n - 5),
+        (8, n - 4),
+        (8, n - 3),
+        (8, n - 2),
+        (8, n - 1),
+    ]
     for i, (r, c) in enumerate(a_coords):
         matrix[r][c] = bits[i]
     for i, (r, c) in enumerate(b_coords):
@@ -366,6 +415,7 @@ def _place_format(matrix: list[list[int]], mask: int) -> None:
 # ---------------------------------------------------------------------------
 # Public API
 # ---------------------------------------------------------------------------
+
 
 def encode(text: str) -> list[list[int]]:
     """Return the QR matrix (1 = dark module) for ``text``."""

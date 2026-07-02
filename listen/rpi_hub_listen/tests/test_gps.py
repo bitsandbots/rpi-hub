@@ -175,7 +175,7 @@ def test_real_simulator_full_scenario_all_acquire() -> None:
 
 @pytest.fixture()
 def client(monkeypatch: pytest.MonkeyPatch) -> TestClient:
-    monkeypatch.setattr(main.dongle, "dongle_present", lambda: True)
+    monkeypatch.setattr(main.dongle, "dongle_present", lambda: True)  # type: ignore[attr-defined]
     monkeypatch.setattr(main._GPS, "_argv_builder", _canned_argv)
     main._TUNER.stop()
     return TestClient(main.app)
@@ -210,9 +210,7 @@ def test_api_sweep_rejected_while_audio_tuned(
     monkeypatch.setattr(
         main._TUNER,
         "_state",
-        dongle.TunerState(
-            mode="weather", frequency_hz=162_400_000, label="NOAA", started_ts=1.0
-        ),
+        dongle.TunerState(mode="weather", frequency_hz=162_400_000, label="NOAA", started_ts=1.0),
     )
     r = client.post("/gps/sweep", json={})
     assert r.status_code == 409
@@ -220,7 +218,7 @@ def test_api_sweep_rejected_while_audio_tuned(
 
 
 def test_api_sweep_503_without_dongle(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setattr(main.dongle, "dongle_present", lambda: False)
+    monkeypatch.setattr(main.dongle, "dongle_present", lambda: False)  # type: ignore[attr-defined]
     monkeypatch.setattr(main, "GPS_SIMULATE", False)
     main._TUNER.stop()
     c = TestClient(main.app)

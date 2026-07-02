@@ -58,9 +58,7 @@ class HealthResponse(BaseModel):
     vector_status: str
 
 
-def _hybrid_search(
-    conn: object, query: str, k: int
-) -> list[retrieval.RankedResult]:
+def _hybrid_search(conn: object, query: str, k: int) -> list[retrieval.RankedResult]:
     """Run the BM25 + vector lanes and fuse.
 
     Each lane is allowed to fail independently — if vector search returns
@@ -92,7 +90,7 @@ def _hybrid_search(
     if qvec:
         # hnsw + id_map are lazy-loaded once per process at startup; we
         # pull them via attribute lookup on the module so tests can stub.
-        from . import index_handle
+        from . import index_handle  # noqa: PLC0415
 
         vec_ids = retrieval.vector_search(
             qvec,
@@ -120,7 +118,7 @@ def _hybrid_search(
 
 @app.get("/health", response_model=HealthResponse)
 def health() -> HealthResponse:
-    from . import index_handle
+    from . import index_handle  # noqa: PLC0415
 
     if not store.index_present():
         return HealthResponse(

@@ -78,7 +78,7 @@ def build_prompt(question: str, passages: list[PromptPassage]) -> str:
     body_lines.append(
         "Answer in one paragraph of at most 80 words. End every sentence "
         "with the bracketed number of the passage it draws from. If the "
-        "passages do not contain the answer, reply: \"The library "
+        'passages do not contain the answer, reply: "The library '
         "doesn't have that.\""
     )
     user = "\n".join(body_lines)

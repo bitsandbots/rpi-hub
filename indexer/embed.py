@@ -13,11 +13,12 @@ from __future__ import annotations
 
 import os
 import sys
-from typing import Callable
+from collections.abc import Callable
 
 EMBED_MODEL = os.environ.get("rpi_hub_EMBED_MODEL", "BAAI/bge-small-en-v1.5")
 EMBED_DIM = int(os.environ.get("rpi_hub_EMBED_DIM", "384"))
 EMBED_BATCH = int(os.environ.get("rpi_hub_EMBED_BATCH", "32"))
+
 
 # A zero-vector index is silently useless — every cosine distance is
 # identical, so the vector lane returns meaningless neighbours. We refuse
@@ -43,7 +44,9 @@ def load_encoder() -> Callable[[list[str]], list[list[float]]]:
     """
 
     try:
-        from sentence_transformers import SentenceTransformer  # type: ignore[import-not-found]
+        from sentence_transformers import (  # noqa: PLC0415 # optional heavy dep — see module docstring
+            SentenceTransformer,
+        )
     except ImportError as exc:
         if not _stub_allowed():
             raise EmbeddingModelUnavailable(
@@ -56,8 +59,7 @@ def load_encoder() -> Callable[[list[str]], list[list[float]]]:
             "\n" + "=" * 70 + "\n"
             "[indexer] WARNING: sentence-transformers missing — building a\n"
             "[indexer] ZERO-VECTOR stub index. The vector lane will be useless.\n"
-            "[indexer] DO NOT SHIP THIS INDEX.\n"
-            + "=" * 70 + "\n",
+            "[indexer] DO NOT SHIP THIS INDEX.\n" + "=" * 70 + "\n",
             file=sys.stderr,
         )
 

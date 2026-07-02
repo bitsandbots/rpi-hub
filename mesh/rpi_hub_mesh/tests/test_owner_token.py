@@ -30,9 +30,7 @@ def _set_paths(
     monkeypatch.setattr(main, "_LEGACY_TOKEN_FALLBACK", fallback)
 
 
-def test_mesh_token_preferred_over_legacy(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_mesh_token_preferred_over_legacy(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     mesh_file = tmp_path / "mesh-owner-token"
     legacy_file = tmp_path / "notes-owner-token"
     mesh_file.write_text("mesh-token\n")
@@ -55,9 +53,7 @@ def test_no_fallback_by_default_when_mesh_missing(
     assert main._read_owner_token() is None
 
 
-def test_fallback_to_legacy_when_opted_in(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_fallback_to_legacy_when_opted_in(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     mesh_file = tmp_path / "mesh-owner-token"  # not created
     legacy_file = tmp_path / "notes-owner-token"
     legacy_file.write_text("legacy-token\n")
@@ -78,9 +74,7 @@ def test_fallback_when_mesh_empty_and_opted_in(
     assert main._read_owner_token() == "legacy-token"
 
 
-def test_none_when_both_absent(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_none_when_both_absent(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     mesh_file = tmp_path / "mesh-owner-token"
     legacy_file = tmp_path / "notes-owner-token"
     _set_paths(monkeypatch, mesh_file, legacy_file, fallback=True)

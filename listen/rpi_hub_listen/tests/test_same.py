@@ -41,7 +41,7 @@ def test_fips_filter() -> None:
     line = "ZCZC-WXR-TOR-053009-053011+0030-3171800-KEAX/NWS-"
     out = same.parse(line)
     assert out is not None
-    assert out.affects_fips("")             # empty filter → always true
-    assert out.affects_fips("053009")       # exact match
-    assert out.affects_fips("153009")       # different subcounty digit, same county
-    assert not out.affects_fips("019003")   # different county
+    assert out.affects_fips("")  # empty filter → always true
+    assert out.affects_fips("053009")  # exact match
+    assert out.affects_fips("153009")  # different subcounty digit, same county
+    assert not out.affects_fips("019003")  # different county

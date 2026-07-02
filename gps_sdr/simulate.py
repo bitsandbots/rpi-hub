@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import dataclasses
 import logging
-from typing import Sequence
+from collections.abc import Sequence
 
 import numpy as np
 
@@ -29,10 +29,11 @@ log = logging.getLogger(__name__)
 @dataclasses.dataclass
 class SimSatellite:
     """Parameters for one simulated GPS satellite."""
+
     prn: int
-    doppler_hz: float = 0.0       # Doppler offset (Hz)
-    code_phase: int = 0            # Code-phase offset (samples from start)
-    amplitude: float = 0.20        # Signal amplitude relative to noise std=1
+    doppler_hz: float = 0.0  # Doppler offset (Hz)
+    code_phase: int = 0  # Code-phase offset (samples from start)
+    amplitude: float = 0.20  # Signal amplitude relative to noise std=1
     # Rough metric guide at 2.048 Msps (spc=2048): the peak/noise-floor ratio
     # after 1 ms correlation is ≈ spc × amp² × scallop, where the scallop
     # factor (~0.4–0.5) accounts for Doppler-bin quantisation and the
@@ -57,10 +58,10 @@ class SimSatellite:
 # metric (~0.004× ≈ 0.2), far below 20; the non-scenario metrics (~9–17)
 # are noise-floor maxima (ln(84k bins) ≈ 11), not cross-correlation leaks.
 DEFAULT_SCENARIO: list[SimSatellite] = [
-    SimSatellite(prn= 1, doppler_hz= +1_200.0, code_phase= 512, amplitude=0.22),
-    SimSatellite(prn= 5, doppler_hz= -2_500.0, code_phase= 200, amplitude=0.20),
-    SimSatellite(prn=14, doppler_hz= +4_000.0, code_phase= 987, amplitude=0.18),
-    SimSatellite(prn=22, doppler_hz=   -750.0, code_phase=1500, amplitude=0.20),
+    SimSatellite(prn=1, doppler_hz=+1_200.0, code_phase=512, amplitude=0.22),
+    SimSatellite(prn=5, doppler_hz=-2_500.0, code_phase=200, amplitude=0.20),
+    SimSatellite(prn=14, doppler_hz=+4_000.0, code_phase=987, amplitude=0.18),
+    SimSatellite(prn=22, doppler_hz=-750.0, code_phase=1500, amplitude=0.20),
 ]
 
 

@@ -15,6 +15,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+
 def _require_loopback(url: str) -> str:
     """Refuse a non-loopback upstream — the device must never initiate
     outbound IP connections. Override with

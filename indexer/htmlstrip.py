@@ -14,9 +14,27 @@ from html.parser import HTMLParser
 
 _SKIP_TAGS = {"script", "style", "noscript", "template"}
 _BLOCK_TAGS = {
-    "p", "div", "section", "article", "header", "footer", "nav",
-    "table", "tr", "td", "th", "ul", "ol", "li", "dl", "dt", "dd",
-    "blockquote", "pre", "br", "hr",
+    "p",
+    "div",
+    "section",
+    "article",
+    "header",
+    "footer",
+    "nav",
+    "table",
+    "tr",
+    "td",
+    "th",
+    "ul",
+    "ol",
+    "li",
+    "dl",
+    "dt",
+    "dd",
+    "blockquote",
+    "pre",
+    "br",
+    "hr",
 }
 _HEADING_LEVEL = {"h1": 2, "h2": 2, "h3": 3, "h4": 4, "h5": 4, "h6": 4}
 

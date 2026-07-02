@@ -11,7 +11,6 @@ from __future__ import annotations
 import json
 import os
 import shutil
-import socket
 import subprocess
 import urllib.error
 import urllib.request
@@ -82,9 +81,7 @@ def storage(path: Path = KIWIX_DIR) -> StorageInfo:
             kiwix_bytes_free=u.free, kiwix_bytes_total=u.total, kiwix_present=present
         )
     except OSError:
-        return StorageInfo(
-            kiwix_bytes_free=None, kiwix_bytes_total=None, kiwix_present=present
-        )
+        return StorageInfo(kiwix_bytes_free=None, kiwix_bytes_total=None, kiwix_present=present)
 
 
 def dhcp_clients() -> int | None:
@@ -123,7 +120,7 @@ def voltage() -> VoltageInfo:
     if not raw.startswith(prefix):
         return VoltageInfo(throttled=raw or None, undervoltage=None)
 
-    word = raw[len(prefix):]
+    word = raw[len(prefix) :]
     try:
         bits = int(word, 16)
     except ValueError:
@@ -163,6 +160,9 @@ def build_version() -> str:
 # inactive, each probe falls through to "not-running" in ~5ms.
 
 PROBE_TIMEOUT_S = 0.4
+HTTP_STATUS_OK = 200
+HTTP_STATUS_REDIRECT = 300
+HTTP_STATUS_SERVER_ERROR = 500
 
 
 def _probe_local_http(url: str) -> str:
@@ -171,11 +171,11 @@ def _probe_local_http(url: str) -> str:
             # Only a 2xx is "ready". A 4xx (e.g. missing /health route) or
             # 5xx means the port answered but the service is not actually
             # serving — surface that as "unknown", not a false "ready".
-            return "ready" if 200 <= resp.status < 300 else "unknown"
+            return "ready" if HTTP_STATUS_OK <= resp.status < HTTP_STATUS_REDIRECT else "unknown"
     except urllib.error.HTTPError as exc:
         # urlopen raises on 4xx/5xx; treat 5xx as down, 4xx as unknown.
-        return "not-running" if exc.code >= 500 else "unknown"
-    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, OSError):
+        return "not-running" if exc.code >= HTTP_STATUS_SERVER_ERROR else "unknown"
+    except (urllib.error.URLError, TimeoutError, ConnectionError, OSError):
         return "not-running"
 
 
@@ -185,7 +185,7 @@ def _probe_json_field(url: str, field: str) -> str | None:
     try:
         with urllib.request.urlopen(url, timeout=PROBE_TIMEOUT_S) as resp:
             body = json.loads(resp.read())
-    except (urllib.error.URLError, socket.timeout, TimeoutError, ConnectionError, json.JSONDecodeError, OSError):
+    except (urllib.error.URLError, TimeoutError, ConnectionError, json.JSONDecodeError, OSError):
         return None
     if not isinstance(body, dict):
         return None
@@ -196,12 +196,12 @@ def _probe_json_field(url: str, field: str) -> str | None:
 @dataclass(frozen=True)
 class ServicesInfo:
     retrieve: str  # Phase 6
-    assist: str    # Phase 6
-    listen: str    # Phase 8
-    notes: str     # Phase 9A
-    mesh: str      # Phase 7
-    kiwix: str     # Phase 3 — core library backend
-    adsb: str      # Phase 8.4
+    assist: str  # Phase 6
+    listen: str  # Phase 8
+    notes: str  # Phase 9A
+    mesh: str  # Phase 7
+    kiwix: str  # Phase 3 — core library backend
+    adsb: str  # Phase 8.4
     adsb_aircraft: int | None  # surfaced from aircraft.json on a ready probe
     mesh_fingerprint: str | None  # surfaced for owner-to-owner trust
 
@@ -267,7 +267,7 @@ _HTTP_PROBES = {
 
 
 def services() -> ServicesInfo:
-    global _SERVICES_CACHE
+    global _SERVICES_CACHE  # noqa: PLW0603 module-level probe cache for TTL
     now = _now()
     if _SERVICES_CACHE is not None and (now - _SERVICES_CACHE[0]) < _SERVICES_TTL_S:
         return _SERVICES_CACHE[1]
@@ -278,7 +278,9 @@ def services() -> ServicesInfo:
     from concurrent.futures import ThreadPoolExecutor  # noqa: PLC0415
 
     with ThreadPoolExecutor(max_workers=len(_HTTP_PROBES) + 2) as pool:
-        http_futs = {name: pool.submit(_probe_local_http, url) for name, url in _HTTP_PROBES.items()}
+        http_futs = {
+            name: pool.submit(_probe_local_http, url) for name, url in _HTTP_PROBES.items()
+        }
         adsb_fut = pool.submit(_probe_adsb)
         fp_fut = pool.submit(_probe_json_field, "http://127.0.0.1:8500/identity", "fingerprint")
         http = {name: fut.result() for name, fut in http_futs.items()}

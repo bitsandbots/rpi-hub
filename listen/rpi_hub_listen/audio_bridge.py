@@ -26,10 +26,9 @@ and pipes through this module's :class:`AudioFanout`.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import threading
-from collections import deque
 from dataclasses import dataclass
-from typing import Deque
 
 # Per-consumer queue cap. Each frame is ~4 KB at 22050 mono 16-bit
 # (200ms blocks); 16 frames ≈ 3.2 s of audio. A consumer that falls
@@ -85,11 +84,8 @@ class AudioFanout:
             self._consumers.append(consumer)
 
     def remove(self, consumer: AudioConsumer) -> None:
-        with self._lock:
-            try:
-                self._consumers.remove(consumer)
-            except ValueError:
-                pass
+        with self._lock, contextlib.suppress(ValueError):
+            self._consumers.remove(consumer)
 
     def consumer_count(self) -> int:
         with self._lock:

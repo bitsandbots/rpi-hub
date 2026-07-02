@@ -19,14 +19,15 @@ adapter aren't present.
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import shutil
 import subprocess
 import threading
 import time
+from collections.abc import Callable
 from dataclasses import dataclass
-from typing import Callable
 
 BATCTL = shutil.which("batctl") or "/usr/sbin/batctl"
 ALFRED = shutil.which("alfred") or "/usr/sbin/alfred"
@@ -54,7 +55,11 @@ class WifiBridge:
         # on_peer receives (mac, tq, last_hop)
         self._on_peer = on_peer
         self._stop = threading.Event()
-        self._status = WifiStatus(state="unavailable", detail="not started", last_change_ts=time.time())
+        self._status = WifiStatus(
+            state="unavailable",
+            detail="not started",
+            last_change_ts=time.time(),
+        )
         self._thread: threading.Thread | None = None
 
     @property
@@ -130,10 +135,8 @@ class WifiBridge:
                         tq = int(tq_str)
                     except ValueError:
                         continue
-                    try:
+                    with contextlib.suppress(Exception):  # noqa: BLE001
                         self._on_peer(mac, tq, next_hop)
-                    except Exception:  # noqa: BLE001
-                        pass
 
             if self._stop.wait(POLL_INTERVAL_S):
                 return

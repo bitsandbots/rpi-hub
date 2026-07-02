@@ -23,6 +23,7 @@ we exercise the *handoff*: notes-app → mesh_client → outbound URL.
 from __future__ import annotations
 
 import json
+import urllib.request
 from pathlib import Path
 
 import pytest
@@ -65,9 +66,7 @@ def capture_publish(monkeypatch: pytest.MonkeyPatch) -> list[dict[str, object]]:
     calls: list[dict[str, object]] = []
 
     def fake_publish(note_id: int, name: str, text: str, ttl_s: int = 86400) -> bool:
-        calls.append(
-            {"note_id": note_id, "name": name, "text": text, "ttl_s": ttl_s}
-        )
+        calls.append({"note_id": note_id, "name": name, "text": text, "ttl_s": ttl_s})
         return True
 
     monkeypatch.setattr(mesh_client, "publish", fake_publish)
@@ -135,7 +134,7 @@ def test_mesh_client_payload_shape_via_real_urlopen(
     class _FakeResp:
         status = 200
 
-        def __enter__(self) -> "_FakeResp":
+        def __enter__(self) -> _FakeResp:
             return self
 
         def __exit__(self, *_: object) -> None:
@@ -147,15 +146,13 @@ def test_mesh_client_payload_shape_via_real_urlopen(
         captured["content_type"] = req.headers.get("Content-type")  # type: ignore[attr-defined]
         return _FakeResp()
 
-    import urllib.request
-
     monkeypatch.setattr(urllib.request, "urlopen", fake_urlopen)
 
     ok = mesh_client.publish(7, "alice", "hello mesh", ttl_s=3600)
     assert ok is True
     assert captured["url"] == mesh_client.MESH_PUBLISH_URL
     assert captured["content_type"] == "application/json"
-    assert isinstance(captured["body"], (bytes, bytearray))
+    assert isinstance(captured["body"], bytes | bytearray)
     payload = json.loads(bytes(captured["body"]).decode("utf-8"))
     assert payload == {
         "note_id": 7,

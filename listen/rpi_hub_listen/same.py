@@ -29,6 +29,10 @@ _HEADER = re.compile(
     r"ZCZC-([A-Z]{3})-([A-Z]{3})-(\d{6}(?:-\d{6})*)\+(\d{4})-(\d{7})-([A-Z0-9 /]{1,8})-?"
 )
 
+# FIPS code suffix length: the trailing 5 digits identify the county,
+# regardless of the leading digit (0 = full county, 1–9 = portion).
+FIPS_COUNTY_SUFFIX_LEN = 5
+
 # Common EAS event codes → human label. Not exhaustive (NOAA publishes
 # ~80 codes); the long tail falls through to the raw code.
 EVENT_LABELS: dict[str, str] = {
@@ -70,8 +74,11 @@ class SameAlert:
         # 1–9 = portion). Match against the trailing 5-digit county id so
         # a "0" full-county alert still hits a "5XXXXX" partial-county
         # filter and vice versa.
-        target = fips[-5:] if len(fips) >= 5 else fips
-        return any((c[-5:] if len(c) >= 5 else c) == target for c in self.fips_codes)
+        target = fips[-FIPS_COUNTY_SUFFIX_LEN:] if len(fips) >= FIPS_COUNTY_SUFFIX_LEN else fips
+        return any(
+            (c[-FIPS_COUNTY_SUFFIX_LEN:] if len(c) >= FIPS_COUNTY_SUFFIX_LEN else c) == target
+            for c in self.fips_codes
+        )
 
 
 def parse(line: str) -> SameAlert | None:

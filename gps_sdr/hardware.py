@@ -19,13 +19,18 @@ Bias-tee support:
 
 from __future__ import annotations
 
+import contextlib
 import logging
 import shutil
 import subprocess
+from typing import TYPE_CHECKING
 
 import numpy as np
 
 from .constants import DEFAULT_GAIN_DB, DEFAULT_SAMPLE_RATE, GPS_L1_FREQ
+
+if TYPE_CHECKING:
+    from rtlsdr import RtlSdr
 
 log = logging.getLogger(__name__)
 
@@ -52,16 +57,16 @@ class GPSRadio:
         self.ppm_correction = ppm_correction
         self.bias_tee = bias_tee
         self.gain_db = gain_db
-        self._sdr = None
+        self._sdr: RtlSdr | None = None
         self._bias_tee_active = False
 
     # ── context manager ───────────────────────────────────────────────────────
 
-    def __enter__(self) -> "GPSRadio":
+    def __enter__(self) -> GPSRadio:
         self.open()
         return self
 
-    def __exit__(self, *_) -> None:
+    def __exit__(self, *_: object) -> None:
         self.close()
 
     # ── public API ────────────────────────────────────────────────────────────
@@ -69,7 +74,7 @@ class GPSRadio:
     def open(self) -> None:
         """Open the RTL-SDR device and apply GPS-optimised settings."""
         try:
-            from rtlsdr import RtlSdr
+            from rtlsdr import RtlSdr  # noqa: PLC0415
         except ImportError as e:
             raise RuntimeError(
                 "pyrtlsdr is not installed.\n"
@@ -106,10 +111,8 @@ class GPSRadio:
             if self._bias_tee_active:
                 self._set_bias_tee_state(enable=False)
         finally:
-            try:
+            with contextlib.suppress(Exception):
                 self._sdr.close()
-            except Exception:
-                pass
             self._sdr = None
             log.info("RTL-SDR closed")
 
@@ -144,12 +147,12 @@ class GPSRadio:
         """Try all known bias-tee control paths.  Returns True on success."""
         if self._try_pyrtlsdr_bias_tee(enable=enable):
             return True
-        if self._try_rtl_biast_cli(enable=enable):
-            return True
-        return False
+        return bool(self._try_rtl_biast_cli(enable=enable))
 
     def _try_pyrtlsdr_bias_tee(self, *, enable: bool) -> bool:
         """Use pyrtlsdr's set_bias_tee() if the library supports it."""
+        if self._sdr is None:
+            return False
         try:
             self._sdr.set_bias_tee(1 if enable else 0)
             self._bias_tee_active = enable
@@ -169,8 +172,10 @@ class GPSRadio:
         try:
             cmd = [
                 "rtl_biast",
-                "-d", str(self.device_index),
-                "-b", "1" if enable else "0",
+                "-d",
+                str(self.device_index),
+                "-b",
+                "1" if enable else "0",
             ]
             subprocess.run(cmd, check=True, capture_output=True, timeout=5)
             self._bias_tee_active = enable

@@ -76,8 +76,7 @@ def _prune_to_cap(conn: sqlite3.Connection, max_entries: int = MAX_ENTRIES) -> i
     """
 
     cur = conn.execute(
-        "DELETE FROM notes WHERE id NOT IN "
-        "(SELECT id FROM notes ORDER BY id DESC LIMIT ?)",
+        "DELETE FROM notes WHERE id NOT IN " "(SELECT id FROM notes ORDER BY id DESC LIMIT ?)",
         (max_entries,),
     )
     return cur.rowcount or 0
@@ -85,8 +84,7 @@ def _prune_to_cap(conn: sqlite3.Connection, max_entries: int = MAX_ENTRIES) -> i
 
 def list_recent(conn: sqlite3.Connection, limit: int = 100) -> list[Note]:
     rows = conn.execute(
-        "SELECT id, created_ts, name, text FROM notes "
-        "ORDER BY created_ts DESC LIMIT ?",
+        "SELECT id, created_ts, name, text FROM notes " "ORDER BY created_ts DESC LIMIT ?",
         (limit,),
     ).fetchall()
     return [

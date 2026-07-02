@@ -23,25 +23,26 @@ Decoder candidates, in priority order: ``pyzbar`` (libzbar binding).
 
 from __future__ import annotations
 
+from collections.abc import Callable
+from typing import Any
+
 import pytest
 
 from mesh.rpi_hub_mesh import qrcode
 
 
-def _import_optional() -> tuple[object, object]:
+def _import_optional() -> tuple[object, Callable[..., Any]]:
     """Resolve (PIL.Image, pyzbar.decode) or skip with a clear message."""
 
     try:
-        from PIL import Image  # type: ignore[import-not-found]
+        from PIL import Image  # noqa: PLC0415
     except ImportError:
         pytest.skip("Pillow unavailable; install pillow to run QR decode round-trip")
 
     try:
-        from pyzbar.pyzbar import decode  # type: ignore[import-not-found]
+        from pyzbar.pyzbar import decode  # noqa: PLC0415
     except ImportError:
-        pytest.skip(
-            "pyzbar unavailable; install pyzbar + libzbar0 to run QR decode round-trip"
-        )
+        pytest.skip("pyzbar unavailable; install pyzbar + libzbar0 to run QR decode round-trip")
 
     return Image, decode
 
@@ -53,7 +54,7 @@ def _matrix_to_image(matrix: list[list[int]], scale: int = 8, quiet: int = 4) ->
     quiet zone around the matrix is mandatory for decoder lock-on.
     """
 
-    from PIL import Image  # type: ignore[import-not-found]
+    from PIL import Image  # noqa: PLC0415
 
     n = len(matrix)
     side = (n + 2 * quiet) * scale
