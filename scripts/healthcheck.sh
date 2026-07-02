@@ -139,7 +139,11 @@ if systemctl is-active --quiet rpi-hub-mesh.service; then
     check_http "http://127.0.0.1/api/mesh/identity" 200
     fp="$(curl -s --max-time 2 http://127.0.0.1/api/mesh/identity \
            | python3 -c "import sys,json;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)"
-    [[ -n "$fp" ]] && ok "mesh fingerprint: $fp" || warn "mesh fingerprint missing — keypair generation may have failed"
+    if [[ -n "$fp" ]]; then
+        ok "mesh fingerprint: $fp"
+    else
+        warn "mesh fingerprint missing — keypair generation may have failed"
+    fi
 fi
 if [[ -s /etc/rpi-hub/mesh-owner-token ]]; then
     ok "mesh owner token present at /etc/rpi-hub/mesh-owner-token (0600)"
@@ -169,7 +173,7 @@ fi
 
 section "Phase 9B: Packs (optional)"
 if [[ -d /var/www/rpi-hub-portal/print ]] && compgen -G "/var/www/rpi-hub-portal/print/*.pdf" >/dev/null; then
-    ok "/print/ has PDFs ($(ls /var/www/rpi-hub-portal/print/*.pdf 2>/dev/null | wc -l) files)"
+    ok "/print/ has PDFs ($(find /var/www/rpi-hub-portal/print -maxdepth 1 -name '*.pdf' 2>/dev/null | wc -l) files)"
 elif [[ -f /var/www/rpi-hub-portal/print/index.html ]]; then
     warn "/print/ index present but no PDFs — pack PDFs not staged"
 else

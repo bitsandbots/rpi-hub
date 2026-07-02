@@ -535,8 +535,8 @@ print('-'.join(b[i:i+4] for i in range(0, len(b), 4)))
     # Smoke test: give uvicorn ~3s to bind, then probe /api/status. Failure
     # here is non-fatal (install completed; the user can investigate via
     # journalctl) but loud.
-    local i probe_ok=0
-    for i in 1 2 3 4 5 6; do
+    local probe_ok=0
+    for _ in 1 2 3 4 5 6; do
         if curl --silent --fail --max-time 1 \
             http://127.0.0.1:8000/status >/dev/null 2>&1; then
             probe_ok=1
@@ -653,8 +653,8 @@ phase7() {
     # Surface the local fingerprint right after start so the operator
     # can confirm the keypair landed. 6×0.5s mirrors phase 5's status
     # probe — Pi Zero 2 W can take >1s for keygen + mesh bind.
-    local i fp=""
-    for i in 1 2 3 4 5 6; do
+    local fp=""
+    for _ in 1 2 3 4 5 6; do
         fp=$(curl --silent --max-time 1 http://127.0.0.1:8500/identity 2>/dev/null \
               | python3 -c "import json,sys;print(json.load(sys.stdin).get('fingerprint',''))" 2>/dev/null || true)
         [[ -n "$fp" ]] && break
