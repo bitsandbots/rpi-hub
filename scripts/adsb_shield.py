@@ -64,7 +64,7 @@ def round_positions(body: dict[str, Any], precision: int) -> dict[str, Any]:
             continue
         for key in ("lat", "lon"):
             v = a.get(key)
-            if isinstance(v, (int, float)):
+            if isinstance(v, int | float):
                 a[key] = round(float(v), precision)
     return body
 

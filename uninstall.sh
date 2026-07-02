@@ -24,7 +24,9 @@ drop_iptables() {
     while iptables -C FORWARD -i wlan0 ! -o wlan0 -j DROP 2>/dev/null; do
         iptables -D FORWARD -i wlan0 ! -o wlan0 -j DROP
     done
-    command -v netfilter-persistent >/dev/null && netfilter-persistent save >/dev/null || true
+    if command -v netfilter-persistent >/dev/null; then
+        netfilter-persistent save >/dev/null || true
+    fi
 }
 
 remove_nginx_site() {
