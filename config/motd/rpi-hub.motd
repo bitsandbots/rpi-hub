@@ -33,4 +33,3 @@
    Factory reset  : sudo /opt/rpi-hub/scripts/factory_reset.sh --yes
 
    No internet egress   ·   MIT licensed   ·   {{VERSION}}
-
