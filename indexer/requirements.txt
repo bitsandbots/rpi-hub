@@ -1,0 +1,19 @@
+# Workstation-only dependencies for the ZIM → search-index builder.
+# These are NEVER installed on the Pi — the device receives the prebuilt
+# index artefact via rsync (see docs/OVERVIEW.md §4.4) and only needs the
+# lightweight runtime deps from install.sh phase6.
+#
+# Install: pip install -r indexer/requirements.txt
+#
+# Note: sentence-transformers pulls in torch (large) and, on first run,
+# downloads BAAI/bge-small-en-v1.5 from HuggingFace — an outbound call that
+# is acceptable on a workstation but must never happen on a field device.
+
+# Read article text out of .zim archives.
+libzim>=3.4
+
+# Embedding model loader (BAAI/bge-small-en-v1.5). Pulls torch + numpy.
+sentence-transformers>=2.6
+
+# Approximate-nearest-neighbour index for the vector lane (HNSW).
+hnswlib>=0.8,<0.9

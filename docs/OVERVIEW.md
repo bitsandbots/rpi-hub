@@ -264,7 +264,9 @@ workflow, and curation principles.
 ### 4.4 Assistant index + weights (Pi 5 only)
 
 ```bash
-# Workstation:
+# Workstation (one-time toolchain install for the index builder):
+pip install -r indexer/requirements.txt   # libzim + sentence-transformers + hnswlib
+
 ./models/fetch_models.sh             # weights → ./payload/var/lib/rpi-hub/models/
 python -m indexer.build_index \
     --zim-dir /var/lib/kiwix \
