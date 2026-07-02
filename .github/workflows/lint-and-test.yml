@@ -33,7 +33,7 @@ jobs:
           pip install fastapi pydantic uvicorn numpy cryptography
 
       - name: Run pytest
-        run: pytest
+        run: python -m pytest
 
   lint:
     name: pre-commit (report-only)
