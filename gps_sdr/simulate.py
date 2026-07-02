@@ -32,22 +32,35 @@ class SimSatellite:
     prn: int
     doppler_hz: float = 0.0       # Doppler offset (Hz)
     code_phase: int = 0            # Code-phase offset (samples from start)
-    amplitude: float = 0.07        # Signal amplitude relative to noise std=1
-    # amplitude ≈ 0.07 → metric ≈  spc × amp² / 2  ≈ 5 (threshold=2.5) at 2.048 Msps
+    amplitude: float = 0.20        # Signal amplitude relative to noise std=1
+    # Rough metric guide at 2.048 Msps (spc=2048): the peak/noise-floor ratio
+    # after 1 ms correlation is ≈ spc × amp² × scallop, where the scallop
+    # factor (~0.4–0.5) accounts for Doppler-bin quantisation and the
+    # ±1-chip noise-floor exclusion. amp=0.20 → metric ≈ 35–45. The
+    # DEFAULT_SCENARIO amplitudes below are tuned to clear the real hardware
+    # threshold (DEFAULT_ACQ_THRESHOLD=20) with ~2× margin; see
+    # tests/gps_sdr/test_sim_e2e.py for the pinned values.
 
 
 # Default scenario: four satellites in different parts of the sky.
-# Amplitudes are tuned so all four clear the demonstration threshold of 15
-# (see the README "Simulator threshold note") even with the worst-case
-# Doppler-bin scalloping loss — otherwise a full 32-PRN sim sweep would
-# under-report the synthetic constellation. PRN 1 stays the strongest.
-# Cross-correlations remain ≤ (65/1023)² of a source metric (~0.004×),
-# far below 15, so raising amplitudes adds no false positives.
+#
+# The simulator uses a SINGLE threshold — the real DEFAULT_ACQ_THRESHOLD
+# (20), not a lowered demo threshold. The amplitudes below are chosen so all
+# four synthetic satellites clear that real threshold with ~2× margin even
+# under worst-case Doppler-bin scalloping, which keeps the demo honest: a
+# satellite the sim marks ACQUIRED is one that would also be detected at the
+# hardware detection bar. Verified across 20 noise seeds
+# (worst scenario metric ≈ 41, worst non-scenario ≈ 17 — threshold 20 sits
+# in the gap) by tests/gps_sdr/test_sim_e2e.py.
+#
+# Cross-correlations with non-scenario PRNs stay ≤ (65/1023)² of a source
+# metric (~0.004× ≈ 0.2), far below 20; the non-scenario metrics (~9–17)
+# are noise-floor maxima (ln(84k bins) ≈ 11), not cross-correlation leaks.
 DEFAULT_SCENARIO: list[SimSatellite] = [
-    SimSatellite(prn= 1, doppler_hz= +1_200.0, code_phase= 512, amplitude=0.13),
-    SimSatellite(prn= 5, doppler_hz= -2_500.0, code_phase= 200, amplitude=0.12),
-    SimSatellite(prn=14, doppler_hz= +4_000.0, code_phase= 987, amplitude=0.11),
-    SimSatellite(prn=22, doppler_hz=   -750.0, code_phase=1500, amplitude=0.12),
+    SimSatellite(prn= 1, doppler_hz= +1_200.0, code_phase= 512, amplitude=0.22),
+    SimSatellite(prn= 5, doppler_hz= -2_500.0, code_phase= 200, amplitude=0.20),
+    SimSatellite(prn=14, doppler_hz= +4_000.0, code_phase= 987, amplitude=0.18),
+    SimSatellite(prn=22, doppler_hz=   -750.0, code_phase=1500, amplitude=0.20),
 ]
 
 

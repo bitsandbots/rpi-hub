@@ -22,6 +22,8 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
+from .constants import DEFAULT_ACQ_THRESHOLD
+
 if TYPE_CHECKING:
     from .acquisition import AcquisitionResult
 
@@ -59,8 +61,11 @@ def _build_parser() -> argparse.ArgumentParser:
     acq = p.add_argument_group("Acquisition")
     acq.add_argument("--prns", type=int, nargs="+", metavar="N",
                      help="Specific PRN numbers to search (default: all 1–32)")
-    acq.add_argument("--threshold", type=float, default=2.5, metavar="RATIO",
-                     help="Peak-to-noise-floor detection threshold")
+    acq.add_argument("--threshold", type=float, default=DEFAULT_ACQ_THRESHOLD,
+                     metavar="RATIO",
+                     help="Peak-to-noise-floor detection threshold "
+                          "(default %(default)s; see constants.py for the "
+                          "false-alarm derivation — do not lower without care)")
     acq.add_argument("--doppler-range", type=float, default=10_000, metavar="HZ",
                      help="Doppler search half-range in Hz")
     acq.add_argument("--doppler-step", type=float, default=500, metavar="HZ",

@@ -18,16 +18,27 @@ DEFAULT_GAIN_DB: float = 49.6          # dB  (maximum; GPS is very weak)
 # ── Acquisition defaults ──────────────────────────────────────────────────────
 DEFAULT_DOPPLER_RANGE_HZ: float = 10_000.0   # typical satellite Doppler ≤ ±5 kHz
 DEFAULT_DOPPLER_STEP_HZ: float = 500.0        # frequency resolution
-DEFAULT_ACQ_THRESHOLD: float = 2.5            # peak-to-noise-floor ratio
+DEFAULT_ACQ_THRESHOLD: float = 20.0           # peak-to-noise-floor ratio
+# Chosen for a low false-alarm rate across the default search space. With
+# doppler_range=±10 kHz / step=500 Hz there are 41 Doppler bins × 2048 code
+# phases ≈ 84k cells per PRN. For pure noise the per-cell power is
+# exponentially distributed, so the max/mean (peak/noise-floor) ratio across
+# N cells concentrates near ln(N) ≈ ln(84k) ≈ 11; P(max/mean > T) ≈ N·e^−T.
+# T=20 → P_FA ≈ 84k·e^−20 ≈ 2e-4 per PRN per sweep (well above the noise
+# max of ~11). A threshold of 2.5 — the value this was briefly set to —
+# gives P_FA ≈ 84k·e^−2.5 ≈ 6900 false cells per PRN, i.e. near-certain
+# false acquisition on every PRN on real hardware. Do not lower it without
+# re-deriving the false-alarm budget; see tests/gps_sdr/test_false_alarm.py.
 DEFAULT_INTEGRATION_MS: int = 1               # non-coherent integration periods
 
 # ── G2 code-phase tap assignments ────────────────────────────────────────────
 # IS-GPS-200, Table 3-Ia.  For PRN n the C/A chip output is:
-#   G1[0]  XOR  G2[tap_a − 1]  XOR  G2[tap_b − 1]
+#   G1[9]  XOR  G2[tap_a − 1]  XOR  G2[tap_b − 1]        (G1 = last stage, 0-indexed 9)
 #
-# NOTE: These assignments are believed correct per IS-GPS-200 but have not
-# been independently verified here.  Cross-check against the spec before
-# use in any safety-critical application.
+# NOTE: The G2 phase-selection taps below are transcribed from IS-GPS-200
+# Table 3-Ia and pinned by golden-vector tests (tests/gps_sdr/test_prn_golden.py)
+# against the spec's published first-10-chips for PRNs 1–4, 10, 32. The G1
+# output tap (last stage) is pinned by the same tests.
 PRN_G2_TAPS: dict[int, tuple[int, int]] = {
      1: ( 2,  6),   2: ( 3,  7),   3: ( 4,  8),   4: ( 5,  9),
      5: ( 1,  9),   6: ( 2, 10),   7: ( 1,  8),   8: ( 2,  9),

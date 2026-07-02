@@ -71,7 +71,11 @@ def default_argv(
         str(integration_ms),
     ]
     if simulate:
-        argv += ["--simulate", "--threshold", "15"]  # see gps_sdr README note
+        # Use the real DEFAULT_ACQ_THRESHOLD (20), not a lowered demo bar.
+        # The sim DEFAULT_SCENARIO amplitudes are tuned to clear it (see
+        # gps_sdr/simulate.py), so the sweeper's sim path reports exactly the
+        # synthetic constellation at the same detection bar hardware uses.
+        argv += ["--simulate", "--threshold", "20"]
     if prns:
         argv += ["--prns", *[str(p) for p in prns]]
     return argv

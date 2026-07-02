@@ -37,7 +37,14 @@ def generate_ca_code(prn: int) -> np.ndarray:
     chips = np.empty(CA_CODE_LENGTH, dtype=np.int8)
 
     for k in range(CA_CODE_LENGTH):
-        chips[k] = g1[0] ^ g2[tap_a - 1] ^ g2[tap_b - 1]
+        # G1 output is taken from the LAST stage (stage 10, 0-indexed 9) per
+        # IS-GPS-200 §3.3.2.3.  Reading an earlier stage (e.g. g1[0]) yields a
+        # time-shifted G1 m-sequence — still a valid Gold code, so it "works"
+        # in simulation (where the correlator uses the same wrong code) but
+        # produces non-standard C/A codes that will not correlate against real
+        # GPS satellites.  See tests/gps_sdr/test_prn_golden.py for the
+        # IS-GPS-200 Table 3-Ia golden-vector check that pins this tap.
+        chips[k] = g1[9] ^ g2[tap_a - 1] ^ g2[tap_b - 1]
 
         # G1 shift: feedback from taps 3, 10  (0-indexed: 2, 9)
         fb1 = g1[2] ^ g1[9]

@@ -87,15 +87,23 @@ python -m gps_sdr --simulate
 Generates a synthetic signal with PRNs 1, 5, 14, 22 at known Dopplers and
 verifies the acquisition engine finds them.
 
-> **Simulator threshold note:** The simulator uses artificially high signal
-> amplitudes for reliable demonstration.  GPS C/A code cross-correlations
-> (≤ 65/1023 ≈ −21.7 dB) will push other PRNs above the default threshold
-> of 2.5.  To see only the injected satellites, raise the threshold:
+> **Simulator threshold note:** The simulator uses a *single* detection
+> threshold — the real `DEFAULT_ACQ_THRESHOLD` (20.0), not a lowered demo
+> bar. Its signal amplitudes are tuned so the four synthetic satellites
+> (PRNs 1, 5, 14, 22) clear that real threshold with ~2× margin while
+> cross-correlations and noise-floor maxima on the other 28 PRNs stay below
+> it, so the sim reports exactly the injected constellation at the same bar
+> hardware uses. See `tests/gps_sdr/test_sim_e2e.py`.
 >
->     python -m gps_sdr --simulate --threshold 15
+>     python -m gps_sdr --simulate
 >
-> In hardware mode, real signal levels are much lower and threshold=2.5
-> works correctly — cross-correlations stay buried in noise.
+> In hardware mode the same threshold applies. The threshold is a
+> peak-to-noise-floor ratio over the 41 Doppler × 2048 code-phase search
+> space; the default of 20 is derived from a false-alarm budget (P_FA ≈
+> 84k·e⁻²⁰ ≈ 2e-4 per PRN per sweep). **Do not lower it to ~2–3** — at that
+> level the noise-floor maximum (ln(84k) ≈ 11) is exceeded on nearly every
+> PRN every sweep, producing constant false acquisitions. See
+> `gps_sdr/constants.py` and `tests/gps_sdr/test_false_alarm.py`.
 
 ### Hardware mode
 ```bash
@@ -112,7 +120,7 @@ The bias tee will be enabled automatically.
 --gain DB               RF gain in dB (default: 49.6 = max)
 --sample-rate MSPS      Sample rate in Msps (default: 2.048)
 --prns N [N ...]        Restrict search to specific PRN numbers
---threshold RATIO       Detection threshold (default: 2.5; raise if too many false positives)
+--threshold RATIO       Detection threshold (default: 20.0; see constants.py — do not lower without re-deriving the false-alarm budget)
 --integration-ms MS     Non-coherent integration length in ms (default: 1)
 --doppler-range HZ      Doppler search ±range in Hz (default: 10000)
 --doppler-step HZ       Doppler bin step in Hz (default: 500)
@@ -135,8 +143,11 @@ python -m gps_sdr --ppm 15 --interval 10
 
 Longer integration for marginal signals (2 ms non-coherent):
 ```bash
-python -m gps_sdr --integration-ms 2 --threshold 2.2
+python -m gps_sdr --integration-ms 2
 ```
+Integration raises the peak/noise-floor ratio without lowering the
+detection bar, so it is the preferred lever for weak signals. Lower
+`--threshold` only with care (see the false-alarm note above).
 
 ---
 
@@ -146,8 +157,11 @@ python -m gps_sdr --integration-ms 2 --threshold 2.2
 - Ensure antenna has clear sky view (GPS cannot penetrate buildings)
 - Check bias tee is on — look for "Bias tee ENABLED ✓" in output
 - Try `--ppm` calibration (use `kalibrate-rtl` with a known FM station)
-- Try `--threshold 2.0` to lower the detection bar temporarily
-- Increase integration: `--integration-ms 2`
+- Increase integration: `--integration-ms 2` (raises the metric without
+  lowering the detection bar)
+- As a last resort, lower `--threshold` slightly (e.g. 18) — but re-check
+  the false-alarm budget, since each unit dropped roughly multiplies the
+  per-PRN false-acquisition probability by e ≈ 2.7
 
 **`set_bias_tee` not available**
 - Your pyrtlsdr or librtlsdr is too old.  Enable manually before running:
