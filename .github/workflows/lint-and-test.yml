@@ -46,6 +46,14 @@ jobs:
         with:
           python-version: "3.11"
 
+      # Pinned at latest (v3.0.1, confirmed 2026-07-02). This job will keep
+      # showing a "Node.js 20 is deprecated" annotation because the action
+      # itself pins actions/cache@v4 internally (see its action.yml) — not
+      # something we control from this workflow. Upstream's own bump PR
+      # (pre-commit/action#242, cache v4→v5) was closed without merging, and
+      # main is still on v4 too, so there's no newer release to pick up.
+      # Nothing to do here short of dropping pre-commit/action for a manual
+      # install step, which isn't worth it for one cosmetic warning.
       - uses: pre-commit/action@v3.0.1
 
   frontend-build:
