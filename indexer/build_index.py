@@ -31,6 +31,7 @@ from pathlib import Path
 from . import chunk as chunker
 from . import embed as embedder
 from . import manifest as manifest_mod
+from .htmlstrip import html_to_text
 
 
 def _open_db(path: Path) -> sqlite3.Connection:
@@ -82,11 +83,14 @@ def _iter_articles(zim_dir: Path):
                 continue
             item = entry.get_item()
             mime = item.mimetype or ""
-            if not mime.startswith("text/"):
+            if mime != "text/html":
                 continue
             try:
-                body = bytes(item.content).decode("utf-8", errors="ignore")
+                raw_html = bytes(item.content).decode("utf-8", errors="ignore")
             except Exception:  # noqa: BLE001
+                continue
+            body = html_to_text(raw_html)
+            if not body:
                 continue
             yield (entry.title or entry.path, body, f"/library/{zim_path.stem}/A/{entry.path}")
 
