@@ -4,7 +4,7 @@
 # Phase:   6
 #
 # We never bundle weights in the repo (size + license clarity). This script
-# downloads two files into ./payload/var/lib/rpi-hub/models/ with sha256
+# downloads two files into <repo>/payload/var/lib/rpi-hub/models/ with sha256
 # verification, then prints the rsync command to push them to the Pi.
 #
 # Usage:
@@ -15,7 +15,8 @@
 
 set -euo pipefail
 
-DEST="${DEST:-./payload/var/lib/rpi-hub/models}"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEST="${DEST:-$REPO_DIR/payload/var/lib/rpi-hub/models}"
 
 log() { printf '[fetch-models] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }

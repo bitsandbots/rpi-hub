@@ -12,9 +12,9 @@ set -euo pipefail
 PACK="${1:-general-purpose}"
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 PACK_DIR="$REPO_DIR/packs/$PACK"
-DEST_KIWIX="${DEST_KIWIX:-./payload/var/lib/kiwix}"
-DEST_PRINT="${DEST_PRINT:-./payload/var/www/rpi-hub-portal/print}"
-DEST_PRESETS="${DEST_PRESETS:-./payload/var/lib/rpi-hub/listen}"
+DEST_KIWIX="${DEST_KIWIX:-$REPO_DIR/payload/var/lib/kiwix}"
+DEST_PRINT="${DEST_PRINT:-$REPO_DIR/payload/var/www/rpi-hub-portal/print}"
+DEST_PRESETS="${DEST_PRESETS:-$REPO_DIR/payload/var/lib/rpi-hub/listen}"
 
 log() { printf '[apply-pack] %s\n' "$*" >&2; }
 die() { log "ERROR: $*"; exit 1; }

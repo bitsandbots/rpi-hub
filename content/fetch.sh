@@ -9,7 +9,7 @@
 # pre-imaging the SD card.
 #
 # Usage:
-#   ./content/fetch.sh                 # tier=core, dest=./payload/var/lib/kiwix
+#   ./content/fetch.sh                 # tier=core, dest=<repo>/payload/var/lib/kiwix
 #   ./content/fetch.sh minimal         # smaller subset for Pi Zero builds
 #   DEST=/mnt/sd/var/lib/kiwix ./content/fetch.sh full
 #
@@ -18,7 +18,8 @@
 set -euo pipefail
 
 TIER="${1:-core}"
-DEST="${DEST:-./payload/var/lib/kiwix}"
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+DEST="${DEST:-$REPO_DIR/payload/var/lib/kiwix}"
 MANIFEST="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/manifest.yaml"
 
 log() { printf '[fetch] %s\n' "$*" >&2; }
