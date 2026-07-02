@@ -16,6 +16,7 @@ off-grid communities.
 > `sky.html`) — acquisition-only diagnostic, no position fix.
 >
 > Canonical references:
+>
 > - [`docs/OVERVIEW.md`](./docs/OVERVIEW.md) — system reference (architecture, setup, API)
 > - [`docs/GAP_ANALYSIS.md`](./docs/GAP_ANALYSIS.md) — hardware-gated items + future phases
 > - [`Blueprint_Overview.html`](./Blueprint_Overview.html) — visual blueprint for operators

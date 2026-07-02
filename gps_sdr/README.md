@@ -9,6 +9,7 @@ it reports the Doppler offset, code phase alignment, and a signal strength
 metric.
 
 > **What this does and does not do**
+>
 > - ✅ Detects visible GPS satellites and measures their Doppler offset
 > - ✅ Reports code-phase alignment (first step toward tracking)
 > - ❌ Does **not** decode the navigation message or compute a position fix
@@ -49,6 +50,7 @@ Without a powered LNA acquisition will almost certainly fail.
 ## System dependencies
 
 ### Ubuntu / Debian
+
 ```bash
 sudo apt update
 sudo apt install librtlsdr-dev rtl-sdr python3-pip
@@ -58,12 +60,14 @@ sudo modprobe -r dvb_usb_rtl28xxu   # or reboot
 ```
 
 ### macOS
+
 ```bash
 brew install librtlsdr
 ```
 
 ### Windows
-Download the RTL-SDR Blog driver package from https://www.rtl-sdr.com/rtl-sdr-quick-start-guide/
+
+Download the RTL-SDR Blog driver package from <https://www.rtl-sdr.com/rtl-sdr-quick-start-guide/>
 and follow the Zadig WinUSB installation steps.
 
 ---
@@ -81,9 +85,11 @@ pip install -r requirements.txt
 ## Usage
 
 ### Simulation mode (no hardware needed)
+
 ```bash
 python -m gps_sdr --simulate
 ```
+
 Generates a synthetic signal with PRNs 1, 5, 14, 22 at known Dopplers and
 verifies the acquisition engine finds them.
 
@@ -95,7 +101,9 @@ verifies the acquisition engine finds them.
 > it, so the sim reports exactly the injected constellation at the same bar
 > hardware uses. See `tests/gps_sdr/test_sim_e2e.py`.
 >
->     python -m gps_sdr --simulate
+> ```bash
+> python -m gps_sdr --simulate
+> ```
 >
 > In hardware mode the same threshold applies. The threshold is a
 > peak-to-noise-floor ratio over the 41 Doppler × 2048 code-phase search
@@ -106,14 +114,17 @@ verifies the acquisition engine finds them.
 > `gps_sdr/constants.py` and `tests/gps_sdr/test_false_alarm.py`.
 
 ### Hardware mode
+
 ```bash
 python -m gps_sdr
 ```
+
 Place your active GPS antenna outdoors (or near a window with sky view).
 The bias tee will be enabled automatically.
 
 ### Common options
-```
+
+```text
 --simulate              Use synthetic signal instead of hardware
 --no-bias-tee           Disable bias tee (external LNA or passive antenna)
 --ppm N                 Frequency correction in ppm (check with kalibrate-rtl)
@@ -132,19 +143,23 @@ The bias tee will be enabled automatically.
 ### Examples
 
 Single sweep, save time:
+
 ```bash
 python -m gps_sdr --once
 ```
 
 Outdoor session with a slightly drifty dongle:
+
 ```bash
 python -m gps_sdr --ppm 15 --interval 10
 ```
 
 Longer integration for marginal signals (2 ms non-coherent):
+
 ```bash
 python -m gps_sdr --integration-ms 2
 ```
+
 Integration raises the peak/noise-floor ratio without lowering the
 detection bar, so it is the preferred lever for weak signals. Lower
 `--threshold` only with care (see the false-alarm note above).
@@ -153,7 +168,8 @@ detection bar, so it is the preferred lever for weak signals. Lower
 
 ## Troubleshooting
 
-**No satellites acquired**
+### No satellites acquired
+
 - Ensure antenna has clear sky view (GPS cannot penetrate buildings)
 - Check bias tee is on — look for "Bias tee ENABLED ✓" in output
 - Try `--ppm` calibration (use `kalibrate-rtl` with a known FM station)
@@ -163,18 +179,22 @@ detection bar, so it is the preferred lever for weak signals. Lower
   the false-alarm budget, since each unit dropped roughly multiplies the
   per-PRN false-acquisition probability by e ≈ 2.7
 
-**`set_bias_tee` not available**
+### `set_bias_tee` not available
+
 - Your pyrtlsdr or librtlsdr is too old.  Enable manually before running:
+
   ```bash
   rtl_biast -b 1
   python -m gps_sdr --no-bias-tee
   ```
 
-**`usb_claim_interface` / permission errors**
+### `usb_claim_interface` / permission errors
+
 - On Linux: `sudo usermod -aG plugdev $USER` and re-login, or run with `sudo`
 - Ensure the `dvb_usb_rtl28xxu` kernel module is blacklisted (see above)
 
-**Only noise, metric never exceeds 1.5**
+### Only noise, metric never exceeds 1.5
+
 - Noise floor may be elevated by interference near 1575 MHz (Wi-Fi, LTE)
 - Move antenna away from electronics; try a USB extension cable
 
@@ -182,7 +202,7 @@ detection bar, so it is the preferred lever for weak signals. Lower
 
 ## Architecture
 
-```
+```text
 gps_sdr/
 ├── constants.py      GPS L1 constants and PRN G2 tap table (IS-GPS-200)
 ├── prn.py            C/A Gold code generator + FFT pre-computation

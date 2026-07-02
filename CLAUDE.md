@@ -36,7 +36,7 @@ specific hardware on a bench; see `docs/GAP_ANALYSIS.md` §1.
 
 ## Repository layout
 
-```
+```text
 api/rpi_hub_status/   Phase 5 status API (exposes services block since v1.0+)
 assistant/           Phase 6 (rpi_hub_retrieve, rpi_hub_assist)
 indexer/             Phase 6 workstation-side ZIM → index builder
@@ -115,7 +115,7 @@ make smoke    # → scripts/healthcheck.sh
 
 ## Final port map
 
-```
+```text
 80/tcp    nginx           public          landing, /library, /api/*, /print
 53/udp    dnsmasq         public          wildcard DNS → 192.168.4.1
 67/udp    dnsmasq         public          DHCP

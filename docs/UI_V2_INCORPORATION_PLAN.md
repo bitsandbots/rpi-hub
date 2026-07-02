@@ -1,9 +1,11 @@
 # rpi-hub Portal v2 Incorporation Plan
 
 ## Goal
+
 Replace the current captive-portal landing page (`www/portal/index.html`) with the redesigned `portal-v2.html` UI while preserving offline-first invariants, install/uninstall paths, and the existing nginx-backed asset pipeline.
 
 ## Status
+
 **Completed.** The new landing page is live in `www/portal/index.html`. The out-of-tree `portal-v2.html` and the temporary `index-original.html` backup have been removed.
 
 ## Current state (post-incorporation)
@@ -28,35 +30,43 @@ Replace the current captive-portal landing page (`www/portal/index.html`) with t
 ## Implementation checklist
 
 ### 1. Pre-flight verification
+
 - [x] All v2 `data-probe` URLs are served by existing nginx routes.
 - [x] Font files fall back to system fonts when `scripts/fetch_fonts.sh` has not run.
 - [x] No external requests in the page (only self-hosted fonts/assets and internal endpoints).
 
 ### 2. File placement
+
 - [x] Moved `portal-v2.html` → `rpi-hub/www/portal/index.html`.
 - [x] Removed temporary `index-original.html` backup.
 - [x] Removed out-of-tree `portal-v2.html`.
 
 ### 3. Hardcoded values
+
 - [x] Status-strip version now populated from `/api/status` `build_version`.
 - [x] Footer no longer contains a hardcoded version string.
 - [x] `/app/` tile points to the React SPA build output.
 - [x] Core-resource tiles route to `/library/` (library home) as in the original design.
 
 ### 4. Contrast toggle
+
 - [x] Inline contrast script removed; page loads `/assets/js/contrast.js`.
 
 ### 5. Asset pipeline
+
 - [x] No new shared assets introduced.
 - [x] Future extraction to `rpi-hub-v2.css` / `portal-v2.js` left as a follow-up polish item.
 
 ### 6. Install / uninstall
+
 - [x] No changes required; `install_tree` handles deployment.
 
 ### 7. Nginx config
+
 - [x] No new routes required.
 
 ### 8. Testing
+
 - [x] HTML parses cleanly with `python -m html.parser`.
 - [x] Local `http.server` sanity check returned 200 with expected markers.
 - [x] pytest could not be run in this Windows environment (module not installed); must be validated on a Pi/dev container.
@@ -66,10 +76,12 @@ Replace the current captive-portal landing page (`www/portal/index.html`) with t
 - [ ] Keyboard/accessibility pass on a real browser.
 
 ### 9. Documentation
+
 - [x] `docs/OVERVIEW.md` updated to describe the grouped layout and status strip.
 - [x] `CHANGELOG.md` updated under `[Unreleased]`.
 
 ### 10. Release
+
 - [ ] Run `scripts/release.sh` to stamp `VERSION` and `CHANGELOG`.
 - [ ] Tag release.
 

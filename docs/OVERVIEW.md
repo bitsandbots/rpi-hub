@@ -47,6 +47,7 @@ the requirement instead of shipping the change.
 | **Full** | Pi 5 (4 GB+) | NVMe or fast 256 GB SD | + RAG assistant (Qwen2.5 1.5B + bge-small) |
 
 Additional kit:
+
 - **RTL-SDR Blog v3/v4** (Phase 8 — receive only; v3/v4 required for hardware bias tee)
 - **Active GPS patch antenna** (~$12, built-in LNA) (Phase 13 — GPS sky survey; powered via dongle bias tee; requires clear sky view)
 - **RAK4631** USB LoRa hat (Phase 7.1 — mesh data plane, scaffold only)
@@ -60,7 +61,7 @@ Additional kit:
 
 ### Topology
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────────┐
 │  client phone / laptop                                              │
 │    │   joins open SSID  RPI-HUB-INFOHUB                              │
@@ -147,7 +148,7 @@ Additional kit:
 
 ### Final port map
 
-```
+```text
 80/tcp    nginx                  public      landing, /library, /api/*, /adsb, /print
 53/udp    dnsmasq                public      wildcard DNS → 192.168.4.1
 67/udp    dnsmasq                public      DHCP
@@ -236,7 +237,8 @@ yours doesn't, browse to `http://hub.local/`. See
 `rpi-hub-${VERSION}-${VARIANT}-arm64.img.xz`:
 
    make bake                         # → dist/rpi-hub-v1.2.1-generic-arm64.img.xz
-```
+
+```text
 
 The script loop-mounts the upstream Pi OS Lite base, runs
 `PHASE=5 ./install.sh` in a (qemu-bridged if needed) chroot, scrubs the
@@ -367,7 +369,7 @@ every other service probe is a loopback HTTP `GET /health`.
 
 ### 5.2 `rpi-hub-retrieve` — `GET /api/retrieve`
 
-```
+```text
 GET /api/retrieve?q=knot&k=5    →  { ready, results: [{article, section, score, url}, …] }
 ```
 
@@ -376,7 +378,7 @@ cap of 3 results.
 
 ### 5.3 `rpi-hub-assist` — `POST /api/ask`
 
-```
+```text
 POST /api/ask  {"q": "how to purify water"}
   → 200  {
       "mode": "answer | defer | noanswer",
@@ -400,7 +402,7 @@ Three rules enforced at the boundary:
 Key endpoints (full list in the FastAPI OpenAPI schema at `/api/listen/docs`
 when the service is running):
 
-```
+```text
 GET  /api/listen/state          → { mode, frequency_hz, label, started_ts, dongle_present }
 GET  /api/listen/presets        → [ { label, frequency_hz, … }, … ]
 POST /api/listen/tune           { frequency_hz, mode }  →  state
@@ -501,6 +503,7 @@ sudo reboot
 
 State that persists across reboots even with the overlay enabled
 (carved out via fstab bind mounts):
+
 - `/var/lib/rpi-hub/keys/` — Ed25519 mesh keypair
 - `/var/lib/rpi-hub/index/` — assistant index
 - `/var/lib/rpi-hub/models/` — LLM weights
@@ -518,6 +521,7 @@ sudo ./install.sh --pack=pacific-northwest     # copies print tree, sets manifes
 ```
 
 Pack contents (per `packs/<name>/pack.yaml`):
+
 - `zims` — manifest entries the workstation `fetch.sh` honours
 - `print[]` — printable field cards (PDFs) staged under `/print/`
 - `noaa.preset_frequencies_mhz` — pre-loaded into `rpi-hub-listen`'s preset cache
@@ -531,7 +535,8 @@ LoRa (`rpi-hub-reticulum.service`):
 Wi-Fi mesh (`rpi-hub-batman.service`):
 
    sudo systemctl enable --now rpi-hub-batman
-```
+
+```text
 
 Both bridges fail-open: a missing socket / binary surfaces as
 `state="unavailable"` on `/api/mesh/health`; the daemon stays up.

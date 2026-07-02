@@ -151,8 +151,6 @@ commit.
   - **`hub.local` /etc/hosts**: added `192.168.4.1 hub.local` so the
     Pi's own browser can reach the portal without a DNS failure.
 
-
-
 ### Changed
 
 - `mesh/rpi_hub_mesh/messages.py` — `verify()` now fails **closed** when
@@ -179,7 +177,7 @@ commit.
 ### Fixed
 
 - `models/fetch_models.sh` — added `-C -` for resume + `--retry-all-errors`
-  + bumped `--retry` 3→5, mirroring the `ab8a014` fix already applied
+  - bumped `--retry` 3→5, mirroring the `ab8a014` fix already applied
   to `content/fetch.sh`. A real mid-stream hang on the qwen GGUF at
   940 MB / 84% would otherwise have wasted the partial download on
   every restart. Locked both sha256s from the verified workstation
@@ -312,7 +310,7 @@ commit.
   contract. Closes `docs/GAP_ANALYSIS.md` §3b row "Split
   `X-Owner-Token` into per-domain tokens".
 
-### Docs
+### Docs (consolidation pass)
 
 - Docs consolidation pass. `docs/REMAINING_TASKS.md` folded into
   `docs/GAP_ANALYSIS.md`; the latter is now the single canonical
@@ -336,7 +334,7 @@ commit.
 - `Blueprint_Overview.html` "What's left" table — removed Pack PDFs
   row (no longer hardware-gated), added Phase 8.5 APRS scanner.
 
-### Changed
+### Changed (frontend/docs polish)
 
 - `config/dump1090/dump1090-mutability.default` header — added inline
   single-dongle mutual-exclusion note (mirrors
@@ -472,7 +470,7 @@ ships in a single image. Approved sequencing was
 - `rpi-hub-mesh.service` on `127.0.0.1:8500` — FastAPI control plane with
   Ed25519 identity, peer table, replay protection, signed wire format.
 - Keypair generation at first boot (`/var/lib/rpi-hub/keys/`, 0600).
-- Fingerprint format: 24-char base32 of SHA-256(pubkey)[:15], grouped 6×4.
+- Fingerprint format: 24-char base32 of SHA-256[pubkey](:15), grouped 6×4.
 - Owner-token-gated `POST /peers/{fp}/trust` and `.../block`.
 - `peers.html` + `peers.js` for the trust UI.
 - `apt_install python3-cryptography` in `phase7()`.
